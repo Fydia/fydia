@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fydia</title>
+  </head>
+  <body onload="onLoad()">
+    <div class="container">
+      <ul class="channels channel-container">
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+        <li class="channel">
+          <p>eee</p>
+        </li>
+      </ul>
+
+      <div class="messages">
+        <div class="form-container">
+          <form class="form" action="">
+            <input id="form-text" class="form-input" type="text" />
+            <button class="form-submit" onclick="PostMessage()" type="button">
+              Envoyer
+            </button>
+          </form>
+        </div>
+        <div>
+          <ul class="messages-container" id="messages"></ul>
+        </div>
+      </div>
+    </div>
+  </body>
+  <style>
+    body,
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #37474f;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .container {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      position: absolute;
+    }
+
+    .channels {
+      border: solid black;
+      width: 20%;
+      height: 100%;
+      background-color: white;
+    }
+    .channel-container {
+      display: flex;
+      flex-direction: column;
+      align-content: stretch;
+      align-items: center;
+    }
+
+    .channel {
+      margin: 15px;
+      background-color: #37474f;
+      text-align: center;
+      width: 100%;
+    }
+
+    .messages {
+      height: 100%;
+      width: 100%;
+    }
+
+    .messages-container {
+      min-height: 95%;
+      width: 100%;
+      background-color: orange;
+      display: flex;
+      flex-direction: column;
+      overflow-y: scroll;
+      position: relative;
+      align-content: stretch;
+    }
+
+    .message {
+      margin: 15px;
+      text-align: left;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: row;
+      align-content: center;
+      align-items: center;
+      align-self: center;
+      justify-content: center;
+    }
+
+    .form-input {
+      width: 90%;
+      padding: 5px;
+    }
+
+    .form-submit {
+      width: 10%;
+      padding: 5px;
+    }
+
+    .form-container {
+      margin: 8px;
+    }
+
+    li {
+      list-style-type: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(302deg, #616161 47%, #616161 64%);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(13deg, #c7ceff 14%, #f9d4ff 64%);
+    }
+    ::-webkit-scrollbar-track {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: inset 7px 10px 12px 0px #f0f0f0;
+    }
+  </style>
+  <script>
+    url = window.location;
+
+    function onLoad() {
+      //alert("Welcome this is a experimental version of Fydia");
+      //addMessage("Rheydskey@rheydskey.studio", "eeeee")
+      connect();
+    }
+
+    function connect() {
+      let sock = new WebSocket(
+        `ws://${document.location.host}/api/user/websocket?token=YvxxiH8l8S3d7y5n73xZFbgNuSjYur`
+      );
+      sock.onopen = () => {
+        console.log("Connected")
+        document.getElementsByTagName("body")[0].style.backgroundColor="green"
+      }
+      sock.onclose = onReveiceMessage.bind(window, "Disconnected");
+      sock.onmessage = function (msg) {
+        onReveiceMessage(msg.data);
+      };
+    }
+    /*
+    {
+    "server": {
+        "id": "1ENwYDlsoe"
+    },
+    "content": {
+        "type": "Message",
+        "content": {
+            "id": "MIEjyxxuQ41fGEwUrqI1HtdGWkDyIqYL",
+            "content": "test",
+            "message_type": "TEXT",
+            "edited": false,
+            "timestamp": "2021-08-17 00:58:48",
+            "channel": {
+                "id": "TecKrTtRhekn7IE"
+            },
+            "author": {
+                "id": 1,
+                "name": "Rheydskey",
+                "instance": {
+                    "protocol": "HTTP",
+                    "domain": "localhost",
+                    "port": 0
+                }
+            }
+        }
+    }
+}
+    */
+    function onReveiceMessage(msg) {
+      let json = JSON.parse(msg);
+      if (json["content"] != null) {
+        addMessage(json["content"]["content"]["author"]["name"], json["content"]["content"]["content"]);
+      }
+    }
+
+    function addMessage(name, content) {
+      if (typeof name == "undefined") {
+        name = "";
+      }
+
+      if (typeof content == "undefined") {
+        content = "";
+      }
+
+      var elname = document.createElement("p");
+      elname.classList.add("message-name");
+      elname.innerHTML = name;
+
+      var elcontent = document.createElement("p");
+      elcontent.classList.add("message-content");
+      elcontent.innerHTML = content;
+
+      var child = document.createElement("li");
+      child.classList.add("message");
+      child.appendChild(elname);
+      child.appendChild(elcontent);
+
+      var element = document.getElementById("messages").appendChild(child);
+
+      console.log(element);
+    }
+
+    function PostMessage() {
+      let message = document.getElementById("form-text").value;
+      let http = new XMLHttpRequest();
+
+      http.open(
+        "POST",
+        `http://${document.location.host}/api/server/1ENwYDlsoe/channel/TecKrTtRhekn7IE/messages`
+      );
+      http.setRequestHeader("Content-Type", "application/json");
+      http.setRequestHeader("token", "YvxxiH8l8S3d7y5n73xZFbgNuSjYur");
+      http.setRequestHeader("Access-Control-Allow-Origin", "*");
+      http.send('{"type":"TEXT", "content":"' + message + '"}');
+
+      document.getElementById("form-text").value = "";
+    }
+  </script>
+</html>

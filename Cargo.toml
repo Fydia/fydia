@@ -1,0 +1,19 @@
+
+[workspace]
+members = [
+    "fydia",
+    "fydia-client",
+    "fydia-router",
+    "fydia-sql",
+    "fydia-struct",
+    "fydia-utils",
+    "fydia-config",
+    "fydia-crypto",
+    "fydia-dispatcher",
+]
+
+[profile.release]
+codegen-units = 1
+panic = 'abort'
+lto = "fat"
+opt-level = 3

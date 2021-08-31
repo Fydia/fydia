@@ -1,0 +1,20 @@
+[package]
+name = "fydia-dispatcher"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.0", default-features = false, features = [
+    "rt",
+    "macros",
+] }
+serde_json = "1.0.64"
+serde = "1.0.126"
+reqwest = "0.11.4"
+fydia-struct = { path = "../fydia-struct" }
+fydia-utils = { path = "../fydia-utils" }
+fydia-crypto = { path = "../fydia-crypto" }
+gotham = "0.6.0"
+gotham_derive = "0.6.0"

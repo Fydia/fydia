@@ -1,0 +1,21 @@
+[package]
+name = "fydia-struct"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fydia-crypto =  {path = "../fydia-crypto"}
+fydia-utils = { path="../fydia-utils" }
+serde = { version="1.0.126", features=["derive"] }
+serde_json = { version="1.0.64" }
+gotham_derive = "0.6.0"
+gotham = "0.6.0"
+chrono = "0.4.19"
+
+futures = "0.3.15"
+logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
+tokio-tungstenite = "0.15.0"
+url = "2.2.2"
+reqwest = {version = "0.11.4",features = ["blocking"]}
