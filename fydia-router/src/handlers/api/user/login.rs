@@ -38,8 +38,8 @@ pub async fn user_login(mut state: State) -> HandlerResult {
                     .await;
 
                     match user {
-                        Some(user) => {
-                            let token = user.unwrap().update_token(database).await.unwrap();
+                        Some(mut user) => {
+                            let token = user.update_token(database).await.unwrap();
                             *res.body_mut() = token.into();
                         }
                         None => {
