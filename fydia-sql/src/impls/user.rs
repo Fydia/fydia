@@ -410,7 +410,7 @@ impl SqlUser for User {
     }
 
     async fn insert_user(&self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "INSERT INTO Ethicks.`User`
+        let rawquery = "INSERT INTO `User`
         (name, token, email, password, server)
         VALUES(?,?, ?, ?, ?);
         ";
