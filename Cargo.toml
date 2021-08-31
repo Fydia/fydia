@@ -14,6 +14,6 @@ members = [
 
 [profile.release]
 codegen-units = 1
-panic = 'unwind'
+panic = 'abort'
 lto = "fat"
 opt-level = 3
