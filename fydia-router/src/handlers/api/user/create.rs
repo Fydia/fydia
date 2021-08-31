@@ -27,10 +27,11 @@ pub async fn create_user(mut state: State) -> HandlerResult {
                 (Some(name), Some(email), Some(password)) => {
                     match (name.as_str(), email.as_str(), password.as_str()) {
                         (Some(name), Some(email), Some(password)) => {
-                            if let Err(_) = User::new(name, email, password, Instance::default())
+                            if let Err(e) = User::new(name, email, password, Instance::default())
                                 .insert_user(database)
                                 .await
                             {
+                                error!(format!("{}", e));
                                 *res.body_mut() = "Error: Database".into();
                                 *res.status_mut() = StatusCode::BAD_REQUEST;
                             } else {

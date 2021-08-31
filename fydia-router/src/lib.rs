@@ -39,7 +39,6 @@ use gotham::router::builder::{build_router, DrawRoutes};
 use gotham::router::Router;
 use gotham::state::State;
 
-
 /// Return gotham's router
 pub async fn get_router(config: Config) -> Router {
     info!(format!("Fydia - {}", env!("CARGO_PKG_VERSION")));
