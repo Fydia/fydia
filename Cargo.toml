@@ -2,7 +2,6 @@
 [workspace]
 members = [
     "fydia",
-    "fydia-client",
     "fydia-router",
     "fydia-sql",
     "fydia-struct",
