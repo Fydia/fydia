@@ -6,7 +6,6 @@ pub mod encrypt;
 pub mod key;
 pub mod pem;
 pub mod structs;
-pub mod test;
 
 pub type PublicKey = Rsa<Public>;
 pub type PrivateKey = Rsa<Private>;
