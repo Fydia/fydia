@@ -14,10 +14,13 @@ pub async fn get_connection(configdatabase: &DatabaseConfig) -> FydiaPool {
                 .await
                 .expect("Error"),
         ),
-        DatabaseType::Sqlite => FydiaPool::Sqlite(
-            SqlitePool::connect(configdatabase.format_url().as_str())
-                .await
-                .expect("Error"),
-        ),
+        DatabaseType::Sqlite => {
+            std::fs::File::create(&configdatabase.ip).expect("Error");
+            FydiaPool::Sqlite(
+                SqlitePool::connect(configdatabase.ip.as_str())
+                    .await
+                    .expect("Error"),
+            )
+        }
     }
 }
