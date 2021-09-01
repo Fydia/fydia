@@ -11,7 +11,7 @@ pub enum DatabaseType {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
     pub database_type: DatabaseType,
-    ip: String,
+    pub ip: String,
     port: i16,
     name: String,
     password: String,
