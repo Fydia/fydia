@@ -9,7 +9,7 @@ mod test {
 
         use crate::launch_server;
 
-        spawn(|| launch_server());
+        let task = spawn(|| launch_server());
 
         loop {
             match ureq::post("http://127.0.0.1:8888/api/user/create").send_string(
@@ -17,15 +17,18 @@ mod test {
             ) {
                 Ok(e) => match e.status() {
                     200 => {
+                        task.join().unwrap().kill().unwrap();
                         return Ok(());
                     }
 
                     _ => {
+                        task.join().unwrap().kill().unwrap();
                         return Err(());
                     }
                 },
                 Err(e) => match e.kind() {
                     ureq::ErrorKind::HTTP => {
+                        task.join().unwrap().kill().unwrap();
                         return Err(());
                     }
                     _ => {}

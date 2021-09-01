@@ -1,9 +1,9 @@
 use std::{
     io::Write,
-    process::{Command, Stdio},
+    process::{exit, Child, Command, Stdio},
 };
 
-pub fn launch_server() {
+pub fn launch_server() -> Child {
     let mut file = std::fs::File::create("./config.toml").unwrap();
     file.write(
         br#"
@@ -24,21 +24,18 @@ pub fn launch_server() {
     )
     .expect("Error");
     if let Ok(_) = std::fs::File::open("../target/debug/fydia") {
-        Command::new("../target/debug/fydia")
+        return Command::new("../target/debug/fydia")
             .stdout(Stdio::null())
             .spawn()
-            .unwrap()
-            .wait()
-            .expect("Error");
+            .unwrap();
     } else if let Ok(_) = std::fs::File::open("../target/release/fydia") {
-        Command::new("../target/release/fydia")
+        return Command::new("../target/release/fydia")
             .stdout(Stdio::null())
             .spawn()
-            .unwrap()
-            .wait()
-            .expect("Error");
+            .unwrap();
     } else {
-        println!("No Fydia executable. Try to build fydia: cargo build -p fydia")
+        println!("No Fydia executable. Try to build fydia: cargo build -p fydia");
+        exit(0);
     }
 }
 

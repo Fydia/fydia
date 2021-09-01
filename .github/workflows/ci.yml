@@ -32,29 +32,14 @@ jobs:
         with:
           command: build
           args: -p fydia --release
-      - if: matrix.os == 'ubuntu-18.04'
-        name: cargo test
+      - name: cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test 
-          args: --tests --verbose
-      - if: matrix.os == 'ubuntu-18.04'
-        name: upload artifact
+          args: --tests
+      - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: 'Linux-release'
           path: "/home/runner/work/Fydia/Fydia/target/release/fydia"
-      - if: matrix.os == 'MacOS-latest'
-        name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: 'macOS-release'
-          path: "/Users/runner/work/Fydia/Fydia/target/release/fydia"
-      - if: matrix.os == 'windows-latest'
-        name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: 'windows-release'
-          path: 'D:\a\Fydia\Fydia\target\release\fydia.exe'
-        
       
