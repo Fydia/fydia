@@ -37,7 +37,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p fydia-test
+          args: -p fydia-test --verbose
       - if: matrix.os == 'ubuntu-18.04'
         name: upload artifact
         uses: actions/upload-artifact@v2
