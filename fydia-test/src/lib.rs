@@ -23,13 +23,23 @@ pub fn launch_server() {
     database_name = "fydia""#,
     )
     .expect("Error");
-
-    Command::new("../target/debug/fydia")
-        .stdout(Stdio::null())
-        .spawn()
-        .unwrap()
-        .wait()
-        .expect("Error");
+    if let Ok(_) = std::fs::File::open("../target/debug/fydia") {
+        Command::new("../target/debug/fydia")
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("Error");
+    } else if let Ok(_) = std::fs::File::open("../target/release/fydia") {
+        Command::new("../target/release/fydia")
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("Error");
+    } else {
+        println!("No Fydia executable. Try to build fydia: cargo build -p fydia")
+    }
 }
 
 mod test;
