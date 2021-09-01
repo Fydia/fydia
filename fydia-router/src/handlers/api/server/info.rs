@@ -12,6 +12,8 @@ pub async fn get_server_of_user(mut state: State) -> HandlerResult {
     let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
+        *res.status_mut() = StatusCode::BAD_REQUEST;
+
         return Ok((state, res));
     };
     let database = &SqlPool::borrow_from(&state).get_pool();
