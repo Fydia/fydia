@@ -46,8 +46,8 @@ pub async fn get_router(config: Config) -> Router {
     let database = Repo::new(get_connection(&config.database).await);
     success!("Database connected");
     info!("Info init database");
-    if init(&database.get_pool()).await.is_err() {
-        error!("Error");
+    if let Err(e) = init(&database.get_pool()).await {
+        error!(format!("Error: {}", e.to_string()));
         exit(0);
     }
     success!("Init successfully");
