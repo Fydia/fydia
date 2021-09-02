@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `User` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `Server` (
   `id` varchar(30) NOT NULL,
-  `shortid` varchar(10) NOT NULL,
+  `shortid` varchar(10) PRIMARY KEY NOT NULL,
   `name` text NOT NULL,
   `owner` int(10) NOT NULL,
   `icon` text DEFAULT NULL,
@@ -39,4 +39,15 @@ CREATE TABLE IF NOT EXISTS `Messages` (
   KEY `Messages_FK_1` (`author_id`),
   CONSTRAINT `Messages_FK` FOREIGN KEY (`channel_id`) REFERENCES `Channels` (`id`),
   CONSTRAINT `Messages_FK_1` FOREIGN KEY (`author_id`) REFERENCES `User` (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+CREATE TABLE IF NOT EXISTS `Roles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `serverid` varchar(10) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `color` varchar(25) NOT NULL,
+  `channel_access` text DEFAULT NULL,
+  `permission` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `Roles_FK` (`serverid`),
+  CONSTRAINT `Roles_FK` FOREIGN KEY (`serverid`) REFERENCES `Server` (`shortid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;

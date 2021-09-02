@@ -35,3 +35,13 @@ CREATE TABLE IF NOT EXISTS `Messages` (
   CONSTRAINT `Messages_FK` FOREIGN KEY (channel_id) REFERENCES "Channels"(id),
   CONSTRAINT `Messages_FK_1` FOREIGN KEY (author_id) REFERENCES "User"(id)
 );
+CREATE TABLE IF NOT EXISTS Roles (
+  id INTEGER NOT NULL,
+  serverid TEXT(10) NOT NULL,
+  name TEXT(255) NOT NULL,
+  color TEXT(25) NOT NULL,
+  channel_access TEXT,
+  permission TEXT,
+  CONSTRAINT Roles_PK PRIMARY KEY (id),
+  CONSTRAINT Server_FK FOREIGN KEY (serverid) REFERENCES "Server"(shortid)
+);
