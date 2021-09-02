@@ -45,7 +45,7 @@ impl DatabaseConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub ip: String,
     pub port: i16,
@@ -60,7 +60,7 @@ impl ServerConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct InstanceConfig {
     pub domain: String, // URL OR IP
 }
@@ -73,7 +73,7 @@ impl InstanceConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     pub instance: InstanceConfig,
     pub server: ServerConfig,
