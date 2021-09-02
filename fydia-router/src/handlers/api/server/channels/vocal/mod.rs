@@ -9,10 +9,10 @@ use gotham::{
 use reqwest::StatusCode;
 
 pub async fn join_channel(state: State) -> HandlerResult {
-    let headers = HeaderMap::borrow_from(&state);
+    let _headers = HeaderMap::borrow_from(&state);
     let database = &SqlPool::borrow_from(&state).get_pool();
     let extracted = ChannelExtractor::borrow_from(&state);
-    let serverid = ServerId::new(extracted.serverid.clone());
+    let _serverid = ServerId::new(extracted.serverid.clone());
     let channelid = ChannelId::new(extracted.channelid.clone());
     let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, "");
 

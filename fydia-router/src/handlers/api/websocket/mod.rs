@@ -43,7 +43,7 @@ impl Websockets {
         msg: &Event,
         user: Vec<User>,
         keys: Option<&RsaData>,
-        origin: Option<Instance>,
+        _origin: Option<Instance>,
     ) {
         let mut e = self.channel.lock().await;
         e.remove_unvalid_channel();
@@ -54,7 +54,7 @@ impl Websockets {
                         .send(ChannelMessage::Message(Box::new(msg.clone())))
                         .unwrap();
                 } else if let Some(rsa) = keys {
-                    let encrypt_message = encrypt_message(
+                    let _encrypt_message = encrypt_message(
                         rsa,
                         i.user.instance.get_public_key().unwrap(),
                         msg.clone(),

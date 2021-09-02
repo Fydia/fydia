@@ -48,7 +48,7 @@ pub async fn get_server(state: State) -> HandlerResult {
 use fydia_struct::pathextractor::ServerExtractor;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GetServer {
     pub server: Vec<Server>,
 }
