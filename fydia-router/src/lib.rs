@@ -63,6 +63,7 @@ pub async fn get_router(config: Config) -> Router {
             exit(0);
         }
     };
+
     info!("try to get ip adress of the server");
     let domain = if config.instance.domain.is_empty() {
         reqwest::Client::new()

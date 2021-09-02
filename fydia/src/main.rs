@@ -3,7 +3,6 @@
 //! Top-level crate of fydia
 use fydia_config::get_config_or_init;
 
-
 /// Start function
 #[tokio::main]
 async fn main() {
