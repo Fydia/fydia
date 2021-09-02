@@ -39,6 +39,7 @@ pub async fn create_server(mut state: State) -> HandlerResult {
             let mut server = Server::new();
             server.name = name_string;
             server.owner = user.id;
+            server.insert_server(database).await;
             server.join(user, database).await;
 
             *res.status_mut() = StatusCode::OK;
