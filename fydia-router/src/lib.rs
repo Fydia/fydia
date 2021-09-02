@@ -23,11 +23,12 @@ use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
+use futures::executor::block_on;
 use fydia_config::Config;
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
 use fydia_sql::default::init;
-use fydia_sql::sqlpool::{Repo, SqlPool};
+use fydia_sql::sqlpool::{FydiaPool, Repo, SqlPool};
 use fydia_struct::instance::{Instance, RsaData};
 use gotham::handler::HandlerResult;
 use gotham::hyper::{Body, Response};
@@ -76,6 +77,18 @@ pub async fn get_router(config: Config) -> Router {
     } else {
         config.instance.domain.clone()
     };
+    let data = database.get_pool();
+    ctrlc::set_handler(move || {
+        let data = &data;
+        block_on(async {
+            match data {
+                FydiaPool::Mysql(e) => e.close().await,
+                FydiaPool::PgSql(e) => e.close().await,
+                FydiaPool::Sqlite(e) => e.close().await,
+            }
+        })
+    })
+    .expect("Error setting Ctrl-C handler");
 
     success!(format!("Ip is : {}", domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
