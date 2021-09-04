@@ -78,6 +78,10 @@ impl Instance {
 
 impl Default for Instance {
     fn default() -> Self {
-        Self { protocol: Protocol::HTTP, domain: String::new(), port: 0 }
+        Self {
+            protocol: Protocol::HTTP,
+            domain: String::new(),
+            port: 0,
+        }
     }
 }

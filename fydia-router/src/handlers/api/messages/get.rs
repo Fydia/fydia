@@ -31,22 +31,22 @@ pub async fn get_message(state: State) -> HandlerResult {
 
     if let Some(user) = token.get_user(database).await {
         if user.server.is_join(ServerId::new(serverid.clone())) {
-            let server = user
-                .server
-                .get(serverid)
-                .unwrap()
-                .get_server(database)
-                .await
-                .unwrap();
-
-            if let Some(e) = server.channel.get_channel(channelid) {
-                let messages = serde_json::to_string(&e.get_messages(database).await).unwrap();
-
-                *res.status_mut() = StatusCode::OK;
-                *res.headers_mut().get_mut(CONTENT_TYPE).unwrap() =
-                    mime::APPLICATION_JSON.as_ref().parse().unwrap();
-                *res.body_mut() = messages.into();
-            }
+            if let Some(serverid) = user.server.get(serverid) {
+                if let Some(server) = serverid.get_server(database).await {
+                    if let Some(e) = server.channel.get_channel(channelid) {
+                        if let Ok(messages) = serde_json::to_string(&e.get_messages(database).await)
+                        {
+                            if let Some(header) = res.headers_mut().get_mut(CONTENT_TYPE) {
+                                if let Ok(parse) = mime::APPLICATION_JSON.as_ref().parse() {
+                                    *header = parse;
+                                }
+                            }
+                            *res.status_mut() = StatusCode::OK;
+                            *res.body_mut() = messages.into();
+                        }
+                    }
+                }
+            };
         }
     }
 

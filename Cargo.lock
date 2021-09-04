@@ -574,6 +574,7 @@ dependencies = [
 name = "fydia-router"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "base64",
  "chrono",
  "ctrlc",

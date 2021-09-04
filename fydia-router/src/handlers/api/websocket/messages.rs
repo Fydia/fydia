@@ -94,16 +94,18 @@ where
 
     let websocket_stream = sendchannel.clone();
     let task = tokio::spawn(async move {
-        while let Some(message) = stream
+        while let Ok(Some(message)) = stream
             .next()
             .await
             .transpose()
             .map_err(|error| println!("Websocket receive error: {}", error))
-            .expect("Error")
         {
-            websocket_stream
+            if websocket_stream
                 .send(ChannelMessage::WebsocketMessage(message))
-                .expect("Error");
+                .is_err()
+            {
+                error!("Can't send message");
+            }
         }
     });
 
@@ -118,17 +120,23 @@ where
                 }
             },
             ChannelMessage::Kill => {
-                sink.close().await.expect("Error");
+                if sink.close().await.is_err() {
+                    error!("Can't close channel");
+                };
                 break;
             }
-            ChannelMessage::Message(msg) => match sink.send(to_websocketmessage(&msg)).await {
-                Ok(()) => {}
-                Err(Error::ConnectionClosed) => {}
-                Err(error) => {
-                    println!("{:?}", error);
-                    return Err(());
+            ChannelMessage::Message(msg) => {
+                if let Ok(msg) = to_websocketmessage(&msg) {
+                    match sink.send(msg).await {
+                        Ok(()) => {}
+                        Err(Error::ConnectionClosed) => {}
+                        Err(error) => {
+                            println!("{:?}", error);
+                            return Err(());
+                        }
+                    }
                 }
-            },
+            }
         }
     }
 
@@ -137,9 +145,12 @@ where
     Ok(())
 }
 
-pub fn to_websocketmessage<T>(msg: &T) -> Message
+pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, ()>
 where
     T: Serialize,
 {
-    Message::from(serde_json::to_string(msg).unwrap())
+    match serde_json::to_string(msg) {
+        Ok(json) => Ok(Message::from(json)),
+        _ => Err(()),
+    }
 }

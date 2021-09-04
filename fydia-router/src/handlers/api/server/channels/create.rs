@@ -36,29 +36,32 @@ pub async fn create_channel(mut state: State) -> HandlerResult {
                             let mut channel = Channel::new();
                             channel.server_id = ServerId::new(server.id.clone());
 
-                            let value = serde_json::from_str::<Value>(body.as_str()).unwrap();
-                            let name = value.get("name");
-                            let ctype = value.get("type");
+                            if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
+                                let name = value.get("name");
+                                let ctype = value.get("type");
 
-                            match (name, ctype) {
-                                (Some(name), Some(ctype)) => {
-                                    match (name.as_str(), ctype.as_str()) {
-                                        (Some(name), Some(ctype)) => {
-                                            channel.name = name.to_string();
-                                            channel.channel_type =
-                                                ChannelType::from_string(ctype.to_string());
+                                match (name, ctype) {
+                                    (Some(name), Some(ctype)) => {
+                                        match (name.as_str(), ctype.as_str()) {
+                                            (Some(name), Some(ctype)) => {
+                                                channel.name = name.to_string();
+                                                channel.channel_type =
+                                                    ChannelType::from_string(ctype.to_string());
 
-                                            server.insert_channel(channel.clone(), database).await;
-                                            *res.body_mut() = channel.id.into();
-                                            *res.status_mut() = StatusCode::OK;
-                                        }
-                                        _ => {
-                                            *res.body_mut() = "Error".into();
+                                                server
+                                                    .insert_channel(channel.clone(), database)
+                                                    .await;
+                                                *res.body_mut() = channel.id.into();
+                                                *res.status_mut() = StatusCode::OK;
+                                            }
+                                            _ => {
+                                                *res.body_mut() = "Error".into();
+                                            }
                                         }
                                     }
-                                }
-                                _ => {
-                                    *res.body_mut() = "Error".into();
+                                    _ => {
+                                        *res.body_mut() = "Error".into();
+                                    }
                                 }
                             }
                         } else {

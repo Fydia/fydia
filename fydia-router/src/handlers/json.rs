@@ -1,4 +1,4 @@
-use fydia_sql::impls::channel::SqlChannel;
+/*use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
@@ -34,6 +34,14 @@ pub async fn json(state: State) -> HandlerResult {
     let server = Server::get_server_by_id(ServerId::new("1ENwYDlsoe".to_string()), mp)
         .await
         .unwrap();
+    match (
+        serde_json::to_string(&channels),
+        serde_json::to_string(&user),
+        serde_json::to_string(&server),
+    ) {
+        (Ok(channels), Ok(users), Ok(servers)) => todo!(),
+        _ => {}
+    }
     let res = create_response(
         &state,
         StatusCode::OK,
@@ -47,3 +55,4 @@ pub async fn json(state: State) -> HandlerResult {
     );
     Ok((state, res))
 }
+*/

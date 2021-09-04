@@ -1,6 +1,7 @@
 //! Router of fydia
 //! Working with gotham.rs
-
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
 #![warn(missing_debug_implementations)]
 
 /// Handling routes
@@ -18,7 +19,6 @@ use std::process::exit;
 
 use crate::handlers::api::websocket::Websockets;
 use crate::handlers::default;
-use crate::handlers::json::json;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
@@ -66,20 +66,26 @@ pub async fn get_router(config: Config) -> Router {
 
     info!("try to get ip adress of the server");
     let domain = if config.instance.domain.is_empty() {
-        reqwest::Client::new()
+        if let Ok(req) = reqwest::Client::new()
             .get("http://ifconfig.io")
             .header("User-Agent", "curl/7.55.1")
             .send()
             .await
-            .unwrap()
-            .text()
-            .await
-            .unwrap()
+        {
+            if let Ok(text) = req.text().await {
+                text
+            } else {
+                panic!("Domain is not valid")
+            }
+        } else {
+            panic!("Domain is not valid")
+        }
     } else {
         config.instance.domain.clone()
     };
     let data = database.get_pool();
-    ctrlc::set_handler(move || {
+    let ctrlc_handler = ctrlc::set_handler(move || {
+        info!("Try to close database");
         let data = &data;
         block_on(async {
             match data {
@@ -88,8 +94,10 @@ pub async fn get_router(config: Config) -> Router {
                 FydiaPool::Sqlite(e) => e.close().await,
             }
         })
-    })
-    .expect("Error setting Ctrl-C handler");
+    });
+    if ctrlc_handler.is_err() {
+        panic!("Error setting Ctrl-C handler");
+    };
 
     success!(format!("Ip is : {}", domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
@@ -112,7 +120,7 @@ pub async fn get_router(config: Config) -> Router {
 
     build_router(chain, pipelineset, |router| {
         router.get("/").to_async(get_client);
-        router.get("/json").to_async(json);
+        //router.get("/json").to_async(json);
         router.scope("/api", |router| {
             router.get("/").to(default);
             router.scope("/instance", instance_routes);

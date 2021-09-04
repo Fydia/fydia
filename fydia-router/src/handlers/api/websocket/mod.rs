@@ -50,16 +50,17 @@ impl Websockets {
         e.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
                 if i.user.instance.domain == "localhost" {
-                    i.channel
-                        .send(ChannelMessage::Message(Box::new(msg.clone())))
-                        .unwrap();
+                    i.channel.send(ChannelMessage::Message(Box::new(msg.clone())));
                 } else if let Some(rsa) = keys {
-                    let _encrypt_message = encrypt_message(
-                        rsa,
-                        i.user.instance.get_public_key().unwrap(),
-                        msg.clone(),
-                    );
-                    //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
+                    if let Ok(public_key) = i.user.instance.get_public_key() {
+                        let _encrypt_message = encrypt_message(
+                            rsa,
+                            public_key,
+                            msg.clone(),
+                        );
+                        //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
+                    }
+                    
                 }
             }
         });
@@ -171,13 +172,16 @@ pub fn accept(
 fn response(headers: &HeaderMap) -> Result<Response<Body>, ()> {
     let key = headers.get(SEC_WEBSOCKET_KEY).ok_or(())?;
 
-    Ok(Response::builder()
-        .header(UPGRADE, PROTO_WEBSOCKET)
-        .header(CONNECTION, "upgrade")
-        .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
-        .status(StatusCode::SWITCHING_PROTOCOLS)
-        .body(Body::empty())
-        .unwrap())
+    if let Ok(res) = Response::builder()
+    .header(UPGRADE, PROTO_WEBSOCKET)
+    .header(CONNECTION, "upgrade")
+    .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
+    .status(StatusCode::SWITCHING_PROTOCOLS)
+    .body(Body::empty()) {
+        return Ok(res);
+    }
+
+    Err(())
 }
 
 fn accept_key(key: &[u8]) -> String {

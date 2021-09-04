@@ -20,27 +20,29 @@ pub async fn get_server(state: State) -> HandlerResult {
     let mut res = create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, "");
     let serverid = ServerExtractor::borrow_from(&state);
     let mut servers: GetServer = GetServer { server: Vec::new() };
-    let getted_server =
-        Server::get_server_by_id(ServerId::new(serverid.serverid.clone()), database)
-            .await
-            .unwrap();
+    if let Some(getted_server) =
+        Server::get_server_by_id(ServerId::new(serverid.serverid.clone()), database).await
+    {
+        let token = if let Some(token) = Token::from_headervalue(&headers) {
+            token
+        } else {
+            return Ok((state, res));
+        };
 
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
-        token
-    } else {
-        return Ok((state, res));
-    };
+        let server = User::get_user_by_token(&token, database).await;
 
-    let server = User::get_user_by_token(&token, database).await;
-
-    if let Some(e) = server {
-        let a = e.server;
-        for i in a.0 {
-            servers.server.push(i.get_server(database).await.unwrap());
+        if let Some(e) = server {
+            let a = e.server;
+            for i in a.0 {
+                if let Some(server) = i.get_server(database).await {
+                    servers.server.push(server);
+                }
+            }
+        }
+        if let Ok(json) = serde_json::to_string(&getted_server) {
+            *res.body_mut() = json.into();
         }
     }
-
-    *res.body_mut() = serde_json::to_string(&getted_server).unwrap().into();
 
     Ok((state, res))
 }

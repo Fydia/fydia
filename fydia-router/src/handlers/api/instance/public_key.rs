@@ -13,12 +13,7 @@ pub async fn public_key(state: State) -> HandlerResult {
     );
     let rsa = RsaData::borrow_from(&state);
     if let Some(pem) = fydia_crypto::pem::key_to_string(&rsa.1) {
-        res = create_response(
-            &state,
-            StatusCode::OK,
-            mime::TEXT_PLAIN_UTF_8,
-            format!("{}", pem),
-        );
+        res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, pem);
     }
     Ok((state, res))
 }

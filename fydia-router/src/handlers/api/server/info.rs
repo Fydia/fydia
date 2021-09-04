@@ -17,7 +17,11 @@ pub async fn get_server_of_user(mut state: State) -> HandlerResult {
         return Ok((state, res));
     };
     let database = &SqlPool::borrow_from(&state).get_pool();
-    let user = User::get_user_by_token(&token, database).await.unwrap();
-    *res.body_mut() = serde_json::to_string(&user.server).unwrap().into();
+    if let Some(user) = User::get_user_by_token(&token, database).await {
+        if let Ok(json) = serde_json::to_string(&user.server) {
+            *res.body_mut() = json.into();
+        }
+    }
+
     Ok((state, res))
 }

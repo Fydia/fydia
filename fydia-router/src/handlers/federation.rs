@@ -12,24 +12,23 @@ use gotham::hyper::{body, Body, HeaderMap, StatusCode};
 use gotham::state::{FromState, State};
 
 pub async fn event_handler(mut state: State) -> HandlerResult {
-    let body = body::to_bytes(Body::take_from(&mut state))
-        .await
-        .expect("Error")
-        .to_vec();
+    let body = body::to_bytes(Body::take_from(&mut state));
     let headers = HeaderMap::borrow_from(&state);
     let rsa = RsaData::borrow_from(&state);
     let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
-
-    if let Some(msg) = receive_message(headers, body, rsa).await {
-        if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
-            crate::handlers::event::event_handler(event, &mut state).await;
+    if let Ok(body_bytes) = body.await {
+        let body = body_bytes.to_vec();
+        if let Some(msg) = receive_message(headers, body, rsa).await {
+            if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
+                crate::handlers::event::event_handler(event, &mut state).await;
+            } else {
+                *res.body_mut() = "Bad Body".into();
+                *res.status_mut() = StatusCode::BAD_REQUEST;
+            }
         } else {
-            *res.body_mut() = "Bad Body".into();
+            *res.body_mut() = "Decryption error".into();
             *res.status_mut() = StatusCode::BAD_REQUEST;
         }
-    } else {
-        *res.body_mut() = "Decryption error".into();
-        *res.status_mut() = StatusCode::BAD_REQUEST;
     }
 
     Ok((state, res))
@@ -53,33 +52,33 @@ pub async fn send_test_message(state: State) -> HandlerResult {
 
     let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN, format!(""));
 
-    let publickey = get_public_key(Instance {
+    if let Some(publickey) = get_public_key(Instance {
         protocol: fydia_struct::instance::Protocol::HTTP,
         domain: String::from("localhost"),
         port: 8080,
     })
     .await
-    .unwrap();
-
-    if fydia_dispatcher::message::send::send_message(
-        keys,
-        Instance::new(
-            fydia_struct::instance::Protocol::HTTP,
-            "localhost".to_string(),
-            8080,
-        ),
-        publickey,
-        event,
-        vec![Instance::new(
-            fydia_struct::instance::Protocol::HTTP,
-            "localhost".to_string(),
-            8080,
-        )],
-    )
-    .await
-    .is_err()
     {
-        *res.body_mut() = "Error when send message".into()
+        if fydia_dispatcher::message::send::send_message(
+            keys,
+            Instance::new(
+                fydia_struct::instance::Protocol::HTTP,
+                "localhost".to_string(),
+                8080,
+            ),
+            publickey,
+            event,
+            vec![Instance::new(
+                fydia_struct::instance::Protocol::HTTP,
+                "localhost".to_string(),
+                8080,
+            )],
+        )
+        .await
+        .is_err()
+        {
+            *res.body_mut() = "Error when send message".into()
+        };
     };
 
     Ok((state, res))

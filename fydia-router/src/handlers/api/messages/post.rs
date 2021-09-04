@@ -36,7 +36,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
     let extracted = ChannelExtractor::borrow_from(&state);
     let serverid = ServerId::new(extracted.serverid.clone());
     let channelid = extracted.channelid.clone();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
+    let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
         return Ok((state, res));
@@ -44,104 +44,121 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
 
     if let Some(user) = token.get_user(database).await {
         if user.server.is_join(serverid.clone()) {
-            let server = user
-                .server
-                .get(serverid.clone().short_id)
-                .unwrap()
-                .get_server(database)
-                .await
-                .unwrap();
-
-            if server.channel.is_exists(channelid.clone()) {
-                if headers.get("content-type").unwrap() == "application/json" {
-                    let body = body::to_bytes(Body::take_from(&mut state))
-                        .await
-                        .expect("Error");
-
-                    match String::from_utf8(body.to_vec()) {
-                        Ok(string_body) => {
-                            let value =
-                                serde_json::from_str::<Value>(string_body.as_str()).unwrap();
-                            match json_message(
-                                value,
-                                &user,
-                                &ChannelId::new(channelid.clone()),
-                                &serverid,
-                            ) {
-                                Ok(channel_msg) => {
-                                    let mut websocket =
-                                        Websockets::borrow_mut_from(&mut state).clone();
-                                    let key = RsaData::borrow_from(&state).clone();
-                                    let users = server.get_user(database).await;
-                                    tokio::spawn(async move {
-                                        websocket
-                                            .send(
-                                                &channel_msg.clone(),
-                                                users.clone(),
-                                                Some(&key),
-                                                None,
-                                            )
-                                            .await;
-                                    });
-                                    *res.body_mut() = "".into();
-                                    *res.status_mut() = StatusCode::OK;
-                                }
-                                Err(error) => {
-                                    *res.status_mut() = StatusCode::BAD_REQUEST;
-                                    *res.headers_mut().get_mut(CONTENT_TYPE).unwrap() =
-                                        mime::APPLICATION_JSON.as_ref().parse().unwrap();
-                                    *res.body_mut() =
-                                        format! {r#"{{"status":"Error", "content":"{}"}}"#, error}
-                                            .into();
+            if let Some(serverid) = user.server.get(serverid.clone().short_id) {
+                if let Some(server) = serverid.get_server(database).await {
+                    if server.channel.is_exists(channelid.clone()) {
+                        if headers.get("content-type").unwrap() == "application/json" {
+                            if let Ok(body) = body::to_bytes(Body::take_from(&mut state)).await {
+                                match String::from_utf8(body.to_vec()) {
+                                    Ok(string_body) => {
+                                        if let Ok(value) =
+                                            serde_json::from_str::<Value>(string_body.as_str())
+                                        {
+                                            match json_message(
+                                                value,
+                                                &user,
+                                                &ChannelId::new(channelid.clone()),
+                                                &serverid,
+                                            ) {
+                                                Ok(channel_msg) => {
+                                                    let mut websocket =
+                                                        Websockets::borrow_mut_from(&mut state)
+                                                            .clone();
+                                                    let key = RsaData::borrow_from(&state).clone();
+                                                    let users = server.get_user(database).await;
+                                                    tokio::spawn(async move {
+                                                        websocket
+                                                            .send(
+                                                                &channel_msg.clone(),
+                                                                users.clone(),
+                                                                Some(&key),
+                                                                None,
+                                                            )
+                                                            .await;
+                                                    });
+                                                    *res.body_mut() = "".into();
+                                                    *res.status_mut() = StatusCode::OK;
+                                                }
+                                                Err(error) => {
+                                                    if let Some(header) =
+                                                        res.headers_mut().get_mut(CONTENT_TYPE)
+                                                    {
+                                                        if let Ok(content_type) =
+                                                            mime::APPLICATION_JSON.as_ref().parse()
+                                                        {
+                                                            *header = content_type;
+                                                        }
+                                                    }
+                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                                                    *res.body_mut() =
+                                                        format! {r#"{{"status":"Error", "content":"{}"}}"#, error}
+                                                            .into();
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(_) => {
+                                        *res.status_mut() = StatusCode::BAD_REQUEST;
+                                        if let Some(header) =
+                                            res.headers_mut().get_mut(CONTENT_TYPE)
+                                        {
+                                            if let Ok(content_type) =
+                                                mime::APPLICATION_JSON.as_ref().parse()
+                                            {
+                                                *header = content_type;
+                                            }
+                                        }
+                                        *res.body_mut() =
+                                            r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
+                                                .into();
+                                    }
                                 }
                             }
-                        }
-                        Err(_) => {
-                            *res.status_mut() = StatusCode::BAD_REQUEST;
-                            *res.headers_mut().get_mut(CONTENT_TYPE).unwrap() =
-                                mime::APPLICATION_JSON.as_ref().parse().unwrap();
-                            *res.body_mut() =
-                                format! {r#"{{"status":"Error", "content":"Utf-8 Error"}}"#}.into();
-                        }
-                    }
-                } else if headers
-                    .get("content-type")
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .contains(&"multipart/form-data;")
-                {
-                    match multipart_message(
-                        &mut state,
-                        &user.clone(),
-                        &ChannelId::new(channelid),
-                        serverid,
-                    )
-                    .await
-                    {
-                        Ok(msg) => {
-                            let mut websocket = Websockets::borrow_mut_from(&mut state).clone();
-                            let key = RsaData::borrow_from(&state).clone();
-                            let users = server.get_user(database).await;
-                            tokio::spawn(async move {
-                                websocket
-                                    .send(&msg.clone(), users.clone(), Some(&key), None)
-                                    .await;
-                            });
+                        } else if let Some(header) = headers.get(CONTENT_TYPE) {
+                            if let Ok(string) = header.to_str() {
+                                if string.contains(&"multipart/form-data;") {
+                                    match multipart_message(
+                                        &mut state,
+                                        &user.clone(),
+                                        &ChannelId::new(channelid),
+                                        serverid,
+                                    )
+                                    .await
+                                    {
+                                        Ok(msg) => {
+                                            let mut websocket =
+                                                Websockets::borrow_mut_from(&mut state).clone();
+                                            let key = RsaData::borrow_from(&state).clone();
+                                            let users = server.get_user(database).await;
+                                            tokio::spawn(async move {
+                                                websocket
+                                                    .send(
+                                                        &msg.clone(),
+                                                        users.clone(),
+                                                        Some(&key),
+                                                        None,
+                                                    )
+                                                    .await;
+                                            });
 
-                            *res.body_mut() = "Message send".into();
-                            *res.status_mut() = StatusCode::OK;
+                                            *res.body_mut() = "Message send".into();
+                                            *res.status_mut() = StatusCode::OK;
+                                        }
+                                        Err(e) => {
+                                            *res.body_mut() =
+                                                format!(r#"{{"error":"{}"}}"#, e).into();
+                                            *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                        }
+                                    };
+                                }
+                            }
+                        } else {
+                            *res.body_mut() = "Bad Content-Type".into();
                         }
-                        Err(e) => {
-                            *res.body_mut() = format!(r#"{{"error":"{}"}}"#, e).into();
-                            *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                        }
-                    };
-                } else {
-                    *res.body_mut() = "Bad Content-Type".into();
+                    } else {
+                        *res.body_mut() = "Unvalid channel".into();
+                    }
                 }
-            } else {
-                *res.body_mut() = "Unvalid channel".into();
             }
         } else {
             *res.body_mut() = "unknow server".into();
@@ -158,50 +175,57 @@ pub async fn multipart_message(
     server_id: ServerId,
 ) -> Result<Event, String> {
     let headers = HeaderMap::borrow_from(state);
-    let boundary = headers
-        .get(CONTENT_TYPE)
-        .and_then(|ct| {
-            let ct = ct.to_str().ok()?;
-            let idx = ct.find(BOUNDARY)?;
-            Some(ct[idx + BOUNDARY.len()..].to_string())
-        })
-        .unwrap();
 
-    let mut multer = multer::Multipart::new(Body::take_from(state), boundary.clone());
-    let name = generate_string(32);
-    let mut file = std::fs::File::create(&name).unwrap();
-    while let Ok(Some(mut field)) = multer.next_field().await {
-        if field.name().unwrap().eq("file") {
-            let mut info = std::fs::File::create(format!("{}.json", name)).unwrap();
-            info.write_all(format!(r#"{{"name":"{}"}}"#, field.file_name().unwrap()).as_bytes())
-                .unwrap();
-            while let Ok(Some(chunck)) = field.chunk().await {
-                match file.write_all(&chunck) {
-                    Ok(_) => {}
-                    Err(e) => return Err(e.to_string()),
-                };
-            }
-            info!(format!("{:?}", get_mime_of_file(&name)));
-        } else if let Some(e) = field.name() {
-            if e.eq("context") {
-                info!(field.text().await.unwrap_or_default());
+    if let Some(boundary) = headers.get(CONTENT_TYPE).and_then(|ct| {
+        let ct = ct.to_str().ok()?;
+        let idx = ct.find(BOUNDARY)?;
+        Some(ct[idx + BOUNDARY.len()..].to_string())
+    }) {
+        let mut multer = multer::Multipart::new(Body::take_from(state), boundary.clone());
+        let name = generate_string(32);
+        if let Ok(mut file) = std::fs::File::create(&name) {
+            while let Ok(Some(mut field)) = multer.next_field().await {
+                if let Some(field_name) = field.name() {
+                    if field_name.eq("file") {
+                        if let Ok(mut info) = std::fs::File::create(format!("{}.json", name)) {
+                            if let Some(name) = field.file_name() {
+                                if let Err(_) =
+                                    info.write_all(format!(r#"{{"name":"{}"}}"#, name).as_bytes())
+                                {
+                                    return Err(String::from("File writing error"));
+                                }
+                            };
+
+                            while let Ok(Some(chunck)) = field.chunk().await {
+                                if let Err(e) = file.write_all(&chunck) {
+                                    return Err(e.to_string());
+                                }
+                            }
+                        }
+                    } else if field_name.eq("context") {
+                        info!(field.text().await.unwrap_or_default());
+                    }
+                }
             }
         }
+
+        let event = Event::new(
+            server_id,
+            EventContent::Message {
+                content: Message::new(
+                    name.clone(),
+                    MessageType::FILE,
+                    false,
+                    SqlDate::new(DateTime::from(SystemTime::now())),
+                    user.clone(),
+                    channelid.clone(),
+                ),
+            },
+        );
+        Ok(event)
+    } else {
+        Err(String::from("error"))
     }
-    let event = Event::new(
-        server_id,
-        EventContent::Message {
-            content: Message::new(
-                name.clone(),
-                MessageType::FILE,
-                false,
-                SqlDate::new(DateTime::from(SystemTime::now())),
-                user.clone(),
-                channelid.clone(),
-            ),
-        },
-    );
-    Ok(event)
 }
 
 pub fn json_message(
@@ -210,18 +234,22 @@ pub fn json_message(
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, String> {
-    let content = match value.get("content") {
-        None => {
-            return Err("Where is the content".to_string());
+    let message_type;
+    let content;
+    match (value.get("type"), value.get("content")) {
+        (Some(ctype), Some(mcontent)) => match (ctype.as_str(), mcontent.as_str()) {
+            (Some(ctype), Some(mcontent)) => {
+                message_type = ctype.to_string();
+                content = mcontent.to_string();
+            }
+            _ => {
+                return Err("Json error".to_string());
+            }
+        },
+        _ => {
+            return Err("Json error".to_string());
         }
-        Some(content) => content.as_str().unwrap().to_string(),
-    };
-    let message_type = match value.get("type") {
-        None => {
-            return Err("Where is the type".to_string());
-        }
-        Some(msg_type) => msg_type.as_str().unwrap().to_string(),
-    };
+    }
     if let Some(messagetype) = MessageType::from_string(message_type) {
         let event = Event::new(
             server_id.clone(),

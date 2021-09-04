@@ -4,7 +4,6 @@ pub mod federation;
 /// All routes related to the instances
 pub mod instance;
 
-
 /// All routes related to the roles
 pub mod roles;
 

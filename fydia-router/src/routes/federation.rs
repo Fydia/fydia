@@ -4,7 +4,6 @@ use crate::handlers::federation::{event_handler, send_test_message};
 use gotham::router::builder::*;
 use gotham::{pipeline::chain::PipelineHandleChain, router::builder::ScopeBuilder};
 
-
 /// All routes related to the fedaration
 pub fn federation_routes<C, P>(router: &mut ScopeBuilder<C, P>)
 where
