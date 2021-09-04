@@ -56,7 +56,7 @@ impl SqlMessage for Message {
                 content: i.get("content"),
                 message_type: MessageType::from_string(i.get("message_type")).unwrap(),
                 edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")),
+                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or(SqlDate::null()),
                 channel_id: ChannelId::new(i.get("channel_id")),
                 author_id: User::get_user_by_id(i.get("author_id"), executor)
                     .await
@@ -100,7 +100,7 @@ impl SqlMessage for Message {
                 content: i.get("content"),
                 message_type: MessageType::from_string(i.get("message_type")).unwrap(),
                 edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")),
+                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or(SqlDate::null()),
                 channel_id: ChannelId::new(i.get("channel_id")),
                 author_id: User::get_user_by_id(i.get("author_id"), executor)
                     .await

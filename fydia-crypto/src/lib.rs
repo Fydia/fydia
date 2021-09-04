@@ -1,3 +1,6 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 use openssl::pkey::{Private, Public};
 use openssl::rsa::Rsa;
 

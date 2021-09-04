@@ -39,7 +39,12 @@ pub fn aes_decrypt(
     rsa: PrivateKey,
     body: (Iv, AesKeyEncrypt, EncryptedBody),
 ) -> Result<String, ()> {
-    let aes_key = decrypt(&rsa, body.1 .0).unwrap().split_at(32).0.to_string();
+    let aes_key = if let Ok(decrypted) = decrypt(&rsa, body.1 .0) {
+        decrypted.split_at(32).0.to_string()
+    } else {
+        return Err(());
+    };
+    
     let cipher = Cipher::aes_256_ctr();
     let try_body = openssl::symm::decrypt(
         cipher,

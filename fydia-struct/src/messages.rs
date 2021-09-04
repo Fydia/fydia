@@ -83,9 +83,13 @@ impl SqlDate {
     pub fn new(date: DateTime<Utc>) -> Self {
         Self { 0: date }
     }
-    pub fn parse_string(parse: String) -> Self {
-        let datetime = DateTime::parse_from_str(parse.as_str(), "%F %T").unwrap();
-        Self::new_fixed(datetime)
+    pub fn parse_string(parse: String) -> Option<Self> {
+        if let Ok(datetime) = DateTime::parse_from_str(parse.as_str(), "%F %T") {
+            Some(Self::new_fixed(datetime))            
+        } else {
+            None
+        }
+        
     }
     pub fn now() -> Self {
         Self {
@@ -97,6 +101,9 @@ impl SqlDate {
         Self {
             0: DateTime::from(date),
         }
+    }
+    pub fn null() -> Self {
+        Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
     }
 }
 

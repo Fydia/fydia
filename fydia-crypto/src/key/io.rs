@@ -1,40 +1,54 @@
-use std::io::{Read, Write};
+use std::{error::Error, io::{Read, Write}};
 
 use openssl::{pkey::Private, rsa::Rsa};
 
 pub fn write(rsa: Rsa<Private>) -> std::io::Result<()> {
-    let publickey = rsa.public_key_to_pem().unwrap();
-    let privatekey = rsa.private_key_to_pem().unwrap();
+    match (rsa.public_key_to_pem(), rsa.private_key_to_pem()) {
+        (Ok(publickey), Ok(privatekey)) => {
+            let create_dir = std::fs::create_dir("keys/");
 
-    let create_dir = std::fs::create_dir("keys/");
-
-    if let Err(e) = create_dir {
-        return Err(e);
+            if let Err(e) = create_dir {
+                return Err(e);
+            }
+        
+            let publicfile = std::fs::File::create("keys/public.key");
+        
+            let write_publicfile = match publicfile {
+                Ok(mut file ) => {
+                    file.write(&publickey)
+                },
+                Err(e) => return Err(e),
+            };
+        
+            if let Err(e) = write_publicfile {
+                return Err(e);
+            }
+        
+            let privatefile = std::fs::File::create("keys/private.key");
+        
+            if let Err(e) = privatefile {
+                return Err(e);
+            }
+        
+            let write_privatefile = match privatefile {
+                Ok(mut file) => {
+                    file.write(&privatekey)
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+        
+            if let Err(e) = write_privatefile {
+                return Err(e);
+            }
+        }
+        _ => {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Public key to pem error"));
+        }
     }
 
-    let publicfile = std::fs::File::create("keys/public.key");
 
-    if let Err(e) = publicfile {
-        return Err(e);
-    }
-
-    let write_publicfile = publicfile.unwrap().write(&publickey);
-
-    if let Err(e) = write_publicfile {
-        return Err(e);
-    }
-
-    let privatefile = std::fs::File::create("keys/private.key");
-
-    if let Err(e) = privatefile {
-        return Err(e);
-    }
-
-    let write_privatefile = privatefile.unwrap().write(&privatekey);
-
-    if let Err(e) = write_privatefile {
-        return Err(e);
-    }
 
     Ok(())
 }

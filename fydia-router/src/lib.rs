@@ -101,14 +101,19 @@ pub async fn get_router(config: Config) -> Router {
 
     success!(format!("Ip is : {}", domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
-
+    let public_key = if let Some(public_key) = private_to_public(privatekey.clone()) {
+        public_key
+    } else {
+        panic!("Public key error");
+    };
+    
     let (chain, pipelineset) = single_pipeline(
         new_pipeline()
             .add(StateMiddleware::new(SqlPool::new(database)))
             .add(StateMiddleware::new(Websockets::new()))
             .add(StateMiddleware::new(RsaData(
                 privatekey.clone(),
-                private_to_public(privatekey.clone()),
+                public_key,
             )))
             .add(StateMiddleware::new(Instance::new(
                 fydia_struct::instance::Protocol::HTTP,

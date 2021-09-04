@@ -44,13 +44,16 @@ impl Instance {
     pub fn from(string: String) -> Option<Self> {
         if let Ok(e) = url::Url::parse(string.as_str()) {
             let protocol = Protocol::parse(e.scheme());
-            let domain = e.domain().unwrap().to_string();
-            let port = e.port().unwrap_or(8080);
-            return Some(Self {
-                protocol,
-                domain,
-                port,
-            });
+            match (e.domain(), e.port()) {
+                (Some(domain), Some(port)) => {
+                    return Some(Self {
+                        protocol,
+                        domain: domain.to_string(),
+                        port,
+                    });
+                }
+                _ => {}
+            }
         }
 
         None

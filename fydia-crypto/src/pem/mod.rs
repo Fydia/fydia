@@ -11,7 +11,11 @@ pub fn get_key_from_string(pem: String) -> Option<Rsa<Public>> {
 
 pub fn key_to_string(key: &Rsa<Public>) -> Option<String> {
     if let Ok(pem) = key.public_key_to_pem() {
-        Some(String::from_utf8(pem).unwrap())
+        if let Ok(string) = String::from_utf8(pem) {
+            Some(string)
+        } else {
+            None
+        }
     } else {
         None
     }
