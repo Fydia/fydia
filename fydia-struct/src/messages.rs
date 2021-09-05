@@ -85,11 +85,10 @@ impl SqlDate {
     }
     pub fn parse_string(parse: String) -> Option<Self> {
         if let Ok(datetime) = DateTime::parse_from_str(parse.as_str(), "%F %T") {
-            Some(Self::new_fixed(datetime))            
+            Some(Self::new_fixed(datetime))
         } else {
             None
         }
-        
     }
     pub fn now() -> Self {
         Self {

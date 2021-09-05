@@ -20,7 +20,7 @@ pub async fn join(mut state: State) -> HandlerResult {
     let database = &SqlPool::borrow_from(&state).get_pool();
     let server = ServerExtractor::borrow_from(&state).serverid.clone();
     if let Some(user) = User::get_user_by_token(&token, database).await {
-        if let Some(mut server) = Server::get_server_by_id(ServerId::new(server), database).await {
+        if let Ok(mut server) = Server::get_server_by_id(ServerId::new(server), database).await {
             if user.server.is_join(ServerId::new(server.id.clone())) {
                 *res.body_mut() = "Already join".into();
                 *res.status_mut() = StatusCode::BAD_REQUEST;

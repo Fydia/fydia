@@ -45,7 +45,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
     if let Some(user) = token.get_user(database).await {
         if user.server.is_join(serverid.clone()) {
             if let Some(serverid) = user.server.get(serverid.clone().short_id) {
-                if let Some(server) = serverid.get_server(database).await {
+                if let Ok(server) = serverid.get_server(database).await {
                     if server.channel.is_exists(channelid.clone()) {
                         if headers.get("content-type").unwrap() == "application/json" {
                             if let Ok(body) = body::to_bytes(Body::take_from(&mut state)).await {
@@ -65,19 +65,25 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                         Websockets::borrow_mut_from(&mut state)
                                                             .clone();
                                                     let key = RsaData::borrow_from(&state).clone();
-                                                    let users = server.get_user(database).await;
-                                                    tokio::spawn(async move {
-                                                        websocket
-                                                            .send(
-                                                                &channel_msg.clone(),
-                                                                users.clone(),
-                                                                Some(&key),
-                                                                None,
-                                                            )
-                                                            .await;
-                                                    });
+                                                    if let Ok(users) = server.get_user(database).await {
+
+                                                        tokio::spawn(async move {
+                                                            websocket
+                                                                .send(
+                                                                    &channel_msg.clone(),
+                                                                    users.clone(),
+                                                                    Some(&key),
+                                                                    None,
+                                                                )
+                                                                .await;
+                                                        });
+
                                                     *res.body_mut() = "".into();
                                                     *res.status_mut() = StatusCode::OK;
+                                                    } else{
+                                                        *res.body_mut() = "Cannot get user".into();
+                                                        *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                                    }
                                                 }
                                                 Err(error) => {
                                                     if let Some(header) =
@@ -129,20 +135,25 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                             let mut websocket =
                                                 Websockets::borrow_mut_from(&mut state).clone();
                                             let key = RsaData::borrow_from(&state).clone();
-                                            let users = server.get_user(database).await;
-                                            tokio::spawn(async move {
-                                                websocket
-                                                    .send(
-                                                        &msg.clone(),
-                                                        users.clone(),
-                                                        Some(&key),
-                                                        None,
-                                                    )
-                                                    .await;
-                                            });
+                                            if let Ok(users) = server.get_user(database).await {
 
-                                            *res.body_mut() = "Message send".into();
-                                            *res.status_mut() = StatusCode::OK;
+                                                tokio::spawn(async move {
+                                                    websocket
+                                                        .send(
+                                                            &msg.clone(),
+                                                            users.clone(),
+                                                            Some(&key),
+                                                            None,
+                                                        )
+                                                        .await;
+                                                });
+
+                                                *res.body_mut() = "Message send".into();
+                                                *res.status_mut() = StatusCode::OK;
+                                            } else{
+                                                *res.body_mut() = "Cannot get user".into();
+                                                *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                            }
                                         }
                                         Err(e) => {
                                             *res.body_mut() =

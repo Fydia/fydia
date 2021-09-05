@@ -50,17 +50,13 @@ impl Websockets {
         e.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
                 if i.user.instance.domain == "localhost" {
-                    i.channel.send(ChannelMessage::Message(Box::new(msg.clone())));
+                    i.channel
+                        .send(ChannelMessage::Message(Box::new(msg.clone())));
                 } else if let Some(rsa) = keys {
                     if let Ok(public_key) = i.user.instance.get_public_key() {
-                        let _encrypt_message = encrypt_message(
-                            rsa,
-                            public_key,
-                            msg.clone(),
-                        );
+                        let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
                         //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
                     }
-                    
                 }
             }
         });
@@ -173,11 +169,12 @@ fn response(headers: &HeaderMap) -> Result<Response<Body>, ()> {
     let key = headers.get(SEC_WEBSOCKET_KEY).ok_or(())?;
 
     if let Ok(res) = Response::builder()
-    .header(UPGRADE, PROTO_WEBSOCKET)
-    .header(CONNECTION, "upgrade")
-    .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
-    .status(StatusCode::SWITCHING_PROTOCOLS)
-    .body(Body::empty()) {
+        .header(UPGRADE, PROTO_WEBSOCKET)
+        .header(CONNECTION, "upgrade")
+        .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
+        .status(StatusCode::SWITCHING_PROTOCOLS)
+        .body(Body::empty())
+    {
         return Ok(res);
     }
 

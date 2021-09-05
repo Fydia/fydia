@@ -106,7 +106,7 @@ pub async fn get_router(config: Config) -> Router {
     } else {
         panic!("Public key error");
     };
-    
+
     let (chain, pipelineset) = single_pipeline(
         new_pipeline()
             .add(StateMiddleware::new(SqlPool::new(database)))

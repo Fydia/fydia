@@ -12,11 +12,18 @@ use sqlx::Row;
 #[async_trait::async_trait]
 pub trait SqlChannel {
     async fn get_channel_by_id(id: ChannelId, executor: &FydiaPool) -> Option<Channel>;
-    async fn get_channels_by_server_id(server_id: String, executor: &FydiaPool) -> Channels;
-    async fn update_name(&mut self, name: String, executor: &FydiaPool);
-    async fn update_description(&mut self, description: String, executor: &FydiaPool);
-    async fn delete_channel(&self, executor: &FydiaPool);
-    async fn get_messages(&self, executor: &FydiaPool) -> Vec<Message>;
+    async fn get_channels_by_server_id(
+        server_id: String,
+        executor: &FydiaPool,
+    ) -> Result<Channels, String>;
+    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String>;
+    async fn update_description(
+        &mut self,
+        description: String,
+        executor: &FydiaPool,
+    ) -> Result<(), String>;
+    async fn delete_channel(&self, executor: &FydiaPool) -> Result<(), String>;
+    async fn get_messages(&self, executor: &FydiaPool) -> Result<Vec<Message>, String>;
 }
 
 #[async_trait::async_trait]
@@ -27,8 +34,7 @@ impl SqlChannel for Channel {
             FydiaPool::Mysql(mysql) => {
                 match sqlx::query(rawquery).bind(&id.id).fetch_one(mysql).await {
                     Ok(r) => r.to_anyrow(),
-                    Err(e) => {
-                        error!(e.as_database_error().unwrap().to_string());
+                    Err(e) =>{
                         return None;
                     }
                 }
@@ -36,8 +42,7 @@ impl SqlChannel for Channel {
             FydiaPool::PgSql(pgsql) => {
                 match sqlx::query(rawquery).bind(&id.id).fetch_one(pgsql).await {
                     Ok(r) => r.to_anyrow(),
-                    Err(e) => {
-                        error!(e.as_database_error().unwrap().to_string());
+                    Err(_) => {
                         return None;
                     }
                 }
@@ -46,7 +51,6 @@ impl SqlChannel for Channel {
                 match sqlx::query(rawquery).bind(&id.id).fetch_one(sqlite).await {
                     Ok(r) => r.to_anyrow(),
                     Err(e) => {
-                        error!(e.as_database_error().unwrap().to_string());
                         return None;
                     }
                 }
@@ -62,7 +66,10 @@ impl SqlChannel for Channel {
         });
     }
 
-    async fn get_channels_by_server_id(server_id: String, executor: &FydiaPool) -> Channels {
+    async fn get_channels_by_server_id(
+        server_id: String,
+        executor: &FydiaPool,
+    ) -> Result<Channels, String> {
         let mut server_id = server_id;
         if server_id.len() > 10 {
             server_id = server_id.split_at(10).0.to_string();
@@ -71,24 +78,27 @@ impl SqlChannel for Channel {
         let mut channels: Vec<Channel> = Vec::new();
         let rawquery = "SELECT * FROM Channels WHERE serverid = ?";
         let rows = match executor {
-            FydiaPool::Mysql(mysql) => sqlx::query(rawquery)
+            FydiaPool::Mysql(mysql) => match sqlx::query(rawquery)
                 .bind(server_id)
                 .fetch_all(mysql)
-                .await
-                .unwrap()
-                .to_anyrows(),
-            FydiaPool::PgSql(pgsql) => sqlx::query(rawquery)
+                .await {
+                    Ok(e) => {e.to_anyrows()},
+                    Err(e) => return Err(e.to_string())
+                },
+            FydiaPool::PgSql(pgsql) => match sqlx::query(rawquery)
                 .bind(server_id)
                 .fetch_all(pgsql)
-                .await
-                .unwrap()
-                .to_anyrows(),
-            FydiaPool::Sqlite(sqlite) => sqlx::query(rawquery)
+                .await{
+                    Ok(e) => {e.to_anyrows()},
+                    Err(e) => return Err(e.to_string())
+                },
+            FydiaPool::Sqlite(sqlite) => match sqlx::query(rawquery)
                 .bind(server_id)
                 .fetch_all(sqlite)
-                .await
-                .unwrap()
-                .to_anyrows(),
+                .await{
+                    Ok(e) => {e.to_anyrows()},
+                    Err(e) => return Err(e.to_string())
+                },
         };
 
         for i in rows {
@@ -101,107 +111,121 @@ impl SqlChannel for Channel {
             })
         }
 
-        Channels(channels)
+        Ok(Channels(channels))
     }
 
-    async fn update_name(&mut self, name: String, executor: &FydiaPool) {
+    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String> {
         let rawquery = "UPDATE Channels SET name=? WHERE id=?;";
 
         match executor {
             FydiaPool::Mysql(mysql) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&name)
                     .bind(&self.id)
                     .execute(mysql)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::PgSql(pgsql) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&name)
                     .bind(&self.id)
                     .execute(pgsql)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::Sqlite(sqlite) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&name)
                     .bind(&self.id)
                     .execute(sqlite)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
         }
 
         self.name = name;
+
+        Ok(())
     }
 
-    async fn update_description(&mut self, description: String, executor: &FydiaPool) {
+    async fn update_description(
+        &mut self,
+        description: String,
+        executor: &FydiaPool,
+    ) -> Result<(), String> {
         let rawquery = "UPDATE Channels SET description=? WHERE id=?;";
 
         match executor {
             FydiaPool::Mysql(mysql) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&description)
                     .bind(&self.id)
                     .execute(mysql)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::PgSql(pgsql) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&description)
                     .bind(&self.id)
                     .execute(pgsql)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::Sqlite(sqlite) => {
-                sqlx::query(rawquery)
+                if let Err(e) = sqlx::query(rawquery)
                     .bind(&description)
                     .bind(&self.id)
                     .execute(sqlite)
                     .await
-                    .expect("Error");
+                {
+                    return Err(e.to_string());
+                };
             }
         }
 
         self.description = description;
+
+        Ok(())
     }
 
-    async fn delete_channel(&self, executor: &FydiaPool) {
+    async fn delete_channel(&self, executor: &FydiaPool) -> Result<(), String> {
         let rawquery = "DELETE FROM Channels WHERE id=?;";
 
         match executor {
             FydiaPool::Mysql(mysql) => {
-                sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .execute(mysql)
-                    .await
-                    .expect("Error");
+                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(mysql).await {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::PgSql(pgsql) => {
-                sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .execute(pgsql)
-                    .await
-                    .expect("Error");
+                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(pgsql).await {
+                    return Err(e.to_string());
+                };
             }
             FydiaPool::Sqlite(sqlite) => {
-                sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .execute(sqlite)
-                    .await
-                    .expect("Error");
+                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(sqlite).await {
+                    return Err(e.to_string());
+                };
             }
         }
+
+        Ok(())
     }
 
-    async fn get_messages(&self, executor: &FydiaPool) -> Vec<Message> {
-        Message::get_messages_by_channel(self.id.clone(), executor)
-            .await
-            .unwrap()
+    async fn get_messages(&self, executor: &FydiaPool) -> Result<Vec<Message>, String> {
+        Message::get_messages_by_channel(self.id.clone(), executor).await
     }
 }
 

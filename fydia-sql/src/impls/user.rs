@@ -8,6 +8,7 @@ use fydia_struct::{server::ServerId, user::User};
 use fydia_utils::generate_string;
 use fydia_utils::hash;
 use fydia_utils::verify_password;
+use sqlx::error::DatabaseError;
 use sqlx::Row;
 
 #[async_trait]
@@ -101,7 +102,8 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap(),
+                serde_json::from_str(i.get::<String, &str>("server").as_str())
+                    .unwrap_or(Vec::new()),
             ),
         })
     }
@@ -146,7 +148,8 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap(),
+                serde_json::from_str(i.get::<String, &str>("server").as_str())
+                    .unwrap_or(Vec::new()),
             ),
         })
     }
@@ -195,7 +198,8 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap(),
+                serde_json::from_str(i.get::<String, &str>("server").as_str())
+                    .unwrap_or(Vec::new()),
             ),
         })
     }
@@ -212,10 +216,10 @@ impl SqlUser for User {
                     .execute(mysql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
@@ -225,10 +229,10 @@ impl SqlUser for User {
                     .execute(pgsql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
@@ -238,10 +242,10 @@ impl SqlUser for User {
                     .execute(sqlite)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         }
@@ -261,10 +265,10 @@ impl SqlUser for User {
                     .execute(mysql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
@@ -274,10 +278,10 @@ impl SqlUser for User {
                     .execute(pgsql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
@@ -287,10 +291,10 @@ impl SqlUser for User {
                     .execute(sqlite)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         };
@@ -316,10 +320,10 @@ impl SqlUser for User {
                     .execute(mysql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
@@ -329,10 +333,10 @@ impl SqlUser for User {
                     .execute(pgsql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
@@ -342,10 +346,10 @@ impl SqlUser for User {
                     .execute(sqlite)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         };
@@ -363,45 +367,48 @@ impl SqlUser for User {
         let rawquery = "UPDATE `User` SET server=? WHERE id=?;";
         let server = &mut self.server.0;
         server.push(server_short_id);
-
+        let json = match serde_json::to_string(&server) {
+            Ok(json) => json,
+            Err(error) => error.to_string(),
+        };
         match executor {
             FydiaPool::Mysql(mysql) => {
                 if let Err(e) = sqlx::query(rawquery)
-                    .bind(serde_json::to_string(&server).unwrap())
+                    .bind(json)
                     .bind(&self.id)
                     .execute(mysql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
                 if let Err(e) = sqlx::query(rawquery)
-                    .bind(serde_json::to_string(&server).unwrap())
+                    .bind(json)
                     .bind(&self.id)
                     .execute(pgsql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
                 if let Err(e) = sqlx::query(rawquery)
-                    .bind(serde_json::to_string(&server).unwrap())
+                    .bind(json)
                     .bind(&self.id)
                     .execute(sqlite)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         };
@@ -414,6 +421,10 @@ impl SqlUser for User {
         (name, token, email, password, server)
         VALUES(?,?, ?, ?, ?);
         ";
+        let json = match serde_json::to_string(&Servers(Vec::new())) {
+            Ok(json) => json,
+            Err(error) => return Err(error.to_string()),
+        };
 
         match executor {
             FydiaPool::Mysql(mysql) => {
@@ -422,14 +433,14 @@ impl SqlUser for User {
                     .bind("")
                     .bind(&self.email)
                     .bind(&self.password)
-                    .bind(serde_json::to_string(&Servers(Vec::new())).unwrap())
+                    .bind(json)
                     .execute(mysql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
@@ -438,14 +449,14 @@ impl SqlUser for User {
                     .bind("")
                     .bind(&self.email)
                     .bind(&self.password)
-                    .bind(serde_json::to_string(&Servers(Vec::new())).unwrap())
+                    .bind(json)
                     .execute(pgsql)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
@@ -454,14 +465,14 @@ impl SqlUser for User {
                     .bind("")
                     .bind(&self.email)
                     .bind(&self.password)
-                    .bind(serde_json::to_string(&Servers(Vec::new())).unwrap())
+                    .bind(json)
                     .execute(sqlite)
                     .await
                 {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         };
@@ -475,26 +486,26 @@ impl SqlUser for User {
         match executor {
             FydiaPool::Mysql(mysql) => {
                 if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(mysql).await {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::PgSql(pgsql) => {
                 if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(pgsql).await {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
             FydiaPool::Sqlite(sqlite) => {
                 if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(sqlite).await {
-                    return Err(e
-                        .as_database_error()
-                        .expect("Can't get a error message")
-                        .to_string());
+                    return match e.as_database_error() {
+                        Some(error) => Err(error.to_string()),
+                        None => Err("Cannot get database error".to_string()),
+                    };
                 }
             }
         };

@@ -20,7 +20,7 @@ pub async fn get_server(state: State) -> HandlerResult {
     let mut res = create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, "");
     let serverid = ServerExtractor::borrow_from(&state);
     let mut servers: GetServer = GetServer { server: Vec::new() };
-    if let Some(getted_server) =
+    if let Ok(getted_server) =
         Server::get_server_by_id(ServerId::new(serverid.serverid.clone()), database).await
     {
         let token = if let Some(token) = Token::from_headervalue(&headers) {
@@ -34,7 +34,7 @@ pub async fn get_server(state: State) -> HandlerResult {
         if let Some(e) = server {
             let a = e.server;
             for i in a.0 {
-                if let Some(server) = i.get_server(database).await {
+                if let Ok(server) = i.get_server(database).await {
                     servers.server.push(server);
                 }
             }

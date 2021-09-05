@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used)]
+
 use crate::sqlpool::FydiaPool;
 use fydia_config::{DatabaseConfig, DatabaseType};
 use sqlx::{MySqlPool, PgPool, SqlitePool};

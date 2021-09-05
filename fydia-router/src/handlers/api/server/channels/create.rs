@@ -27,7 +27,7 @@ pub async fn create_channel(mut state: State) -> HandlerResult {
             {
                 if let Ok(vec) = body::to_bytes(body).await {
                     if let Ok(body) = String::from_utf8(vec.to_vec()) {
-                        if let Some(mut server) = Server::get_server_by_id(
+                        if let Ok(mut server) = Server::get_server_by_id(
                             ServerId::new(serverid.serverid.to_string()),
                             database,
                         )

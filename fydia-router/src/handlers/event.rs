@@ -8,8 +8,9 @@ pub async fn event_handler(event: Event, state: &mut State) {
     let database = SqlPool::borrow_from(state).get_pool();
 
     let websockets = Websockets::borrow_mut_from(state);
-    if let Some(server) = event.server.get_server(&database).await {
-        let users = server.get_user(&database).await;
-        websockets.send(&event.clone(), users, None, None).await;
+    if let Ok(server) = event.server.get_server(&database).await {
+        if let Ok(users) = server.get_user(&database).await {
+            websockets.send(&event.clone(), users, None, None).await;
+        }
     }
 }

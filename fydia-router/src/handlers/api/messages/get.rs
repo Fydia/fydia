@@ -32,7 +32,7 @@ pub async fn get_message(state: State) -> HandlerResult {
     if let Some(user) = token.get_user(database).await {
         if user.server.is_join(ServerId::new(serverid.clone())) {
             if let Some(serverid) = user.server.get(serverid) {
-                if let Some(server) = serverid.get_server(database).await {
+                if let Ok(server) = serverid.get_server(database).await {
                     if let Some(e) = server.channel.get_channel(channelid) {
                         if let Ok(messages) = serde_json::to_string(&e.get_messages(database).await)
                         {

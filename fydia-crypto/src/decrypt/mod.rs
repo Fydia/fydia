@@ -44,7 +44,7 @@ pub fn aes_decrypt(
     } else {
         return Err(());
     };
-    
+
     let cipher = Cipher::aes_256_ctr();
     let try_body = openssl::symm::decrypt(
         cipher,
