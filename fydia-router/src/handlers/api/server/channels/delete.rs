@@ -10,7 +10,7 @@ use gotham::{
 };
 
 pub async fn delete_channel(state: State) -> HandlerResult {
-    let res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
+    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
     let channel_extracted = ChannelExtractor::borrow_from(&state);
     let database = &SqlPool::borrow_from(&state).get_pool();
 
@@ -20,7 +20,11 @@ pub async fn delete_channel(state: State) -> HandlerResult {
     )
     .await
     {
-        channel.delete_channel(database).await;
+        if let Err(error) = channel.delete_channel(database).await {
+            *res.body_mut() = "Cannot delete the channel".into();
+            *res.status_mut() = StatusCode::BAD_REQUEST;
+            error!(error);
+        };
     };
 
     Ok((state, res))

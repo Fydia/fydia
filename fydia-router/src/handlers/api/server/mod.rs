@@ -23,7 +23,7 @@ pub async fn get_server(state: State) -> HandlerResult {
     if let Ok(getted_server) =
         Server::get_server_by_id(ServerId::new(serverid.serverid.clone()), database).await
     {
-        let token = if let Some(token) = Token::from_headervalue(&headers) {
+        let token = if let Some(token) = Token::from_headervalue(headers) {
             token
         } else {
             return Ok((state, res));

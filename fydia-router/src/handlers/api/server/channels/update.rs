@@ -9,7 +9,7 @@ use gotham::state::{FromState, State};
 use serde_json::Value;
 
 pub async fn update_name(mut state: State) -> HandlerResult {
-    let res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
+    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
     let body = body::to_bytes(Body::take_from(&mut state));
     if let Ok(body_bytes) = body.await {
         let body_vec = body_bytes.to_vec();
@@ -25,7 +25,13 @@ pub async fn update_name(mut state: State) -> HandlerResult {
                         )
                         .await
                         {
-                            channel.update_name(name_str.to_string(), database).await;
+                            if let Err(error) =
+                                channel.update_name(name_str.to_string(), database).await
+                            {
+                                *res.status_mut() = StatusCode::BAD_REQUEST;
+                                *res.body_mut() = "Cannot update description".into();
+                                error!(error);
+                            }
                         }
                     }
                 };
@@ -37,7 +43,7 @@ pub async fn update_name(mut state: State) -> HandlerResult {
 }
 
 pub async fn update_description(mut state: State) -> HandlerResult {
-    let res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
+    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
 
     let body = body::to_bytes(Body::take_from(&mut state));
     let channel_extracted = ChannelExtractor::borrow_from(&state);
@@ -55,9 +61,14 @@ pub async fn update_description(mut state: State) -> HandlerResult {
                         )
                         .await
                         {
-                            channel
+                            if let Err(error) = channel
                                 .update_description(description_str.to_string(), database)
-                                .await;
+                                .await
+                            {
+                                *res.status_mut() = StatusCode::BAD_REQUEST;
+                                *res.body_mut() = "Cannot update description".into();
+                                error!(error);
+                            }
                         }
                     }
                 }

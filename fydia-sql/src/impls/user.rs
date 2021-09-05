@@ -8,7 +8,6 @@ use fydia_struct::{server::ServerId, user::User};
 use fydia_utils::generate_string;
 use fydia_utils::hash;
 use fydia_utils::verify_password;
-use sqlx::error::DatabaseError;
 use sqlx::Row;
 
 #[async_trait]
@@ -102,8 +101,7 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str())
-                    .unwrap_or(Vec::new()),
+                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap_or_default(),
             ),
         })
     }
@@ -148,8 +146,7 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str())
-                    .unwrap_or(Vec::new()),
+                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap_or_default(),
             ),
         })
     }
@@ -198,8 +195,7 @@ impl SqlUser for User {
             password: i.get("password"),
             description: i.get("description"),
             server: Servers(
-                serde_json::from_str(i.get::<String, &str>("server").as_str())
-                    .unwrap_or(Vec::new()),
+                serde_json::from_str(i.get::<String, &str>("server").as_str()).unwrap_or_default(),
             ),
         })
     }

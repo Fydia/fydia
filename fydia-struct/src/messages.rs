@@ -4,7 +4,7 @@ use chrono::{DateTime, Datelike, FixedOffset, NaiveDateTime, Timelike, Utc};
 use fydia_utils::generate_string;
 use serde::de::{Error, Unexpected, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -17,18 +17,20 @@ pub enum MessageType {
     AUDIO,
 }
 
-impl MessageType {
-    pub fn to_string(&self) -> String {
+impl Display for MessageType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MessageType::TEXT => String::from("TEXT"),
-            MessageType::FILE => String::from("FILE"),
-            MessageType::VIDEO => String::from("VIDEO"),
-            MessageType::PHOTO => String::from("PHOTO"),
-            MessageType::AUDIO => String::from("AUDIO"),
-            MessageType::URL => String::from("URL"),
+            MessageType::TEXT => write!(f, "TEXT"),
+            MessageType::FILE => write!(f, "FILE"),
+            MessageType::VIDEO => write!(f, "VIDEO"),
+            MessageType::PHOTO => write!(f, "PHOTO"),
+            MessageType::AUDIO => write!(f, "AUDIO"),
+            MessageType::URL => write!(f, "URL"),
         }
     }
+}
 
+impl MessageType {
     pub fn from_string(from: String) -> Option<Self> {
         match from.to_uppercase().as_str() {
             "TEXT" => Some(Self::TEXT),
@@ -112,8 +114,7 @@ impl Serialize for SqlDate {
         S: Serializer,
     {
         //serde::ser::SerializeStruct::serialize_field(&mut serializer, "timestamp")
-        serializer
-            .serialize_str(format!("{}", datetime_to_sqltime(DateTime::from(self.0))).as_str())
+        serializer.serialize_str(datetime_to_sqltime(self.0).as_str())
     }
 }
 

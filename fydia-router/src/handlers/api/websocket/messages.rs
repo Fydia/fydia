@@ -145,12 +145,12 @@ where
     Ok(())
 }
 
-pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, ()>
+pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>
 where
     T: Serialize,
 {
     match serde_json::to_string(msg) {
         Ok(json) => Ok(Message::from(json)),
-        _ => Err(()),
+        Err(e) => Err(e.to_string()),
     }
 }

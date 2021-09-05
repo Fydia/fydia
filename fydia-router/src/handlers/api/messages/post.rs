@@ -65,8 +65,9 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                         Websockets::borrow_mut_from(&mut state)
                                                             .clone();
                                                     let key = RsaData::borrow_from(&state).clone();
-                                                    if let Ok(users) = server.get_user(database).await {
-
+                                                    if let Ok(users) =
+                                                        server.get_user(database).await
+                                                    {
                                                         tokio::spawn(async move {
                                                             websocket
                                                                 .send(
@@ -78,11 +79,12 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                                 .await;
                                                         });
 
-                                                    *res.body_mut() = "".into();
-                                                    *res.status_mut() = StatusCode::OK;
-                                                    } else{
+                                                        *res.body_mut() = "".into();
+                                                        *res.status_mut() = StatusCode::OK;
+                                                    } else {
                                                         *res.body_mut() = "Cannot get user".into();
-                                                        *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                                        *res.status_mut() =
+                                                            StatusCode::INTERNAL_SERVER_ERROR;
                                                     }
                                                 }
                                                 Err(error) => {
@@ -136,7 +138,6 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                 Websockets::borrow_mut_from(&mut state).clone();
                                             let key = RsaData::borrow_from(&state).clone();
                                             if let Ok(users) = server.get_user(database).await {
-
                                                 tokio::spawn(async move {
                                                     websocket
                                                         .send(
@@ -150,9 +151,10 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
 
                                                 *res.body_mut() = "Message send".into();
                                                 *res.status_mut() = StatusCode::OK;
-                                            } else{
+                                            } else {
                                                 *res.body_mut() = "Cannot get user".into();
-                                                *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                                *res.status_mut() =
+                                                    StatusCode::INTERNAL_SERVER_ERROR;
                                             }
                                         }
                                         Err(e) => {
@@ -200,9 +202,10 @@ pub async fn multipart_message(
                     if field_name.eq("file") {
                         if let Ok(mut info) = std::fs::File::create(format!("{}.json", name)) {
                             if let Some(name) = field.file_name() {
-                                if let Err(_) =
+                                if let Err(error) =
                                     info.write_all(format!(r#"{{"name":"{}"}}"#, name).as_bytes())
                                 {
+                                    error!(error.to_string());
                                     return Err(String::from("File writing error"));
                                 }
                             };

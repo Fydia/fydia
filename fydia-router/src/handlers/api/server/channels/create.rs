@@ -48,11 +48,18 @@ pub async fn create_channel(mut state: State) -> HandlerResult {
                                                 channel.channel_type =
                                                     ChannelType::from_string(ctype.to_string());
 
-                                                server
+                                                if let Err(error) = server
                                                     .insert_channel(channel.clone(), database)
-                                                    .await;
-                                                *res.body_mut() = channel.id.into();
-                                                *res.status_mut() = StatusCode::OK;
+                                                    .await
+                                                {
+                                                    *res.body_mut() =
+                                                        "Cannot create the channel".into();
+                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                                                    error!(error);
+                                                } else {
+                                                    *res.body_mut() = channel.id.into();
+                                                    *res.status_mut() = StatusCode::OK;
+                                                }
                                             }
                                             _ => {
                                                 *res.body_mut() = "Error".into();

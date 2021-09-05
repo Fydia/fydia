@@ -45,6 +45,12 @@ impl DatabaseConfig {
     }
 }
 
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub ip: String,
@@ -60,9 +66,21 @@ impl ServerConfig {
     }
 }
 
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct InstanceConfig {
     pub domain: String, // URL OR IP
+}
+
+impl Default for InstanceConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InstanceConfig {

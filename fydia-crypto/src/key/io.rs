@@ -1,7 +1,4 @@
-use std::{
-    error::Error,
-    io::{Read, Write},
-};
+use std::io::{Read, Write};
 
 use openssl::{pkey::Private, rsa::Rsa};
 
@@ -56,7 +53,7 @@ pub fn write(rsa: Rsa<Private>) -> std::io::Result<()> {
 pub fn read() -> Option<Rsa<Private>> {
     if let Ok(mut file) = std::fs::File::open("./keys/private.key") {
         let mut buf = Vec::new();
-        if let Ok(_) = file.read_to_end(&mut buf) {
+        if file.read_to_end(&mut buf).is_ok() {
             if let Ok(rsa) = Rsa::private_key_from_pem(&buf) {
                 return Some(rsa);
             };
@@ -67,5 +64,5 @@ pub fn read() -> Option<Rsa<Private>> {
         return None;
     }
     println!("Can't read");
-    return None;
+    None
 }

@@ -6,7 +6,6 @@ use fydia_struct::{
     messages::Message,
     server::{Channels, ServerId},
 };
-use logger::error;
 use sqlx::Row;
 
 #[async_trait::async_trait]
@@ -34,7 +33,7 @@ impl SqlChannel for Channel {
             FydiaPool::Mysql(mysql) => {
                 match sqlx::query(rawquery).bind(&id.id).fetch_one(mysql).await {
                     Ok(r) => r.to_anyrow(),
-                    Err(e) =>{
+                    Err(_) => {
                         return None;
                     }
                 }
@@ -50,7 +49,7 @@ impl SqlChannel for Channel {
             FydiaPool::Sqlite(sqlite) => {
                 match sqlx::query(rawquery).bind(&id.id).fetch_one(sqlite).await {
                     Ok(r) => r.to_anyrow(),
-                    Err(e) => {
+                    Err(_) => {
                         return None;
                     }
                 }
@@ -78,27 +77,26 @@ impl SqlChannel for Channel {
         let mut channels: Vec<Channel> = Vec::new();
         let rawquery = "SELECT * FROM Channels WHERE serverid = ?";
         let rows = match executor {
-            FydiaPool::Mysql(mysql) => match sqlx::query(rawquery)
-                .bind(server_id)
-                .fetch_all(mysql)
-                .await {
-                    Ok(e) => {e.to_anyrows()},
-                    Err(e) => return Err(e.to_string())
-                },
-            FydiaPool::PgSql(pgsql) => match sqlx::query(rawquery)
-                .bind(server_id)
-                .fetch_all(pgsql)
-                .await{
-                    Ok(e) => {e.to_anyrows()},
-                    Err(e) => return Err(e.to_string())
-                },
+            FydiaPool::Mysql(mysql) => {
+                match sqlx::query(rawquery).bind(server_id).fetch_all(mysql).await {
+                    Ok(e) => e.to_anyrows(),
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
+            FydiaPool::PgSql(pgsql) => {
+                match sqlx::query(rawquery).bind(server_id).fetch_all(pgsql).await {
+                    Ok(e) => e.to_anyrows(),
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
             FydiaPool::Sqlite(sqlite) => match sqlx::query(rawquery)
                 .bind(server_id)
                 .fetch_all(sqlite)
-                .await{
-                    Ok(e) => {e.to_anyrows()},
-                    Err(e) => return Err(e.to_string())
-                },
+                .await
+            {
+                Ok(e) => e.to_anyrows(),
+                Err(e) => return Err(e.to_string()),
+            },
         };
 
         for i in rows {

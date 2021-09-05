@@ -67,7 +67,7 @@ impl SqlMessage for Message {
                 content: i.get("content"),
                 message_type,
                 edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or(SqlDate::null()),
+                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or_else(SqlDate::null),
                 channel_id: ChannelId::new(i.get("channel_id")),
                 author_id,
             })
@@ -125,7 +125,7 @@ impl SqlMessage for Message {
                 content: i.get("content"),
                 message_type,
                 edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or(SqlDate::null()),
+                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or_else(SqlDate::null),
                 channel_id: ChannelId::new(i.get("channel_id")),
                 author_id,
             })

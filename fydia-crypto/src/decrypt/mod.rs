@@ -7,42 +7,39 @@ use openssl::{
     rsa::{Padding, Rsa},
 };
 
-pub fn decrypt(rsa: &Rsa<Private>, string: Vec<u8>) -> Result<String, ()> {
+pub fn decrypt(rsa: &Rsa<Private>, string: Vec<u8>) -> Result<String, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    if let Ok(_) = rsa.private_decrypt(string.as_slice(), &mut buf, Padding::PKCS1) {
-        if let Ok(string) = String::from_utf8(buf) {
-            Ok(string)
-        } else {
-            Err(())
-        }
-    } else {
-        Err(())
+    match rsa.private_decrypt(string.as_slice(), &mut buf, Padding::PKCS1) {
+        Ok(_) => match String::from_utf8(buf) {
+            Ok(string) => Ok(string),
+            Err(e) => Err(e.to_string()),
+        },
+
+        Err(e) => Err(e.to_string()),
     }
 }
 
-pub fn public_decrypt(rsa: &Rsa<Public>, string: Vec<u8>) -> Result<String, ()> {
+pub fn public_decrypt(rsa: &Rsa<Public>, string: Vec<u8>) -> Result<String, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    if let Ok(_) = rsa.public_decrypt(string.as_slice(), &mut buf, Padding::PKCS1) {
-        if let Ok(string) = String::from_utf8(buf) {
-            Ok(string)
-        } else {
-            Err(())
-        }
-    } else {
-        Err(())
+    match rsa.public_decrypt(string.as_slice(), &mut buf, Padding::PKCS1) {
+        Ok(_) => match String::from_utf8(buf) {
+            Ok(string) => Ok(string),
+            Err(e) => Err(e.to_string()),
+        },
+
+        Err(e) => Err(e.to_string()),
     }
 }
 
 pub fn aes_decrypt(
     rsa: PrivateKey,
     body: (Iv, AesKeyEncrypt, EncryptedBody),
-) -> Result<String, ()> {
-    let aes_key = if let Ok(decrypted) = decrypt(&rsa, body.1 .0) {
-        decrypted.split_at(32).0.to_string()
-    } else {
-        return Err(());
+) -> Result<String, String> {
+    let aes_key = match decrypt(&rsa, body.1 .0) {
+        Ok(decrypted) => decrypted.split_at(32).0.to_string(),
+        Err(e) => return Err(e),
     };
 
     let cipher = Cipher::aes_256_ctr();
@@ -56,7 +53,7 @@ pub fn aes_decrypt(
         Ok(e) => Ok(String::from_utf8(e).unwrap_or_default()),
         Err(error) => {
             println!("{}", error);
-            Err(())
+            Err(error.to_string())
         }
     };
 }

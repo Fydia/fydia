@@ -11,12 +11,7 @@ use serde_json::Value;
 
 pub async fn create_server(mut state: State) -> HandlerResult {
     let headers = HeaderMap::take_from(&mut state);
-    let mut res = create_response(
-        &state,
-        StatusCode::BAD_REQUEST,
-        mime::TEXT_PLAIN_UTF_8,
-        "BAD REQUEST".to_string(),
-    );
+    let mut res = create_response(&state, StatusCode::BAD_REQUEST, mime::TEXT_PLAIN_UTF_8, "");
     let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
@@ -32,8 +27,20 @@ pub async fn create_server(mut state: State) -> HandlerResult {
                             let mut server = Server::new();
                             server.name = name_str.to_string();
                             server.owner = user.id;
-                            server.insert_server(database).await;
-                            server.join(user, database).await;
+                            //
+                            match server.insert_server(database).await {
+                                Ok(_) => match server.join(user, database).await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        *res.body_mut() = "Cannot join the server".into();
+                                        error!(e);
+                                    }
+                                },
+                                Err(e) => {
+                                    *res.body_mut() = "Cannot join the server".into();
+                                    error!(e);
+                                }
+                            }
 
                             *res.status_mut() = StatusCode::OK;
                             *res.body_mut() = server.shortid.into();

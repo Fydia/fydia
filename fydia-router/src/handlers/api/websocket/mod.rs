@@ -50,8 +50,12 @@ impl Websockets {
         e.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
                 if i.user.instance.domain == "localhost" {
-                    i.channel
-                        .send(ChannelMessage::Message(Box::new(msg.clone())));
+                    if let Err(e) = i
+                        .channel
+                        .send(ChannelMessage::Message(Box::new(msg.clone())))
+                    {
+                        error!(format!("Cannot send message : {}", e.to_string()));
+                    }
                 } else if let Some(rsa) = keys {
                     if let Ok(public_key) = i.user.instance.get_public_key() {
                         let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
@@ -154,7 +158,7 @@ pub fn accept(
         Response<Body>,
         impl Future<Output = Result<WebSocketStream<Upgraded>, gotham::hyper::Error>>,
     ),
-    (),
+    String,
 > {
     let res = response(headers)?;
     let ws = async move {
@@ -165,20 +169,23 @@ pub fn accept(
     Ok((res, ws))
 }
 
-fn response(headers: &HeaderMap) -> Result<Response<Body>, ()> {
-    let key = headers.get(SEC_WEBSOCKET_KEY).ok_or(())?;
+fn response(headers: &HeaderMap) -> Result<Response<Body>, String> {
+    let key = if let Some(key) = headers.get(SEC_WEBSOCKET_KEY) {
+        key
+    } else {
+        return Err("Cannot get the key".into());
+    };
 
-    if let Ok(res) = Response::builder()
+    match Response::builder()
         .header(UPGRADE, PROTO_WEBSOCKET)
         .header(CONNECTION, "upgrade")
         .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
         .status(StatusCode::SWITCHING_PROTOCOLS)
         .body(Body::empty())
     {
-        return Ok(res);
+        Ok(res) => Ok(res),
+        Err(e) => Err(e.to_string()),
     }
-
-    Err(())
 }
 
 fn accept_key(key: &[u8]) -> String {

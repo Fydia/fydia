@@ -5,23 +5,21 @@ use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
 use openssl::symm::Cipher;
 
-pub fn encrypt(rsa: Rsa<Public>, string: String) -> Result<Vec<u8>, ()> {
+pub fn encrypt(rsa: Rsa<Public>, string: String) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    if let Ok(_) = rsa.public_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
-        Ok(buf)
-    } else {
-        Err(())
+    match rsa.public_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
+        Ok(_) => Ok(buf),
+        Err(e) => Err(e.to_string()),
     }
 }
 
-pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, ()> {
+pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    if let Ok(_) = rsa.private_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
-        Ok(buf)
-    } else {
-        Err(())
+    match rsa.private_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
+        Ok(_) => Ok(buf),
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -30,7 +28,7 @@ pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, ()>
 pub fn aes_encrypt(
     rsa: PublicKey,
     string: String,
-) -> Result<(Iv, AesKeyEncrypt, EncryptedBody), ()> {
+) -> Result<(Iv, AesKeyEncrypt, EncryptedBody), String> {
     let key = generate_string(32);
     let cipher = Cipher::aes_256_ctr();
     let iv = generate_string(16);
@@ -41,17 +39,15 @@ pub fn aes_encrypt(
         string.as_bytes(),
     );
 
-    return if let Ok(aes_key_encrypted) = encrypt(rsa, key) {
-        if let Ok(data) = encrypted {
-            Ok((
+    match encrypt(rsa, key) {
+        Ok(aes_key_encrypted) => match encrypted {
+            Ok(data) => Ok((
                 Iv(iv),
                 AesKeyEncrypt(aes_key_encrypted),
                 EncryptedBody(data),
-            ))
-        } else {
-            Err(())
-        }
-    } else {
-        Err(())
-    };
+            )),
+            Err(e) => Err(e.to_string()),
+        },
+        Err(e) => Err(e),
+    }
 }

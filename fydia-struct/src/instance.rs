@@ -13,8 +13,8 @@ pub enum Protocol {
 impl Protocol {
     pub fn format(&self) -> String {
         match self {
-            Protocol::HTTP => format!("http://"),
-            Protocol::HTTPS => format!("https://"),
+            Protocol::HTTP => "http://".to_string(),
+            Protocol::HTTPS => "https://".to_string(),
         }
     }
     pub fn parse(str: &str) -> Self {
@@ -44,15 +44,12 @@ impl Instance {
     pub fn from(string: String) -> Option<Self> {
         if let Ok(e) = url::Url::parse(string.as_str()) {
             let protocol = Protocol::parse(e.scheme());
-            match (e.domain(), e.port()) {
-                (Some(domain), Some(port)) => {
-                    return Some(Self {
-                        protocol,
-                        domain: domain.to_string(),
-                        port,
-                    });
-                }
-                _ => {}
+            if let (Some(domain), Some(port)) = (e.domain(), e.port()) {
+                return Some(Self {
+                    protocol,
+                    domain: domain.to_string(),
+                    port,
+                });
             }
         }
 
@@ -63,18 +60,16 @@ impl Instance {
         format!("{}{}:{}", self.protocol.format(), self.domain, self.port)
     }
 
-    pub fn get_public_key(&self) -> Result<PublicKey, ()> {
+    pub fn get_public_key(&self) -> Result<PublicKey, String> {
         match reqwest::blocking::get(format!("{}/api/instance/public_key", self.format())) {
             Ok(res) => match res.text() {
                 Ok(string) => match fydia_crypto::pem::get_key_from_string(string) {
-                    Some(key) => {
-                        return Ok(key);
-                    }
-                    None => return Err(()),
+                    Some(key) => Ok(key),
+                    None => Err("Key error".to_string()),
                 },
-                Err(_) => return Err(()),
+                Err(e) => Err(e.to_string()),
             },
-            Err(_) => return Err(()),
+            Err(e) => Err(e.to_string()),
         }
     }
 }

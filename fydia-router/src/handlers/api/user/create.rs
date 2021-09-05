@@ -29,7 +29,7 @@ pub async fn create_user(mut state: State) -> HandlerResult {
                                         .insert_user(database)
                                         .await
                                 {
-                                    error!(format!("{}", e));
+                                    error!(e);
                                     *res.body_mut() = "Error: Database".into();
                                     *res.status_mut() = StatusCode::BAD_REQUEST;
                                 } else {
@@ -57,5 +57,5 @@ pub async fn create_user(mut state: State) -> HandlerResult {
         }
     }
 
-    return Ok((state, res));
+    Ok((state, res))
 }

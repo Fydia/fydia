@@ -8,7 +8,7 @@ pub async fn init(executor: &FydiaPool) -> Result<(), Error> {
     let sqlite_query = include_str!("default/sqlite.sql");
     match executor {
         FydiaPool::Mysql(mysql) => {
-            for mysql_query in mysql_query.trim().split(";").collect::<Vec<&str>>() {
+            for mysql_query in mysql_query.trim().split(';').collect::<Vec<&str>>() {
                 if !mysql_query.is_empty() {
                     if let Err(e) = query(mysql_query).execute(mysql).await {
                         return Err(e);

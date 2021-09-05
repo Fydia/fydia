@@ -38,6 +38,12 @@ impl Server {
     }
 }
 
+impl Default for Server {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq)]
 pub struct ServerId {
     pub id: String,
@@ -146,6 +152,12 @@ impl Members {
     }
 }
 
+impl Default for Members {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Channels(pub Vec<Channel>);
 
@@ -170,5 +182,11 @@ impl Channels {
             }
         }
         None
+    }
+}
+
+impl Default for Channels {
+    fn default() -> Self {
+        Self::new()
     }
 }

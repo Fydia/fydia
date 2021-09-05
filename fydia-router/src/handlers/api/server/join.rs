@@ -24,9 +24,11 @@ pub async fn join(mut state: State) -> HandlerResult {
             if user.server.is_join(ServerId::new(server.id.clone())) {
                 *res.body_mut() = "Already join".into();
                 *res.status_mut() = StatusCode::BAD_REQUEST;
-            } else {
-                server.join(user, database).await;
-            }
+            } else if let Err(error) = server.join(user, database).await {
+                *res.body_mut() = "Cannot join".into();
+                *res.status_mut() = StatusCode::BAD_REQUEST;
+                error!(error);
+            };
         }
     }
 

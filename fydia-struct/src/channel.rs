@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
@@ -18,14 +20,16 @@ impl ChannelType {
     }
 }
 
-impl ChannelType {
-    pub fn to_string(&self) -> String {
+impl Display for ChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ChannelType::Voice => String::from("VOICE"),
-            ChannelType::Text => String::from("TEXT"),
+            ChannelType::Voice => write!(f, "VOICE"),
+            ChannelType::Text => write!(f, "TEXT"),
         }
     }
+}
 
+impl ChannelType {
     pub fn from_string(toparse: String) -> Self {
         match toparse.to_uppercase().as_str() {
             "VOICE" => Self::Voice,
@@ -64,5 +68,11 @@ impl Channel {
             description: String::new(),
             channel_type: ChannelType::Text,
         }
+    }
+}
+
+impl Default for Channel {
+    fn default() -> Self {
+        Self::new()
     }
 }
