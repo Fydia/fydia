@@ -16,7 +16,7 @@ pub trait SqlMessage {
         channel_id: String,
         executor: &FydiaPool,
     ) -> Result<Vec<Message>, String>;
-    async fn insert_message(&mut self, executor: &FydiaPool) -> Result<(), String>;
+    async fn insert_message(&self, executor: &FydiaPool) -> Result<(), String>;
     async fn update_message(&mut self, content: String, executor: &FydiaPool)
         -> Result<(), String>;
     async fn delete_message(&mut self, executor: &FydiaPool) -> Result<(), String>;
@@ -134,7 +134,7 @@ impl SqlMessage for Message {
         Ok(messages)
     }
 
-    async fn insert_message(&mut self, executor: &FydiaPool) -> Result<(), String> {
+    async fn insert_message(&self, executor: &FydiaPool) -> Result<(), String> {
         let rawquery ="INSERT INTO Messages (id, content, message_type, edited, `timestamp`, channel_id, author_id) VALUES(?, ?, ?, ?, ?, ?, ?);";
 
         match executor {
