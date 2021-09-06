@@ -39,6 +39,9 @@ use gotham::router::builder::*;
 use gotham::router::builder::{build_router, DrawRoutes};
 use gotham::router::Router;
 use gotham::state::State;
+use std::thread::{sleep, spawn};
+use time::ext::NumericalStdDuration;
+use time::Instant;
 
 /// Return gotham's router
 pub async fn get_router(config: Config) -> Router {
@@ -85,13 +88,32 @@ pub async fn get_router(config: Config) -> Router {
     };
     let data = database.get_pool();
     let ctrlc_handler = ctrlc::set_handler(move || {
-        info!("Try to close database");
         let data = &data;
         block_on(async {
+            info!("Try to close database (15s before exit)");
+            spawn(|| {
+                let instance = Instant::now();
+                loop {
+                    if instance.elapsed().as_seconds_f32() as i32 == 15 {
+                        exit(0);
+                    }
+                    println!("{}", instance.elapsed().as_seconds_f32() as i32);
+                    sleep(750.std_milliseconds())
+                }
+            });
             match data {
-                FydiaPool::Mysql(e) => e.close().await,
-                FydiaPool::PgSql(e) => e.close().await,
-                FydiaPool::Sqlite(e) => e.close().await,
+                FydiaPool::Mysql(e) => {
+                    e.close().await;
+                    exit(0)
+                }
+                FydiaPool::PgSql(e) => {
+                    e.close().await;
+                    exit(0)
+                }
+                FydiaPool::Sqlite(e) => {
+                    e.close().await;
+                    exit(0)
+                }
             }
         })
     });
