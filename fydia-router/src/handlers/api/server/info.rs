@@ -20,7 +20,14 @@ pub async fn get_server_of_user(mut state: State) -> HandlerResult {
     if let Some(user) = User::get_user_by_token(&token, database).await {
         if let Ok(json) = serde_json::to_string(&user.server) {
             *res.body_mut() = json.into();
+        } else {
+            error!("Json server");
+            *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            *res.body_mut() = r#"{"status":"error", "content":"Error server"}"#.into();
         }
+    } else {
+        *res.status_mut() = StatusCode::BAD_REQUEST;
+        *res.body_mut() = r#"{"status":"error", "content":"Token error"}"#.into();
     }
 
     Ok((state, res))
