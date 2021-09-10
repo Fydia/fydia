@@ -1,76 +1,69 @@
-use crate::sqlpool::{FydiaPool, ToAnyRows};
+use std::sync::Arc;
+
 use fydia_struct::{
     channel::ChannelId,
-    messages::{datetime_to_sqltime, Message, MessageType, SqlDate},
+    messages::{Message, MessageType, SqlDate},
     user::User,
 };
-use sqlx::Row;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
 
 use super::user::SqlUser;
 
 #[async_trait::async_trait]
 pub trait SqlMessage {
-    async fn get_messages_by_user_id(id: i32, executor: &FydiaPool)
-        -> Result<Vec<Message>, String>;
+    async fn get_messages_by_user_id(
+        id: i32,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<Vec<Message>, String>;
     async fn get_messages_by_channel(
         channel_id: String,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<Vec<Message>, String>;
-    async fn insert_message(&self, executor: &FydiaPool) -> Result<(), String>;
-    async fn update_message(&mut self, content: String, executor: &FydiaPool)
-        -> Result<(), String>;
-    async fn delete_message(&mut self, executor: &FydiaPool) -> Result<(), String>;
+    async fn insert_message(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn update_message(
+        &mut self,
+        content: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String>;
+    async fn delete_message(&mut self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlMessage for Message {
     async fn get_messages_by_user_id(
         id: i32,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<Vec<Message>, String> {
-        let mut messages: Vec<Message> = Vec::new();
-        let rawquery = "SELECT * FROM Messages WHERE author_id=? ORDER BY `timestamp` LIMIT 50";
-        let result = match executor {
-            FydiaPool::Mysql(mysql) => {
-                match sqlx::query(rawquery).bind(id).fetch_all(mysql).await {
-                    Ok(rows) => rows.to_anyrows(),
-                    Err(e) => return Err(e.to_string()),
-                }
-            }
-            FydiaPool::PgSql(pgsql) => {
-                match sqlx::query(rawquery).bind(id).fetch_all(pgsql).await {
-                    Ok(rows) => rows.to_anyrows(),
-                    Err(e) => return Err(e.to_string()),
-                }
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                match sqlx::query(rawquery).bind(id).fetch_all(sqlite).await {
-                    Ok(rows) => rows.to_anyrows(),
-                    Err(e) => return Err(e.to_string()),
-                }
-            }
-        };
+        let mut messages = Vec::new();
+        let mut query = crate::entity::messages::Entity::find()
+            .filter(crate::entity::messages::Column::AuthorId.eq(id))
+            .order_by(
+                crate::entity::messages::Column::Timestamp,
+                sea_orm::Order::Asc,
+            )
+            .paginate(executor, 50);
+        while let Ok(Some(e)) = query.fetch_and_next().await {
+            for i in e {
+                let author_id = match User::get_user_by_id(i.author_id, executor).await {
+                    Some(author_id) => author_id,
+                    None => return Err("Error Author_id".to_string()),
+                };
 
-        for i in result {
-            let author_id = match User::get_user_by_id(i.get("author_id"), executor).await {
-                Some(author_id) => author_id,
-                None => return Err("Error Author_id".to_string()),
-            };
+                let message_type = match MessageType::from_string(i.message_type) {
+                    Some(e) => e,
+                    None => return Err("Error Message_type".to_string()),
+                };
 
-            let message_type = match MessageType::from_string(i.get("message_type")) {
-                Some(e) => e,
-                None => return Err("Error Message_type".to_string()),
-            };
-
-            messages.push(Message {
-                id: i.get("id"),
-                content: i.get("content"),
-                message_type,
-                edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or_else(SqlDate::null),
-                channel_id: ChannelId::new(i.get("channel_id")),
-                author_id,
-            })
+                messages.push(Message {
+                    id: i.id,
+                    content: i.content.unwrap_or("".to_string()),
+                    message_type,
+                    edited: i.edited != 0,
+                    timestamp: SqlDate::parse_from_naivetime(i.timestamp),
+                    channel_id: ChannelId::new(i.channel_id),
+                    author_id,
+                })
+            }
         }
 
         Ok(messages)
@@ -78,180 +71,116 @@ impl SqlMessage for Message {
 
     async fn get_messages_by_channel(
         channel_id: String,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<Vec<Message>, String> {
-        let mut messages: Vec<Message> = Vec::new();
-        let rawquery = "SELECT * FROM Messages WHERE channel_id=? ORDER BY `timestamp` LIMIT 50";
-        let result = match executor {
-            FydiaPool::Mysql(mysql) => match sqlx::query(rawquery)
-                .bind(channel_id)
-                .fetch_all(mysql)
-                .await
-            {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-            FydiaPool::PgSql(pgsql) => match sqlx::query(rawquery)
-                .bind(channel_id)
-                .fetch_all(pgsql)
-                .await
-            {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-            FydiaPool::Sqlite(sqlite) => match sqlx::query(rawquery)
-                .bind(channel_id)
-                .fetch_all(sqlite)
-                .await
-            {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-        };
+        let mut messages = Vec::new();
+        let mut query = crate::entity::messages::Entity::find()
+            .filter(crate::entity::messages::Column::ChannelId.eq(channel_id))
+            .order_by(
+                crate::entity::messages::Column::Timestamp,
+                sea_orm::Order::Asc,
+            )
+            .paginate(executor, 50);
+        while let Ok(Some(e)) = query.fetch_and_next().await {
+            for i in e {
+                let author_id = match User::get_user_by_id(i.author_id, executor).await {
+                    Some(author_id) => author_id,
+                    None => return Err("Error Author_id".to_string()),
+                };
 
-        for i in result {
-            let author_id = match User::get_user_by_id(i.get("author_id"), executor).await {
-                Some(e) => e,
-                None => return Err(String::from("Author_id error")),
-            };
+                let message_type = match MessageType::from_string(i.message_type) {
+                    Some(e) => e,
+                    None => return Err("Error Message_type".to_string()),
+                };
 
-            let message_type = match MessageType::from_string(i.get("message_type")) {
-                Some(e) => e,
-                None => return Err("Message_type error".to_string()),
-            };
-
-            messages.push(Message {
-                id: i.get("id"),
-                content: i.get("content"),
-                message_type,
-                edited: i.get::<bool, &str>("edited"),
-                timestamp: SqlDate::parse_string(i.get("timestamp")).unwrap_or_else(SqlDate::null),
-                channel_id: ChannelId::new(i.get("channel_id")),
-                author_id,
-            })
+                messages.push(Message {
+                    id: i.id,
+                    content: i.content.unwrap_or("".to_string()),
+                    message_type,
+                    edited: i.edited != 0,
+                    timestamp: SqlDate::parse_from_naivetime(i.timestamp),
+                    channel_id: ChannelId::new(i.channel_id),
+                    author_id,
+                })
+            }
         }
 
         Ok(messages)
     }
 
-    async fn insert_message(&self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery ="INSERT INTO Messages (id, content, message_type, edited, `timestamp`, channel_id, author_id) VALUES(?, ?, ?, ?, ?, ?, ?);";
-
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.content)
-                    .bind(&self.message_type.to_string())
-                    .bind(&self.edited)
-                    .bind(datetime_to_sqltime(self.timestamp.0))
-                    .bind(&self.channel_id.id)
-                    .bind(&self.author_id.id)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.content)
-                    .bind(&self.message_type.to_string())
-                    .bind(&self.edited)
-                    .bind(datetime_to_sqltime(self.timestamp.0))
-                    .bind(&self.channel_id.id)
-                    .bind(&self.author_id.id)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.content)
-                    .bind(&self.message_type.to_string())
-                    .bind(&self.edited)
-                    .bind(datetime_to_sqltime(self.timestamp.0))
-                    .bind(&self.channel_id.id)
-                    .bind(&self.author_id.id)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
+    async fn insert_message(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+        let active_model = crate::entity::messages::ActiveModel {
+            id: Set(self.id.clone()),
+            content: Set(Some(self.content.clone())),
+            message_type: Set(self.message_type.to_string()),
+            edited: Set(self.edited as i8),
+            timestamp: Set(self.timestamp.0.naive_utc()),
+            channel_id: Set(self.channel_id.id.clone()),
+            author_id: Set(self.author_id.id),
         };
 
-        Ok(())
+        match crate::entity::messages::Entity::insert(active_model)
+            .exec(executor)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
+        }
     }
 
     async fn update_message(
         &mut self,
         content: String,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String> {
-        let rawquery = "UPDATE Messages SET content=?, edited=TRUE, WHERE id=?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&content)
-                    .bind(&self.id)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                }
+        let active_model = crate::entity::messages::ActiveModel {
+            content: Set(Some(content.to_string())),
+            edited: Set(true as i8),
+            ..Default::default()
+        };
+
+        match crate::entity::messages::Entity::update(active_model)
+            .filter(crate::entity::messages::Column::Id.eq(self.id.as_str()))
+            .exec(executor)
+            .await
+        {
+            Ok(_) => {
+                self.content = content;
+                return Ok(());
             }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&content)
-                    .bind(&self.id)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                }
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&content)
-                    .bind(&self.id)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                }
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
             }
         }
-
-        self.content = content;
-
-        Ok(())
     }
 
-    async fn delete_message(&mut self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "DELETE FROM Messages WHERE id=?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(mysql).await {
-                    return Err(e.to_string());
-                };
+    async fn delete_message(&mut self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+        match crate::entity::messages::Entity::find_by_id(self.id.as_str())
+            .one(executor)
+            .await
+        {
+            Ok(Some(model)) => {
+                let active_model: crate::entity::messages::ActiveModel = model.into();
+                match crate::entity::messages::Entity::delete(active_model)
+                    .exec(executor)
+                    .await
+                {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        error!("Error");
+                        return Err(e.to_string());
+                    }
+                }
             }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(pgsql).await {
-                    return Err(e.to_string());
-                };
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
             }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(sqlite).await {
-                    return Err(e.to_string());
-                };
-            }
+            _ => return Err("Cannot get database error".to_string()),
         }
-
-        Ok(())
     }
 }

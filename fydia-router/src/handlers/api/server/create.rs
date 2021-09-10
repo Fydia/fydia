@@ -20,7 +20,7 @@ pub async fn create_server(mut state: State) -> HandlerResult {
     let database = &SqlPool::borrow_from(&state).get_pool();
     if let Ok(body_bytes) = body::to_bytes(Body::take_from(&mut state)).await {
         if let Ok(body) = String::from_utf8(body_bytes.to_vec()) {
-            if let Some(user) = User::get_user_by_token(&token, database).await {
+            if let Some(mut user) = User::get_user_by_token(&token, database).await {
                 if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
                     if let Some(name) = value.get("name") {
                         if let Some(name_str) = name.as_str() {
@@ -29,8 +29,11 @@ pub async fn create_server(mut state: State) -> HandlerResult {
                             server.owner = user.id;
                             //
                             match server.insert_server(database).await {
-                                Ok(_) => match server.join(user, database).await {
-                                    Ok(_) => {}
+                                Ok(_) => match server.join(&mut user, database).await {
+                                    Ok(_) => {
+                                        *res.status_mut() = StatusCode::OK;
+                                        *res.body_mut() = server.shortid.into();
+                                    }
                                     Err(e) => {
                                         *res.body_mut() = "Cannot join the server".into();
                                         error!(e);
@@ -41,9 +44,6 @@ pub async fn create_server(mut state: State) -> HandlerResult {
                                     error!(e);
                                 }
                             }
-
-                            *res.status_mut() = StatusCode::OK;
-                            *res.body_mut() = server.shortid.into();
                         }
                     }
                 }

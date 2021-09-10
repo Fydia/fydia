@@ -4,12 +4,14 @@ use gotham::handler::{HandlerFuture, HandlerResult};
 use gotham::middleware::{Middleware, NewMiddleware};
 use gotham::state::State;
 use logger::*;
+use sea_orm::DatabaseConnection;
 use sqlx::{
     any::AnyRow, mysql::MySqlRow, postgres::PgRow, sqlite::SqliteRow, MySqlPool, PgPool, SqlitePool,
 };
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::pin::Pin;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum FydiaPool {
@@ -98,15 +100,21 @@ pub fn parse_array(parse: String) -> Vec<String> {
 
 #[derive(StateData, Clone)]
 pub struct Repo {
-    pool: FydiaPool,
+    pool: Arc<DatabaseConnection>,
 }
 
 impl Repo {
-    pub fn new(pool: FydiaPool) -> Self {
+    pub fn new(pool: DatabaseConnection) -> Self {
+        Self {
+            pool: Arc::new(pool),
+        }
+    }
+
+    pub fn new_arc(pool: Arc<DatabaseConnection>) -> Self {
         Self { pool }
     }
 
-    pub fn get_pool(&self) -> FydiaPool {
+    pub fn get_pool(&self) -> Arc<DatabaseConnection> {
         self.pool.clone()
     }
 }
@@ -117,16 +125,16 @@ pub struct SqlPool {
 }
 
 impl SqlPool {
-    pub fn get_pool(&self) -> FydiaPool {
+    pub fn get_pool(&self) -> Arc<DatabaseConnection> {
         self.repo.get_pool()
     }
 }
 
 impl Clone for SqlPool {
     fn clone(&self) -> Self {
-        match catch_unwind(|| self.repo.clone()) {
+        match catch_unwind(|| self.repo.get_pool()) {
             Ok(repo) => SqlPool {
-                repo: AssertUnwindSafe(repo),
+                repo: AssertUnwindSafe(Repo::new_arc(repo)),
             },
             Err(_) => {
                 error!("PANIC: clone caused a panic".to_string());
@@ -148,9 +156,9 @@ impl NewMiddleware for SqlPool {
     type Instance = SqlPool;
 
     fn new_middleware(&self) -> gotham::anyhow::Result<Self::Instance> {
-        match catch_unwind(|| self.repo.clone()) {
+        match catch_unwind(|| self.repo.get_pool()) {
             Ok(e) => Ok(SqlPool {
-                repo: AssertUnwindSafe(e),
+                repo: AssertUnwindSafe(Repo::new_arc(e)),
             }),
             Err(_) => {
                 error!("Error new middleware");
@@ -171,7 +179,7 @@ impl Middleware for SqlPool {
         Self: Sized,
     {
         info!(format!("[{}] pre chain", gotham::state::request_id(&state)));
-        state.put(self.repo.clone());
+        state.put(SqlPool::new(Repo::new_arc(self.repo.get_pool())));
 
         let f = chain(state).and_then(move |(state, response)| {
             {

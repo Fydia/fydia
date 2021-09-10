@@ -23,12 +23,10 @@ use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
-use futures::executor::block_on;
 use fydia_config::Config;
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
-use fydia_sql::default::init;
-use fydia_sql::sqlpool::{FydiaPool, Repo, SqlPool};
+use fydia_sql::sqlpool::{Repo, SqlPool};
 use fydia_struct::instance::{Instance, RsaData};
 use gotham::handler::HandlerResult;
 use gotham::hyper::{Body, Response};
@@ -39,10 +37,6 @@ use gotham::router::builder::*;
 use gotham::router::builder::{build_router, DrawRoutes};
 use gotham::router::Router;
 use gotham::state::State;
-use std::thread::{sleep, spawn};
-use time::ext::NumericalStdDuration;
-use time::Instant;
-
 /// Return gotham's router
 pub async fn get_router(config: Config) -> Router {
     info!(format!("Fydia - {}", env!("CARGO_PKG_VERSION")));
@@ -50,10 +44,10 @@ pub async fn get_router(config: Config) -> Router {
     let database = Repo::new(get_connection(&config.database).await);
     success!("Database connected");
     info!("Info init database");
-    if let Err(e) = init(&database.get_pool()).await {
+    /*if let Err(e) = init(&database.get_pool()).await {
         error!(format!("Error: {}", e.to_string()));
         exit(0);
-    }
+    }*/
     success!("Init successfully");
     info!("Try to generate RSA keys");
     let privatekey = match fydia_crypto::key::generate::generate_key() {
@@ -85,40 +79,6 @@ pub async fn get_router(config: Config) -> Router {
         }
     } else {
         config.instance.domain.clone()
-    };
-    let data = database.get_pool();
-    let ctrlc_handler = ctrlc::set_handler(move || {
-        let data = &data;
-        block_on(async {
-            info!("Try to close database (15s before exit)");
-            spawn(|| {
-                let instance = Instant::now();
-                loop {
-                    if instance.elapsed().as_seconds_f32() as i32 == 15 {
-                        exit(0);
-                    }
-                    println!("{}", instance.elapsed().as_seconds_f32() as i32);
-                    sleep(750.std_milliseconds())
-                }
-            });
-            match data {
-                FydiaPool::Mysql(e) => {
-                    e.close().await;
-                    exit(0)
-                }
-                FydiaPool::PgSql(e) => {
-                    e.close().await;
-                    exit(0)
-                }
-                FydiaPool::Sqlite(e) => {
-                    e.close().await;
-                    exit(0)
-                }
-            }
-        })
-    });
-    if ctrlc_handler.is_err() {
-        panic!("Error setting Ctrl-C handler");
     };
 
     success!(format!("Ip is : {}", domain));

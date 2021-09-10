@@ -1,339 +1,276 @@
+use std::sync::Arc;
+
 use fydia_struct::{
     channel::Channel,
-    emoji::Emoji,
     instance::Instance,
-    roles::Role,
-    server::{Members, Server, ServerId, Servers},
+    server::{Members, Server, ServerId},
     user::User,
 };
-use sqlx::Row;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
-use crate::sqlpool::{FydiaPool, ToAnyRow, ToAnyRows};
+use crate::entity::server::{self};
 
-use super::{channel::SqlChannel, emoji::SqlEmoji, role::SqlRoles, user::SqlUser};
+use super::user::SqlUser;
 
 #[async_trait::async_trait]
 pub trait SqlServer {
-    async fn get_user(&self, executor: &FydiaPool) -> Result<Vec<User>, String>;
-    async fn get_server_by_id(id: ServerId, executor: &FydiaPool) -> Result<Server, String>;
-    async fn insert_server(&self, executor: &FydiaPool) -> Result<(), String>;
-    async fn delete_server(&self, executor: &FydiaPool) -> Result<(), String>;
-    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String>;
-    async fn join(&mut self, mut user: User, executor: &FydiaPool) -> Result<(), String>;
+    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Vec<User>, String>;
+    async fn get_server_by_id(
+        id: ServerId,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<Server, String>;
+    async fn insert_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn delete_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn update_name(
+        &mut self,
+        name: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String>;
+    async fn join(
+        &mut self,
+        mut user: &mut User,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String>;
     async fn insert_channel(
         &mut self,
         channel: Channel,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlServer for Server {
-    async fn get_user(&self, executor: &FydiaPool) -> Result<Vec<User>, String> {
-        let mut result = Vec::new();
+    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Vec<User>, String> {
+        match crate::entity::server::Entity::find()
+            .filter(crate::entity::server::Column::Id.eq(self.id.as_str()))
+            .one(&executor)
+            .await
+        {
+            Ok(Some(e)) => match serde_json::from_str::<serde_json::value::Value>(&e.members) {
+                Ok(value) => {
+                    if let Some(e) = value.get("members") {
+                        if let Some(e) = e.as_array() {
+                            let mut result = Vec::new();
+                            for i in e {
+                                match (i.get("id"), i.get("name")) {
+                                    (Some(id), Some(name)) => match (id.as_str(), name.as_str()) {
+                                        (Some(_), Some(name)) => result.push(User::new(
+                                            name,
+                                            "",
+                                            "",
+                                            Instance::default(),
+                                        )),
+                                        _ => {
+                                            return Err("Json error".to_string());
+                                        }
+                                    },
+                                    _ => {
+                                        return Err("Json error".to_string());
+                                    }
+                                }
+                            }
 
-        let rawquery = format!(
-            "SELECT * FROM User WHERE User.server LIKE '%{}%'",
-            &self.shortid.clone()
-        );
-        let i = match &executor {
-            FydiaPool::Mysql(mysqlpool) => {
-                match sqlx::query(rawquery.as_str()).fetch_all(mysqlpool).await {
-                    Ok(e) => e.to_anyrows(),
-                    Err(e) => {
-                        return Err(e.to_string());
+                            return Ok(result);
+                        } else {
+                            return Err("Json error".to_string());
+                        }
+                    } else {
+                        return Err("Json error".to_string());
                     }
                 }
-            }
-            FydiaPool::PgSql(pgsqlpool) => {
-                match sqlx::query(rawquery.as_str()).fetch_all(pgsqlpool).await {
-                    Ok(e) => e.to_anyrows(),
-                    Err(e) => {
+                Err(e) => {
+                    {
+                        error!("Error");
                         return Err(e.to_string());
-                    }
+                    };
                 }
+            },
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
             }
-            FydiaPool::Sqlite(sqlitepool) => {
-                match sqlx::query(rawquery.as_str()).fetch_all(sqlitepool).await {
-                    Ok(e) => e.to_anyrows(),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                }
-            }
-        };
-
-        for user in i {
-            let json = match serde_json::from_str(user.get::<String, &str>("server").as_str()) {
-                Ok(json) => json,
-                Err(e) => return Err(e.to_string()),
-            };
-
-            result.push(User {
-                id: user.get("id"),
-                name: user.get("name"),
-                instance: Instance::new(
-                    fydia_struct::instance::Protocol::HTTP,
-                    String::from("localhost"),
-                    0,
-                ),
-                token: user.get("token"),
-                email: user.get("email"),
-                password: user.get("password"),
-                description: user.get("description"),
-                server: Servers(json),
-            })
+            _ => return Err("".to_string()),
         }
-
-        Ok(result)
     }
 
-    async fn get_server_by_id(id: ServerId, executor: &FydiaPool) -> Result<Server, String> {
-        let rawquery = "SELECT * FROM Server WHERE shortid=? LIMIT 1;";
-        let i = match &executor {
-            FydiaPool::Mysql(mysqlpool) => {
-                match sqlx::query(rawquery)
-                    .bind(id.short_id)
-                    .fetch_one(mysqlpool)
-                    .await
-                {
-                    Ok(e) => e.to_anyrow(),
+    async fn get_server_by_id(
+        id: ServerId,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<Server, String> {
+        match crate::entity::server::Entity::find()
+            .filter(server::Column::Shortid.eq(id.short_id))
+            .one(&executor)
+            .await
+        {
+            Ok(Some(model)) => {
+                let members = match serde_json::from_str::<Members>(model.members.as_str()) {
+                    Ok(e) => e,
                     Err(e) => {
+                        error!("Error");
                         return Err(e.to_string());
                     }
-                }
-            }
-            FydiaPool::PgSql(pgsqlpool) => {
-                match sqlx::query(rawquery)
-                    .bind(id.short_id)
-                    .fetch_one(pgsqlpool)
-                    .await
-                {
-                    Ok(e) => e.to_anyrow(),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                }
-            }
-            FydiaPool::Sqlite(sqlitepool) => {
-                match sqlx::query(rawquery)
-                    .bind(id.short_id)
-                    .fetch_one(sqlitepool)
-                    .await
-                {
-                    Ok(e) => e.to_anyrow(),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                }
-            }
-        };
+                };
 
-        let members =
-            match serde_json::from_str::<Members>(i.get::<String, &str>("members").as_str()) {
-                Ok(e) => e,
-                Err(e) => return Err(e.to_string()),
-            };
-        let roles = match Role::get_roles_by_server_id(i.get("shortid"), executor).await {
+                /*let roles = match Role::get_roles_by_server_id(i.get("shortid"), executor).await {
+                    Ok(e) => e,
+                    Err(e) => return Err(e),
+                };*/
+
+                /*let channel =
+                match Channel::get_channels_by_server_id(i.get("shortid"), executor).await {
+                    Ok(e) => e,
+                    Err(e) => return Err(e),
+                };*/
+
+                Ok(Server {
+                    id: model.id,
+                    shortid: model.shortid,
+                    name: model.name,
+                    owner: model.owner,
+                    icon: model.icon.unwrap_or("Error".to_string()),
+                    members,
+                    ..Default::default()
+                })
+            }
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
+            _ => {
+                error!("Error");
+                return Err("Cannot get server".to_string());
+            }
+        }
+    }
+    async fn insert_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+        let members_json = match serde_json::to_string(&Members::new()) {
             Ok(e) => e,
-            Err(e) => return Err(e),
+            Err(e) => return Err(e.to_string()),
         };
-
-        let channel = match Channel::get_channels_by_server_id(i.get("shortid"), executor).await {
-            Ok(e) => e,
-            Err(e) => return Err(e),
+        let active_channel = crate::entity::server::ActiveModel {
+            id: Set(self.id.clone()),
+            name: Set(self.name.clone()),
+            members: Set(members_json),
+            shortid: Set(self.shortid.clone()),
+            owner: Set(self.owner.clone()),
+            icon: Set(Some(self.icon.clone())),
         };
-        Ok(Self {
-            id: i.get("id"),
-            shortid: i.get("shortid"),
-            name: i.get("name"),
-            owner: i.get("owner"),
-            icon: i.get("icon"),
-            members,
-            roles,
-            emoji: Emoji::get_emoji_by_server_id(i.get("shortid"), executor).await,
-            channel,
-        })
-    }
-    async fn insert_server(&self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "INSERT INTO Server
-                (id, shortid, name, owner, icon, members)
-                VALUES(?, ?, ?, ?, ?, ?)";
-        let json = match serde_json::to_string(&self.members) {
-            Ok(json) => json,
-            Err(error) => return Err(error.to_string()),
-        };
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.shortid)
-                    .bind(&self.name)
-                    .bind(self.owner)
-                    .bind(&self.icon)
-                    .bind(json)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.shortid)
-                    .bind(&self.name)
-                    .bind(self.owner)
-                    .bind(&self.icon)
-                    .bind(json)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&self.shortid)
-                    .bind(&self.name)
-                    .bind(self.owner)
-                    .bind(&self.icon)
-                    .bind(json)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-        };
-
-        Ok(())
-    }
-
-    async fn delete_server(&self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "DELETE FROM Server WHERE shortid=?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.shortid)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.shortid)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.shortid)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
+        match crate::entity::server::Entity::insert(active_channel)
+            .exec(&executor)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
         }
-
-        Ok(())
     }
 
-    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "UPDATE Server SET name=? WHERE shortid=?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.shortid)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.shortid)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.shortid)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
+    async fn delete_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+        let active_channel = crate::entity::server::ActiveModel {
+            id: Set(self.id.clone()),
+            ..Default::default()
+        };
+        match crate::entity::server::Entity::delete(active_channel)
+            .exec(&executor)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
         }
+    }
+
+    async fn update_name(
+        &mut self,
+        name: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String> {
+        match crate::entity::server::Entity::find()
+            .filter(server::Column::Shortid.contains(self.shortid.as_str()))
+            .one(&executor)
+            .await
+        {
+            Ok(Some(e)) => {
+                let mut active_model: crate::entity::server::ActiveModel = e.into();
+                active_model.name = Set(name);
+                match crate::entity::server::Entity::update(active_model)
+                    .exec(&executor)
+                    .await
+                {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        error!("Error");
+                        return Err(e.to_string());
+                    }
+                };
+            }
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
+            _ => {}
+        };
 
         self.name = name;
 
         Ok(())
     }
 
-    async fn join(&mut self, mut user: User, executor: &FydiaPool) -> Result<(), String> {
+    async fn join(
+        &mut self,
+        user: &mut User,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String> {
+        let server = match crate::entity::server::Entity::find()
+            .filter(crate::entity::server::Column::Shortid.eq(self.shortid.as_str()))
+            .one(&executor)
+            .await
+        {
+            Ok(Some(e)) => e,
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
+            _ => {
+                error!("Error");
+                return Err("Cannot get server".to_string());
+            }
+        };
+
         let mut vecuser = match self.get_user(executor).await {
             Ok(vec_users) => vec_users,
-            Err(e) => return Err(e),
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
         };
+
         vecuser.push(user.clone());
 
         let value = Members::new_with(vecuser.len() as i32, vecuser);
         let json = match serde_json::to_string(&value) {
             Ok(json) => json,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
+            }
         };
-        let rawquery = "UPDATE Server SET members=? WHERE shortid=?;";
 
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(json)
-                    .bind(&self.shortid)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(json)
-                    .bind(&self.shortid)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(json)
-                    .bind(&self.shortid)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
+        let mut active_model: crate::entity::server::ActiveModel = server.into();
+
+        active_model.members = Set(json);
+
+        match crate::entity::server::Entity::update(active_model)
+            .exec(&executor)
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error");
+                return Err(e.to_string());
             }
         }
+
         if let Err(error) = user
-            .insert_server(ServerId::new(self.id.clone()), executor)
+            .insert_server(ServerId::new(self.id.clone()), &executor)
             .await
         {
             return Err(error);
@@ -347,70 +284,36 @@ impl SqlServer for Server {
     async fn insert_channel(
         &mut self,
         channel: Channel,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String> {
-        let rawquery =
-            "INSERT INTO Channels (id, serverid, name, description, `type`) VALUES(?, ?, ?, ?, ?);";
-        let to_push = channel.clone();
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if sqlx::query(rawquery)
-                    .bind(channel.id)
-                    .bind(&self.shortid)
-                    .bind(channel.name)
-                    .bind(channel.description)
-                    .bind(channel.channel_type.to_string())
-                    .execute(mysql)
-                    .await
-                    .is_err()
-                {
-                    return Err("Cannot insert server".to_string());
-                }
+        let active_channel = crate::entity::channels::ActiveModel {
+            id: Set(channel.id.clone()),
+            serverid: Set(channel.server_id.short_id.clone()),
+            name: Set(channel.name.clone()),
+            description: Set(Some(channel.description.clone())),
+            channel_type: Set(Some(channel.channel_type.to_string())),
+        };
+        match crate::entity::channels::Entity::insert(active_channel)
+            .exec(&executor)
+            .await
+        {
+            Ok(_) => {
+                self.channel.0.push(channel);
+                Ok(())
             }
-            FydiaPool::PgSql(pgsql) => {
-                if sqlx::query(rawquery)
-                    .bind(channel.id)
-                    .bind(&self.shortid)
-                    .bind(channel.name)
-                    .bind(channel.description)
-                    .bind(channel.channel_type.to_string())
-                    .execute(pgsql)
-                    .await
-                    .is_err()
-                {
-                    return Err("Cannot insert server".to_string());
-                }
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if sqlx::query(rawquery)
-                    .bind(channel.id)
-                    .bind(&self.shortid)
-                    .bind(channel.name)
-                    .bind(channel.description)
-                    .bind(channel.channel_type.to_string())
-                    .execute(sqlite)
-                    .await
-                    .is_err()
-                {
-                    return Err("Cannot insert server".to_string());
-                }
-            }
+            Err(e) => Err(e.to_string()),
         }
-
-        self.channel.0.push(to_push.clone());
-
-        Ok(())
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlServerId {
-    async fn get_server(&self, executor: &FydiaPool) -> Result<Server, String>;
+    async fn get_server(&self, executor: &Arc<DatabaseConnection>) -> Result<Server, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
-    async fn get_server(&self, executor: &FydiaPool) -> Result<Server, String> {
+    async fn get_server(&self, executor: &Arc<DatabaseConnection>) -> Result<Server, String> {
         Server::get_server_by_id(ServerId::new(self.id.clone()), executor).await
     }
 }
