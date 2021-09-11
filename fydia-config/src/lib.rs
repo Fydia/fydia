@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::process::exit;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum DatabaseType {
     Mysql,
     PgSql,

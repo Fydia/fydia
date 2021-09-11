@@ -1,26 +1,19 @@
 #![allow(clippy::expect_used)]
 
-use fydia_config::DatabaseConfig;
+use std::process::exit;
+
+use fydia_config::{DatabaseConfig, DatabaseType};
 use sea_orm::{Database, DatabaseConnection};
 
 pub async fn get_connection(configdatabase: &DatabaseConfig) -> DatabaseConnection {
-    /*let a = match configdatabase.database_type {
-        DatabaseType::Mysql =>
-            MySqlPool::connect(configdatabase.format_url().as_str())
-                .await
-                .expect("Error"),
-        DatabaseType::PgSql =>
-            PgPool::connect(configdatabase.format_url().as_str())
-                .await
-                .expect("Error"),
-        DatabaseType::Sqlite => {
-            std::fs::File::create(&configdatabase.ip).expect("Error");
-                SqlitePool::connect(configdatabase.ip.as_str())
-                    .await
-                    .expect("Error")
+    if configdatabase.database_type == DatabaseType::Sqlite {
+        std::fs::File::create(&configdatabase.ip).expect("Error");
+    }
+    match Database::connect(configdatabase.format_url().as_str()).await {
+        Ok(e) => e,
+        Err(e) => {
+            error!(e.to_string());
+            exit(0);
         }
-    }*/
-    Database::connect(configdatabase.format_url().as_str())
-        .await
-        .unwrap()
+    }
 }
