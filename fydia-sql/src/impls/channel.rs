@@ -66,11 +66,8 @@ impl SqlChannel for Channel {
         {
             Ok(models) => {
                 for model in models {
-                    match model.to_channel() {
-                        Some(channel) => {
-                            channels.push(channel);
-                        }
-                        _ => {}
+                    if let Some(channel) = model.to_channel() {
+                        channels.push(channel);
                     }
                 }
             }

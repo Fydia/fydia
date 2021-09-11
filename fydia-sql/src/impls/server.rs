@@ -43,7 +43,7 @@ impl SqlServer for Server {
     async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Vec<User>, String> {
         match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Id.eq(self.id.as_str()))
-            .one(&executor)
+            .one(executor)
             .await
         {
             Ok(Some(e)) => match serde_json::from_str::<serde_json::value::Value>(&e.members) {
@@ -99,7 +99,7 @@ impl SqlServer for Server {
     ) -> Result<Server, String> {
         match crate::entity::server::Entity::find()
             .filter(server::Column::Shortid.eq(id.short_id))
-            .one(&executor)
+            .one(executor)
             .await
         {
             Ok(Some(model)) => {
@@ -127,7 +127,7 @@ impl SqlServer for Server {
                     shortid: model.shortid,
                     name: model.name,
                     owner: model.owner,
-                    icon: model.icon.unwrap_or("Error".to_string()),
+                    icon: model.icon.unwrap_or_else(|| "Error".to_string()),
                     members,
                     ..Default::default()
                 })
@@ -152,11 +152,11 @@ impl SqlServer for Server {
             name: Set(self.name.clone()),
             members: Set(members_json),
             shortid: Set(self.shortid.clone()),
-            owner: Set(self.owner.clone()),
+            owner: Set(self.owner),
             icon: Set(Some(self.icon.clone())),
         };
         match crate::entity::server::Entity::insert(active_channel)
-            .exec(&executor)
+            .exec(executor)
             .await
         {
             Ok(_) => Ok(()),
@@ -170,7 +170,7 @@ impl SqlServer for Server {
             ..Default::default()
         };
         match crate::entity::server::Entity::delete(active_channel)
-            .exec(&executor)
+            .exec(executor)
             .await
         {
             Ok(_) => Ok(()),
@@ -185,14 +185,14 @@ impl SqlServer for Server {
     ) -> Result<(), String> {
         match crate::entity::server::Entity::find()
             .filter(server::Column::Shortid.contains(self.shortid.as_str()))
-            .one(&executor)
+            .one(executor)
             .await
         {
             Ok(Some(e)) => {
                 let mut active_model: crate::entity::server::ActiveModel = e.into();
                 active_model.name = Set(name);
                 match crate::entity::server::Entity::update(active_model)
-                    .exec(&executor)
+                    .exec(executor)
                     .await
                 {
                     Ok(_) => return Ok(()),
@@ -221,7 +221,7 @@ impl SqlServer for Server {
     ) -> Result<(), String> {
         let server = match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Shortid.eq(self.shortid.as_str()))
-            .one(&executor)
+            .one(executor)
             .await
         {
             Ok(Some(e)) => e,
@@ -239,7 +239,7 @@ impl SqlServer for Server {
             Ok(vec_users) => vec_users,
             Err(e) => {
                 error!("Error");
-                return Err(e.to_string());
+                return Err(e);
             }
         };
 
@@ -259,7 +259,7 @@ impl SqlServer for Server {
         active_model.members = Set(json);
 
         match crate::entity::server::Entity::update(active_model)
-            .exec(&executor)
+            .exec(executor)
             .await
         {
             Ok(_) => {}
@@ -270,7 +270,7 @@ impl SqlServer for Server {
         }
 
         if let Err(error) = user
-            .insert_server(ServerId::new(self.id.clone()), &executor)
+            .insert_server(ServerId::new(self.id.clone()), executor)
             .await
         {
             return Err(error);
@@ -294,7 +294,7 @@ impl SqlServer for Server {
             channel_type: Set(Some(channel.channel_type.to_string())),
         };
         match crate::entity::channels::Entity::insert(active_channel)
-            .exec(&executor)
+            .exec(executor)
             .await
         {
             Ok(_) => {

@@ -56,7 +56,7 @@ impl SqlMessage for Message {
 
                 messages.push(Message {
                     id: i.id,
-                    content: i.content.unwrap_or("".to_string()),
+                    content: i.content.unwrap_or_default(),
                     message_type,
                     edited: i.edited != 0,
                     timestamp: SqlDate::parse_from_naivetime(i.timestamp),
@@ -95,7 +95,7 @@ impl SqlMessage for Message {
 
                 messages.push(Message {
                     id: i.id,
-                    content: i.content.unwrap_or("".to_string()),
+                    content: i.content.unwrap_or_default(),
                     message_type,
                     edited: i.edited != 0,
                     timestamp: SqlDate::parse_from_naivetime(i.timestamp),
