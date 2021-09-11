@@ -8,8 +8,8 @@ extern crate gotham_derive;
 extern crate logger;
 
 pub mod connection;
-pub mod default;
 pub mod entity;
 pub mod impls;
+pub mod setup;
 pub mod sqlpool;
 pub mod test;

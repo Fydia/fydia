@@ -26,6 +26,7 @@ use crate::routes::user::user_routes;
 use fydia_config::Config;
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
+use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::{Repo, SqlPool};
 use fydia_struct::instance::{Instance, RsaData};
 use gotham::handler::HandlerResult;
@@ -44,10 +45,10 @@ pub async fn get_router(config: Config) -> Router {
     let database = Repo::new(get_connection(&config.database).await);
     success!("Database connected");
     info!("Info init database");
-    /*if let Err(e) = init(&database.get_pool()).await {
+    if let Err(e) = create_tables(&database.get_pool()).await {
         error!(format!("Error: {}", e.to_string()));
         exit(0);
-    }*/
+    }
     success!("Init successfully");
     info!("Try to generate RSA keys");
     let privatekey = match fydia_crypto::key::generate::generate_key() {
