@@ -152,7 +152,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                         };
                         let mut websocket = Websockets::borrow_mut_from(&mut state).clone();
                         let key = RsaData::borrow_from(&state).clone();
-                        if let Ok(users) = server.get_user(database).await {
+                        if let Ok(members) = server.get_user(database).await {
                             if let EventContent::Message { ref content } = msg.content {
                                 if content.insert_message(database).await.is_err() {
                                     *res.body_mut() = "Cannot send message".into();
@@ -160,7 +160,12 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                 } else {
                                     tokio::spawn(async move {
                                         websocket
-                                            .send(&msg.clone(), users.clone(), Some(&key), None)
+                                            .send(
+                                                &msg.clone(),
+                                                members.members.clone(),
+                                                Some(&key),
+                                                None,
+                                            )
                                             .await;
                                     });
                                 }
@@ -169,7 +174,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                             *res.body_mut() = "Message send".into();
                             *res.status_mut() = StatusCode::OK;
                         } else {
-                            *res.body_mut() = "Cannot get user".into();
+                            *res.body_mut() = "Cannot get users of the server".into();
                             *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                         }
                     } else {

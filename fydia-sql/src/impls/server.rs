@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fydia_struct::{
     channel::Channel,
-    instance::Instance,
     server::{Members, Server, ServerId},
     user::User,
 };
@@ -14,7 +13,7 @@ use super::{channel::SqlChannel, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
-    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Vec<User>, String>;
+    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Members, String>;
     async fn get_server_by_id(
         id: ServerId,
         executor: &Arc<DatabaseConnection>,
@@ -40,44 +39,14 @@ pub trait SqlServer {
 
 #[async_trait::async_trait]
 impl SqlServer for Server {
-    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Vec<User>, String> {
+    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Members, String> {
         match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Id.eq(self.id.as_str()))
             .one(executor)
             .await
         {
-            Ok(Some(e)) => match serde_json::from_str::<serde_json::value::Value>(&e.members) {
-                Ok(value) => {
-                    if let Some(e) = value.get("members") {
-                        if let Some(e) = e.as_array() {
-                            let mut result = Vec::new();
-                            for i in e {
-                                match (i.get("id"), i.get("name")) {
-                                    (Some(id), Some(name)) => match (id.as_str(), name.as_str()) {
-                                        (Some(_), Some(name)) => result.push(User::new(
-                                            name,
-                                            "",
-                                            "",
-                                            Instance::default(),
-                                        )),
-                                        _ => {
-                                            return Err("Json error".to_string());
-                                        }
-                                    },
-                                    _ => {
-                                        return Err("Json error".to_string());
-                                    }
-                                }
-                            }
-
-                            return Ok(result);
-                        } else {
-                            return Err("Json error".to_string());
-                        }
-                    } else {
-                        return Err("Json error".to_string());
-                    }
-                }
+            Ok(Some(e)) => match serde_json::from_str::<Members>(&e.members) {
+                Ok(value) => return Ok(value),
                 Err(e) => {
                     {
                         error!("Error");
@@ -237,7 +206,7 @@ impl SqlServer for Server {
             }
         };
 
-        let mut vecuser = match self.get_user(executor).await {
+        let mut members = match self.get_user(executor).await {
             Ok(vec_users) => vec_users,
             Err(e) => {
                 error!("Error");
@@ -245,10 +214,9 @@ impl SqlServer for Server {
             }
         };
 
-        vecuser.push(user.clone());
+        members.members.push(user.clone());
 
-        let value = Members::new_with(vecuser.len() as i32, vecuser);
-        let json = match serde_json::to_string(&value) {
+        let json = match serde_json::to_string(&members) {
             Ok(json) => json,
             Err(e) => {
                 error!("Error");
@@ -278,7 +246,7 @@ impl SqlServer for Server {
             return Err(error);
         }
 
-        self.members = value;
+        self.members = members;
 
         Ok(())
     }

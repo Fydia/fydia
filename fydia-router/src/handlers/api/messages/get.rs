@@ -47,7 +47,7 @@ pub async fn get_message(state: State) -> HandlerResult {
                         }
                     }
                 }
-            };
+            }
         }
     }
 
