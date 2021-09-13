@@ -10,7 +10,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use crate::entity::server::{self};
 
-use super::user::SqlUser;
+use super::{channel::SqlChannel, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -111,16 +111,17 @@ impl SqlServer for Server {
                     }
                 };
 
-                /*let roles = match Role::get_roles_by_server_id(i.get("shortid"), executor).await {
+                /*let roles = match Role::get_roles_by_server_id(model.shortid, executor).await {
                     Ok(e) => e,
                     Err(e) => return Err(e),
                 };*/
 
-                /*let channel =
-                match Channel::get_channels_by_server_id(i.get("shortid"), executor).await {
-                    Ok(e) => e,
-                    Err(e) => return Err(e),
-                };*/
+                let channel =
+                    match Channel::get_channels_by_server_id(model.shortid.clone(), executor).await
+                    {
+                        Ok(e) => e,
+                        Err(e) => return Err(e),
+                    };
 
                 Ok(Server {
                     id: model.id,
@@ -129,6 +130,7 @@ impl SqlServer for Server {
                     owner: model.owner,
                     icon: model.icon.unwrap_or_else(|| "Error".to_string()),
                     members,
+                    channel,
                     ..Default::default()
                 })
             }
