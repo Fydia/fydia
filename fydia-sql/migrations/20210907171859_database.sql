@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `Messages` (
     `content` text DEFAULT NULL,
     `message_type` varchar(32) NOT NULL,
     `edited` tinyint(1) NOT NULL,
-    `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    `timestamp` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
     `channel_id` varchar(15) NOT NULL,
     `author_id` int(10) NOT NULL,
     PRIMARY KEY (`id`),

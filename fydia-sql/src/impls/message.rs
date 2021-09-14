@@ -1,4 +1,4 @@
-use std::sync::Arc;
+#![allow(irrefutable_let_patterns)]
 
 use fydia_struct::{
     channel::ChannelId,
@@ -6,6 +6,7 @@ use fydia_struct::{
     user::User,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
+use std::sync::Arc;
 
 use super::user::SqlUser;
 
@@ -81,28 +82,47 @@ impl SqlMessage for Message {
                 sea_orm::Order::Asc,
             )
             .paginate(executor, 50);
-        while let Ok(Some(e)) = query.fetch_and_next().await {
-            for i in e {
-                let author_id = match User::get_user_by_id(i.author_id, executor).await {
-                    Some(author_id) => author_id,
-                    None => return Err("Error Author_id".to_string()),
-                };
+        let mut n = 0;
+        while let e = query.fetch_and_next().await {
+            match e {
+                Ok(e) => match e {
+                    Some(vec) => {
+                        for i in vec {
+                            let author_id = match User::get_user_by_id(i.author_id, executor).await
+                            {
+                                Some(author_id) => author_id,
+                                None => return Err("Error Author_id".to_string()),
+                            };
 
-                let message_type = match MessageType::from_string(i.message_type) {
-                    Some(e) => e,
-                    None => return Err("Error Message_type".to_string()),
-                };
+                            let message_type = match MessageType::from_string(i.message_type) {
+                                Some(e) => e,
+                                None => return Err("Error Message_type".to_string()),
+                            };
 
-                messages.push(Message {
-                    id: i.id,
-                    content: i.content.unwrap_or_default(),
-                    message_type,
-                    edited: i.edited != 0,
-                    timestamp: SqlDate::parse_from_naivetime(i.timestamp),
-                    channel_id: ChannelId::new(i.channel_id),
-                    author_id,
-                })
+                            messages.push(Message {
+                                id: i.id,
+                                content: i.content.unwrap_or_default(),
+                                message_type,
+                                edited: i.edited != 0,
+                                timestamp: SqlDate::parse_from_naivetime(i.timestamp),
+                                channel_id: ChannelId::new(i.channel_id),
+                                author_id,
+                            })
+                        }
+                    }
+                    None => {
+                        return Ok(messages);
+                    }
+                },
+                Err(e) => {
+                    error!(e.to_string());
+                    return Err(e.to_string());
+                }
             }
+            if n == 50 {
+                break;
+            }
+            n += 1;
         }
 
         Ok(messages)
