@@ -30,7 +30,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
         &state,
         StatusCode::BAD_REQUEST,
         mime::TEXT_PLAIN_UTF_8,
-        "Bad Token".to_string(),
+        "Error".to_string(),
     );
     let headers = HeaderMap::borrow_from(&state);
     let database = &SqlPool::borrow_from(&state).get_pool();
@@ -40,6 +40,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
     let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
+        *res.body_mut() = "Bad Token".into();
         return Ok((state, res));
     };
 
