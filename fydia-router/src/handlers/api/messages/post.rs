@@ -181,7 +181,11 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                     } else {
                         *res.body_mut() = "Unvalid channel".into();
                     }
+                } else {
+                    *res.body_mut() = "unknow server".into();
                 }
+            } else {
+                *res.body_mut() = "unknow server".into();
             }
         } else {
             *res.body_mut() = "unknow server".into();
