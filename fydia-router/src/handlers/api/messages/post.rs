@@ -49,24 +49,57 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
             if let Some(serverid) = user.server.get(serverid.clone().short_id) {
                 if let Ok(server) = serverid.get_server(database).await {
                     if server.channel.is_exists(channelid.clone()) {
-                        let content_type = headers.get(CONTENT_TYPE).unwrap();
-                        let msg = if content_type == "application/json"
-                            || content_type == "application/json; charset=utf-8"
-                        {
-                            if let Ok(body) = body::to_bytes(Body::take_from(&mut state)).await {
-                                match String::from_utf8(body.to_vec()) {
-                                    Ok(string_body) => {
-                                        if let Ok(value) =
-                                            serde_json::from_str::<Value>(string_body.as_str())
+                        if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
+                            if let Ok(content_type) = header_content_type.to_str() {
+                                let msg = match content_type {
+                                    "application/json" | "application/json; charset=utf-8" => {
+                                        if let Ok(body) =
+                                            body::to_bytes(Body::take_from(&mut state)).await
                                         {
-                                            match json_message(
-                                                value,
-                                                &user,
-                                                &ChannelId::new(channelid.clone()),
-                                                &serverid,
-                                            ) {
-                                                Ok(msg) => msg,
-                                                Err(error) => {
+                                            match String::from_utf8(body.to_vec()) {
+                                                Ok(string_body) => {
+                                                    if let Ok(value) = serde_json::from_str::<Value>(
+                                                        string_body.as_str(),
+                                                    ) {
+                                                        match json_message(
+                                                            value,
+                                                            &user,
+                                                            &ChannelId::new(channelid.clone()),
+                                                            &serverid,
+                                                        ) {
+                                                            Ok(msg) => msg,
+                                                            Err(error) => {
+                                                                if let Some(header) = res
+                                                                    .headers_mut()
+                                                                    .get_mut(CONTENT_TYPE)
+                                                                {
+                                                                    if let Ok(content_type) =
+                                                                        mime::APPLICATION_JSON
+                                                                            .as_ref()
+                                                                            .parse()
+                                                                    {
+                                                                        *header = content_type;
+                                                                    }
+                                                                }
+                                                                *res.status_mut() =
+                                                                    StatusCode::BAD_REQUEST;
+                                                                *res.body_mut() =
+                                                                format! {r#"{{"status":"Error", "content":"{}"}}"#, error}
+                                                                    .into();
+
+                                                                return Ok((state, res));
+                                                            }
+                                                        }
+                                                    } else {
+                                                        *res.status_mut() = StatusCode::BAD_REQUEST;
+                                                        *res.body_mut() =
+                                                        r#"{{"status":"Error", "content":"Bad Json"}}"#
+                                                            .into();
+                                                        return Ok((state, res));
+                                                    }
+                                                }
+                                                Err(_) => {
+                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
                                                     if let Some(header) =
                                                         res.headers_mut().get_mut(CONTENT_TYPE)
                                                     {
@@ -76,111 +109,91 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                             *header = content_type;
                                                         }
                                                     }
-                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
                                                     *res.body_mut() =
-                                                        format! {r#"{{"status":"Error", "content":"{}"}}"#, error}
-                                                            .into();
-
+                                                    r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
+                                                        .into();
                                                     return Ok((state, res));
                                                 }
                                             }
                                         } else {
                                             *res.status_mut() = StatusCode::BAD_REQUEST;
                                             *res.body_mut() =
-                                                r#"{{"status":"Error", "content":"Bad Json"}}"#
+                                                r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
                                                     .into();
+                                            if let Some(header) =
+                                                res.headers_mut().get_mut(CONTENT_TYPE)
+                                            {
+                                                if let Ok(content_type) =
+                                                    mime::APPLICATION_JSON.as_ref().parse()
+                                                {
+                                                    *header = content_type;
+                                                }
+                                            }
+
                                             return Ok((state, res));
                                         }
                                     }
-                                    Err(_) => {
-                                        *res.status_mut() = StatusCode::BAD_REQUEST;
-                                        if let Some(header) =
-                                            res.headers_mut().get_mut(CONTENT_TYPE)
+
+                                    "multipart/form-data" | "multipart/form-data;" => {
+                                        match multipart_message(
+                                            &mut state,
+                                            &user.clone(),
+                                            &ChannelId::new(channelid),
+                                            serverid,
+                                        )
+                                        .await
                                         {
-                                            if let Ok(content_type) =
-                                                mime::APPLICATION_JSON.as_ref().parse()
-                                            {
-                                                *header = content_type;
+                                            Ok(msg) => msg,
+                                            Err(e) => {
+                                                *res.body_mut() =
+                                                    format!(r#"{{"error":"{}"}}"#, e).into();
+                                                *res.status_mut() =
+                                                    StatusCode::INTERNAL_SERVER_ERROR;
+                                                return Ok((state, res));
                                             }
                                         }
-                                        *res.body_mut() =
-                                            r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
-                                                .into();
+                                    }
+
+                                    _ => {
+                                        *res.body_mut() = "Bad Content-Type".into();
                                         return Ok((state, res));
                                     }
-                                }
-                            } else {
-                                *res.status_mut() = StatusCode::BAD_REQUEST;
-                                *res.body_mut() =
-                                    r#"{{"status":"Error", "content":"Utf-8 Error"}}"#.into();
-                                if let Some(header) = res.headers_mut().get_mut(CONTENT_TYPE) {
-                                    if let Ok(content_type) =
-                                        mime::APPLICATION_JSON.as_ref().parse()
-                                    {
-                                        *header = content_type;
-                                    }
-                                }
-
-                                return Ok((state, res));
-                            }
-                        } else if let Some(header) = headers.get(CONTENT_TYPE) {
-                            if let Ok(string) = header.to_str() {
-                                if string.contains(&"multipart/form-data;") {
-                                    match multipart_message(
-                                        &mut state,
-                                        &user.clone(),
-                                        &ChannelId::new(channelid),
-                                        serverid,
-                                    )
-                                    .await
-                                    {
-                                        Ok(msg) => msg,
-                                        Err(e) => {
-                                            *res.body_mut() =
-                                                format!(r#"{{"error":"{}"}}"#, e).into();
+                                };
+                                let mut websocket = Websockets::borrow_mut_from(&mut state).clone();
+                                let key = RsaData::borrow_from(&state).clone();
+                                if let Ok(members) = server.get_user(database).await {
+                                    if let EventContent::Message { ref content } = msg.content {
+                                        if content.insert_message(database).await.is_err() {
+                                            *res.body_mut() = "Cannot send message".into();
                                             *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                                            return Ok((state, res));
+                                        } else {
+                                            tokio::spawn(async move {
+                                                websocket
+                                                    .send(
+                                                        &msg.clone(),
+                                                        members.members.clone(),
+                                                        Some(&key),
+                                                        None,
+                                                    )
+                                                    .await;
+                                            });
                                         }
                                     }
+
+                                    *res.body_mut() = "Message send".into();
+                                    *res.status_mut() = StatusCode::OK;
                                 } else {
-                                    return Ok((state, res));
+                                    *res.body_mut() = "Cannot get users of the server".into();
+                                    *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                                 }
                             } else {
-                                *res.body_mut() =
-                                    r#"{{"status":"Error", "content":"Utf-8 Error"}}"#.into();
+                                *res.body_mut() = "Bad Content-Type".into();
                                 return Ok((state, res));
                             }
                         } else {
-                            *res.body_mut() = "Bad Content-Type".into();
+                            *res.body_mut() = "Where is the Content-Type".into();
                             return Ok((state, res));
                         };
-                        let mut websocket = Websockets::borrow_mut_from(&mut state).clone();
-                        let key = RsaData::borrow_from(&state).clone();
-                        if let Ok(members) = server.get_user(database).await {
-                            if let EventContent::Message { ref content } = msg.content {
-                                if content.insert_message(database).await.is_err() {
-                                    *res.body_mut() = "Cannot send message".into();
-                                    *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                                } else {
-                                    tokio::spawn(async move {
-                                        websocket
-                                            .send(
-                                                &msg.clone(),
-                                                members.members.clone(),
-                                                Some(&key),
-                                                None,
-                                            )
-                                            .await;
-                                    });
-                                }
-                            }
-
-                            *res.body_mut() = "Message send".into();
-                            *res.status_mut() = StatusCode::OK;
-                        } else {
-                            *res.body_mut() = "Cannot get users of the server".into();
-                            *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                        }
                     } else {
                         *res.body_mut() = "Unvalid channel".into();
                     }
