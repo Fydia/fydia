@@ -49,7 +49,10 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
             if let Some(serverid) = user.server.get(serverid.clone().short_id) {
                 if let Ok(server) = serverid.get_server(database).await {
                     if server.channel.is_exists(channelid.clone()) {
-                        let msg = if headers.get("content-type").unwrap() == "application/json" {
+                        let content_type = headers.get(CONTENT_TYPE).unwrap();
+                        let msg = if content_type == "application/json"
+                            || content_type == "application/json; charset=utf-8"
+                        {
                             if let Ok(body) = body::to_bytes(Body::take_from(&mut state)).await {
                                 match String::from_utf8(body.to_vec()) {
                                     Ok(string_body) => {
