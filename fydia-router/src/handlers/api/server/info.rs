@@ -19,13 +19,7 @@ pub async fn get_server_of_user(mut state: State) -> HandlerResult {
     };
     let database = &SqlPool::borrow_from(&state).get_pool();
     if let Some(user) = User::get_user_by_token(&token, database).await {
-        if let Ok(json) = serde_json::to_string(&user.server) {
-            FydiaResponse::new_ok(json).update_response(&mut res);
-        } else {
-            error!("Json server");
-            FydiaResponse::new_error("Error server").update_response(&mut res);
-            *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-        }
+        FydiaResponse::new_ok_json(&user.server).update_response(&mut res);
     } else {
         FydiaResponse::new_error("Token error").update_response(&mut res);
     }
