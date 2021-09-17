@@ -18,6 +18,7 @@ use gotham::hyper::header::CONTENT_TYPE;
 use gotham::hyper::{body, Body, HeaderMap, StatusCode};
 use gotham::state::{FromState, State};
 use mime::Mime;
+use multer::bytes::Bytes;
 use serde_json::Value;
 use std::io::{Read, Write};
 use std::str::FromStr;
@@ -56,50 +57,16 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                         if let Ok(body) =
                                             body::to_bytes(Body::take_from(&mut state)).await
                                         {
-                                            match String::from_utf8(body.to_vec()) {
-                                                Ok(string_body) => {
-                                                    if let Ok(value) = serde_json::from_str::<Value>(
-                                                        string_body.as_str(),
-                                                    ) {
-                                                        match json_message(
-                                                            value,
-                                                            &user,
-                                                            &ChannelId::new(channelid.clone()),
-                                                            &serverid,
-                                                        ) {
-                                                            Ok(msg) => msg,
-                                                            Err(error) => {
-                                                                if let Some(header) = res
-                                                                    .headers_mut()
-                                                                    .get_mut(CONTENT_TYPE)
-                                                                {
-                                                                    if let Ok(content_type) =
-                                                                        mime::APPLICATION_JSON
-                                                                            .as_ref()
-                                                                            .parse()
-                                                                    {
-                                                                        *header = content_type;
-                                                                    }
-                                                                }
-                                                                *res.status_mut() =
-                                                                    StatusCode::BAD_REQUEST;
-                                                                *res.body_mut() =
-                                                                format! {r#"{{"status":"Error", "content":"{}"}}"#, error}
-                                                                    .into();
-
-                                                                return Ok((state, res));
-                                                            }
-                                                        }
-                                                    } else {
-                                                        *res.status_mut() = StatusCode::BAD_REQUEST;
-                                                        *res.body_mut() =
-                                                        r#"{{"status":"Error", "content":"Bad Json"}}"#
-                                                            .into();
-                                                        return Ok((state, res));
-                                                    }
-                                                }
-                                                Err(_) => {
+                                            match message(
+                                                &body,
+                                                &user,
+                                                &ChannelId::new(channelid),
+                                                &serverid,
+                                            ) {
+                                                Ok(msg) => msg,
+                                                Err(err) => {
                                                     *res.status_mut() = StatusCode::BAD_REQUEST;
+                                                    *res.body_mut() = err.into();
                                                     if let Some(header) =
                                                         res.headers_mut().get_mut(CONTENT_TYPE)
                                                     {
@@ -109,16 +76,14 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                                             *header = content_type;
                                                         }
                                                     }
-                                                    *res.body_mut() =
-                                                    r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
-                                                        .into();
+
                                                     return Ok((state, res));
                                                 }
                                             }
                                         } else {
                                             *res.status_mut() = StatusCode::BAD_REQUEST;
                                             *res.body_mut() =
-                                                r#"{{"status":"Error", "content":"Utf-8 Error"}}"#
+                                                r#"{{"status":"Error", "content":"Bad Body"}}"#
                                                     .into();
                                             if let Some(header) =
                                                 res.headers_mut().get_mut(CONTENT_TYPE)
@@ -338,4 +303,25 @@ pub fn get_mime_of_file(path: &str) -> Mime {
     };
 
     mime::APPLICATION_OCTET_STREAM
+}
+
+pub fn message(
+    body: &Bytes,
+    user: &User,
+    channelid: &ChannelId,
+    serverid: &ServerId,
+) -> Result<Event, String> {
+    match String::from_utf8(body.to_vec()) {
+        Ok(string_body) => {
+            if let Ok(value) = serde_json::from_str::<Value>(string_body.as_str()) {
+                match json_message(value, user, channelid, serverid) {
+                    Ok(msg) => Ok(msg),
+                    Err(error) => Err(format! {r#"{{"status":"Error", "content":"{}"}}"#, error}),
+                }
+            } else {
+                Err(r#"{{"status":"Error", "content":"Bad Json"}}"#.to_string())
+            }
+        }
+        Err(_) => Err(r#"{{"status":"Error", "content":"Utf-8 Error"}}"#.to_string()),
+    }
 }
