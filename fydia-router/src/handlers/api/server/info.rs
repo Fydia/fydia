@@ -1,5 +1,6 @@
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::user::{Token, User};
 use gotham::handler::HandlerResult;
 use gotham::helpers::http::response::create_response;
@@ -12,22 +13,21 @@ pub async fn get_server_of_user(mut state: State) -> HandlerResult {
     let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
-        *res.status_mut() = StatusCode::BAD_REQUEST;
+        FydiaResponse::new_error("Bad Token").update_response(&mut res);
 
         return Ok((state, res));
     };
     let database = &SqlPool::borrow_from(&state).get_pool();
     if let Some(user) = User::get_user_by_token(&token, database).await {
         if let Ok(json) = serde_json::to_string(&user.server) {
-            *res.body_mut() = json.into();
+            FydiaResponse::new_ok(json).update_response(&mut res);
         } else {
             error!("Json server");
+            FydiaResponse::new_error("Error server").update_response(&mut res);
             *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-            *res.body_mut() = r#"{"status":"error", "content":"Error server"}"#.into();
         }
     } else {
-        *res.status_mut() = StatusCode::BAD_REQUEST;
-        *res.body_mut() = r#"{"status":"error", "content":"Token error"}"#.into();
+        FydiaResponse::new_error("Token error").update_response(&mut res);
     }
 
     Ok((state, res))

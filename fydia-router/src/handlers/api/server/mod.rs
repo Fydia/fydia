@@ -1,6 +1,7 @@
 use fydia_sql::impls::server::{SqlServer, SqlServerId};
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
 use gotham::handler::HandlerResult;
@@ -40,7 +41,7 @@ pub async fn get_server(state: State) -> HandlerResult {
             }
         }
         if let Ok(json) = serde_json::to_string(&getted_server) {
-            *res.body_mut() = json.into();
+            FydiaResponse::new_ok(json).update_response(&mut res);
         }
     }
 

@@ -1,6 +1,7 @@
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ServerExtractor;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
@@ -11,10 +12,11 @@ use gotham::state::{FromState, State};
 
 pub async fn join(mut state: State) -> HandlerResult {
     let headers = HeaderMap::take_from(&mut state);
-    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
+    let mut res = create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, format!(""));
     let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
+        FydiaResponse::new_error("Token Error").update_response(&mut res);
         return Ok((state, res));
     };
     let database = &SqlPool::borrow_from(&state).get_pool();
@@ -22,11 +24,9 @@ pub async fn join(mut state: State) -> HandlerResult {
     if let Some(mut user) = User::get_user_by_token(&token, database).await {
         if let Ok(mut server) = Server::get_server_by_id(ServerId::new(server), database).await {
             if user.server.is_join(ServerId::new(server.id.clone())) {
-                *res.body_mut() = "Already join".into();
-                *res.status_mut() = StatusCode::BAD_REQUEST;
+                FydiaResponse::new_error("Already join").update_response(&mut res);
             } else if let Err(error) = server.join(&mut user, database).await {
-                *res.body_mut() = "Cannot join".into();
-                *res.status_mut() = StatusCode::BAD_REQUEST;
+                FydiaResponse::new_error("Cannot join").update_response(&mut res);
                 error!(error);
             };
         }

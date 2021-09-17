@@ -1,6 +1,7 @@
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::server::Server;
 use fydia_struct::user::{Token, User};
 use gotham::handler::HandlerResult;
@@ -27,20 +28,19 @@ pub async fn create_server(mut state: State) -> HandlerResult {
                             let mut server = Server::new();
                             server.name = name_str.to_string();
                             server.owner = user.id;
-                            //
                             match server.insert_server(database).await {
                                 Ok(_) => match server.join(&mut user, database).await {
-                                    Ok(_) => {
-                                        *res.status_mut() = StatusCode::OK;
-                                        *res.body_mut() = server.shortid.into();
-                                    }
+                                    Ok(_) => FydiaResponse::new_ok(server.shortid)
+                                        .update_response(&mut res),
                                     Err(e) => {
-                                        *res.body_mut() = "Cannot join the server".into();
+                                        FydiaResponse::new_error("Cannot join the server")
+                                            .update_response(&mut res);
                                         error!(e);
                                     }
                                 },
                                 Err(e) => {
-                                    *res.body_mut() = "Cannot join the server".into();
+                                    FydiaResponse::new_error("Cannot join the server")
+                                        .update_response(&mut res);
                                     error!(e);
                                 }
                             }

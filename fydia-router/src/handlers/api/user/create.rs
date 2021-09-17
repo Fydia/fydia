@@ -1,5 +1,5 @@
 use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
-use fydia_struct::{instance::Instance, user::User};
+use fydia_struct::{error::FydiaResponse, instance::Instance, user::User};
 use gotham::{
     handler::HandlerResult,
     helpers::http::response::create_empty_response,
@@ -30,30 +30,27 @@ pub async fn create_user(mut state: State) -> HandlerResult {
                                         .await
                                 {
                                     error!(e);
-                                    *res.body_mut() = "Error: Database".into();
-                                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                                    FydiaResponse::new_error("Database error")
+                                        .update_response(&mut res);
                                 } else {
-                                    *res.body_mut() = "Register successfully".into();
+                                    FydiaResponse::new_ok("Register successfully")
+                                        .update_response(&mut res);
                                 }
                             }
                             _ => {
-                                *res.body_mut() = "Error: json".into();
-                                *res.status_mut() = StatusCode::BAD_REQUEST;
+                                FydiaResponse::new_error("Json error").update_response(&mut res);
                             }
                         }
                     }
                     _ => {
-                        *res.body_mut() = "Error: json".into();
-                        *res.status_mut() = StatusCode::BAD_REQUEST;
+                        FydiaResponse::new_error("Json error").update_response(&mut res);
                     }
                 }
             } else {
-                *res.body_mut() = "Error: not json".into();
-                *res.status_mut() = StatusCode::BAD_REQUEST;
+                FydiaResponse::new_error("Body is not json").update_response(&mut res);
             }
         } else {
-            *res.body_mut() = "Error".into();
-            *res.status_mut() = StatusCode::BAD_REQUEST;
+            FydiaResponse::new_error("Utf-8 Body").update_response(&mut res);
         }
     }
 

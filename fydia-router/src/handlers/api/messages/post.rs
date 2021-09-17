@@ -42,7 +42,7 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
     let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
-        *res.body_mut() = "Bad Token".into();
+        FydiaResponse::new_error("Bad Token").update_response(&mut res);
         return Ok((state, res));
     };
 

@@ -1,6 +1,7 @@
 use fydia_dispatcher::keys::get::get_public_key;
 use fydia_dispatcher::message::receive::receive_message;
 use fydia_struct::channel::ChannelId;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::instance::{Instance, RsaData};
 use fydia_struct::messages::{Message, MessageType, SqlDate};
@@ -15,19 +16,17 @@ pub async fn event_handler(mut state: State) -> HandlerResult {
     let body = body::to_bytes(Body::take_from(&mut state));
     let headers = HeaderMap::borrow_from(&state);
     let rsa = RsaData::borrow_from(&state);
-    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, format!(""));
+    let mut res = create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, "");
     if let Ok(body_bytes) = body.await {
         let body = body_bytes.to_vec();
         if let Some(msg) = receive_message(headers, body, rsa).await {
             if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
                 crate::handlers::event::event_handler(event, &mut state).await;
             } else {
-                *res.body_mut() = "Bad Body".into();
-                *res.status_mut() = StatusCode::BAD_REQUEST;
+                FydiaResponse::new_error("Bad Body").update_response(&mut res);
             }
         } else {
-            *res.body_mut() = "Decryption error".into();
-            *res.status_mut() = StatusCode::BAD_REQUEST;
+            FydiaResponse::new_error("Decryption Error").update_response(&mut res);
         }
     }
 
@@ -77,7 +76,7 @@ pub async fn send_test_message(state: State) -> HandlerResult {
         .await
         .is_err()
         {
-            *res.body_mut() = "Error when send message".into()
+            FydiaResponse::new_error("Error when send message").update_response(&mut res);
         };
     };
 

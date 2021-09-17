@@ -7,7 +7,7 @@ use gotham::{
 use serde_json::value;
 
 use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
-use fydia_struct::user::User;
+use fydia_struct::{error::FydiaResponse, user::User};
 
 pub async fn user_login(mut state: State) -> HandlerResult {
     let database = &SqlPool::borrow_from(&state).clone().get_pool();
@@ -16,9 +16,7 @@ pub async fn user_login(mut state: State) -> HandlerResult {
     if let Ok(body_bytes) = body::to_bytes(Body::take_from(&mut state)).await {
         let body = body_bytes.to_vec();
         if body.is_empty() {
-            *res.body_mut() = "Bad body".into();
-            *res.status_mut() = StatusCode::BAD_REQUEST;
-
+            FydiaResponse::new_error("Bad Body").update_response(&mut res);
             return Ok((state, res));
         }
         if let Ok(stringed_body) = String::from_utf8(body) {
@@ -36,25 +34,24 @@ pub async fn user_login(mut state: State) -> HandlerResult {
                             match user {
                                 Some(mut user) => {
                                     if let Ok(token) = user.update_token(database).await {
-                                        *res.body_mut() = token.into();
+                                        FydiaResponse::new_ok(token).update_response(&mut res);
                                     } else {
-                                        *res.body_mut() = "token error".into();
+                                        FydiaResponse::new_error("Token error")
+                                            .update_response(&mut res);
                                     }
                                 }
                                 None => {
-                                    *res.status_mut() = StatusCode::BAD_REQUEST;
-                                    *res.body_mut() = "User not exists".into();
+                                    FydiaResponse::new_error("User not exists")
+                                        .update_response(&mut res);
                                 }
                             }
                         }
                         _ => {
-                            *res.status_mut() = StatusCode::BAD_REQUEST;
-                            *res.body_mut() = "Error on json".into();
+                            FydiaResponse::new_error("Json error").update_response(&mut res);
                         }
                     },
                     _ => {
-                        *res.status_mut() = StatusCode::BAD_REQUEST;
-                        *res.body_mut() = "Error on json".into();
+                        FydiaResponse::new_error("Json error").update_response(&mut res);
                     }
                 }
             }

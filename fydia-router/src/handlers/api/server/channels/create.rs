@@ -2,6 +2,7 @@ use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
 use fydia_struct::channel::{Channel, ChannelType};
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ServerExtractor;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
@@ -52,42 +53,45 @@ pub async fn create_channel(mut state: State) -> HandlerResult {
                                                     .insert_channel(channel.clone(), database)
                                                     .await
                                                 {
-                                                    *res.body_mut() =
-                                                        "Cannot create the channel".into();
-                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                                                    FydiaResponse::new_error(
+                                                        "Cannot create the channel",
+                                                    )
+                                                    .update_response(&mut res);
                                                     error!(error);
                                                 } else {
-                                                    *res.body_mut() = channel.id.into();
-                                                    *res.status_mut() = StatusCode::OK;
+                                                    FydiaResponse::new_ok(channel.id)
+                                                        .update_response(&mut res);
                                                 }
                                             }
-                                            _ => {
-                                                *res.body_mut() = "Error".into();
-                                            }
+                                            _ => FydiaResponse::new_error(
+                                                "Error with name or Channel Type",
+                                            )
+                                            .update_response(&mut res),
                                         }
                                     }
                                     _ => {
-                                        *res.body_mut() = "Error".into();
+                                        FydiaResponse::new_error("Error with name or Channel Type")
+                                            .update_response(&mut res);
                                     }
                                 }
                             }
                         } else {
-                            *res.body_mut() = "Error".into();
+                            FydiaResponse::new_error("Cannot get server").update_response(&mut res)
                         }
                     } else {
-                        *res.body_mut() = "Error".into();
+                        FydiaResponse::new_error("Body isn't UTF-8").update_response(&mut res)
                     }
                 } else {
-                    *res.body_mut() = "Error".into();
+                    FydiaResponse::new_error("Bad Body").update_response(&mut res)
                 }
             } else {
-                *res.body_mut() = "Error".into();
+                FydiaResponse::new_error("Unknow Server").update_response(&mut res)
             }
         } else {
-            *res.body_mut() = "User error".into();
+            FydiaResponse::new_error("User error").update_response(&mut res)
         }
     } else {
-        *res.body_mut() = "Token error".into();
+        FydiaResponse::new_error("Token error").update_response(&mut res)
     }
 
     Ok((state, res))

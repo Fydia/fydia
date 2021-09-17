@@ -2,6 +2,7 @@ use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::server::SqlServerId;
 use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ChannelExtractor;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::Token;
@@ -9,14 +10,13 @@ use gotham::handler::HandlerResult;
 use gotham::helpers::http::response::create_response;
 use gotham::hyper::{HeaderMap, StatusCode};
 use gotham::state::{FromState, State};
-use reqwest::header::CONTENT_TYPE;
 
 pub async fn get_message(state: State) -> HandlerResult {
     let mut res = create_response(
         &state,
         StatusCode::BAD_REQUEST,
-        mime::TEXT_PLAIN_UTF_8,
-        "Bad Request".to_string(),
+        mime::APPLICATION_JSON,
+        "".to_string(),
     );
     let headers = HeaderMap::borrow_from(&state);
     let database = &SqlPool::borrow_from(&state).get_pool();
@@ -36,13 +36,7 @@ pub async fn get_message(state: State) -> HandlerResult {
                     if let Some(e) = server.channel.get_channel(channelid) {
                         if let Ok(message) = &e.get_messages(database).await {
                             if let Ok(messages) = serde_json::to_string(&message) {
-                                if let Some(header) = res.headers_mut().get_mut(CONTENT_TYPE) {
-                                    if let Ok(parse) = mime::APPLICATION_JSON.as_ref().parse() {
-                                        *header = parse;
-                                    }
-                                }
-                                *res.status_mut() = StatusCode::OK;
-                                *res.body_mut() = messages.into();
+                                FydiaResponse::new_ok(messages).update_response(&mut res);
                             }
                         }
                     }

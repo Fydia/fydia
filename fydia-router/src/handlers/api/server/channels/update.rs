@@ -1,6 +1,7 @@
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::SqlPool;
 use fydia_struct::channel::{Channel, ChannelId};
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ChannelExtractor;
 use gotham::handler::HandlerResult;
 use gotham::helpers::http::response::create_response;
@@ -28,9 +29,9 @@ pub async fn update_name(mut state: State) -> HandlerResult {
                             if let Err(error) =
                                 channel.update_name(name_str.to_string(), database).await
                             {
-                                *res.status_mut() = StatusCode::BAD_REQUEST;
-                                *res.body_mut() = "Cannot update description".into();
                                 error!(error);
+                                FydiaResponse::new_error("Cannot update description")
+                                    .update_response(&mut res);
                             }
                         }
                     }
@@ -65,9 +66,9 @@ pub async fn update_description(mut state: State) -> HandlerResult {
                                 .update_description(description_str.to_string(), database)
                                 .await
                             {
-                                *res.status_mut() = StatusCode::BAD_REQUEST;
-                                *res.body_mut() = "Cannot update description".into();
                                 error!(error);
+                                FydiaResponse::new_error("Cannot update description")
+                                    .update_response(&mut res);
                             }
                         }
                     }

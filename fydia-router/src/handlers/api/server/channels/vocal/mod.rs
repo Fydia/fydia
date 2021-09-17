@@ -1,5 +1,6 @@
 use fydia_sql::impls::channel::SqlChannelId;
 use fydia_sql::sqlpool::SqlPool;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::{channel::ChannelId, pathextractor::ChannelExtractor, server::ServerId};
 use gotham::state::FromState;
 use gotham::{
@@ -18,9 +19,9 @@ pub async fn join_channel(state: State) -> HandlerResult {
 
     if let Some(channel) = channelid.get_channel(database).await {
         if channel.channel_type.is_voice() {
-            *res.body_mut() = "Vocal Channel".into()
+            FydiaResponse::new_ok("Vocal Channel").update_response(&mut res);
         } else {
-            *res.body_mut() = "text Channel".into()
+            FydiaResponse::new_ok("Text Channel").update_response(&mut res);
         }
     };
 

@@ -1,6 +1,7 @@
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::SqlPool;
 use fydia_struct::channel::{Channel, ChannelId};
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ChannelExtractor;
 use gotham::{
     handler::HandlerResult,
@@ -21,9 +22,8 @@ pub async fn delete_channel(state: State) -> HandlerResult {
     .await
     {
         if let Err(error) = channel.delete_channel(database).await {
-            *res.body_mut() = "Cannot delete the channel".into();
-            *res.status_mut() = StatusCode::BAD_REQUEST;
             error!(error);
+            FydiaResponse::new_error(error).update_response(&mut res);
         };
     };
 
