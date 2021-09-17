@@ -5,6 +5,7 @@ use fydia_sql::impls::server::{SqlServer, SqlServerId};
 use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::SqlPool;
 use fydia_struct::channel::ChannelId;
+use fydia_struct::error::FydiaResponse;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Message, MessageType, SqlDate};
@@ -65,35 +66,15 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                             ) {
                                                 Ok(msg) => msg,
                                                 Err(err) => {
-                                                    *res.status_mut() = StatusCode::BAD_REQUEST;
-                                                    *res.body_mut() = err.into();
-                                                    if let Some(header) =
-                                                        res.headers_mut().get_mut(CONTENT_TYPE)
-                                                    {
-                                                        if let Ok(content_type) =
-                                                            mime::APPLICATION_JSON.as_ref().parse()
-                                                        {
-                                                            *header = content_type;
-                                                        }
-                                                    }
+                                                    FydiaResponse::new_error(err)
+                                                        .update_response(&mut res);
 
                                                     return Ok((state, res));
                                                 }
                                             }
                                         } else {
-                                            *res.status_mut() = StatusCode::BAD_REQUEST;
-                                            *res.body_mut() =
-                                                r#"{{"status":"Error", "content":"Bad Body"}}"#
-                                                    .into();
-                                            if let Some(header) =
-                                                res.headers_mut().get_mut(CONTENT_TYPE)
-                                            {
-                                                if let Ok(content_type) =
-                                                    mime::APPLICATION_JSON.as_ref().parse()
-                                                {
-                                                    *header = content_type;
-                                                }
-                                            }
+                                            FydiaResponse::new_error("Bad Body")
+                                                .update_response(&mut res);
 
                                             return Ok((state, res));
                                         }
@@ -110,17 +91,20 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                         {
                                             Ok(msg) => msg,
                                             Err(e) => {
-                                                *res.body_mut() =
-                                                    format!(r#"{{"error":"{}"}}"#, e).into();
+                                                FydiaResponse::new_error(e)
+                                                    .update_response(&mut res);
+
                                                 *res.status_mut() =
                                                     StatusCode::INTERNAL_SERVER_ERROR;
+
                                                 return Ok((state, res));
                                             }
                                         }
                                     }
 
                                     _ => {
-                                        *res.body_mut() = "Bad Content-Type".into();
+                                        FydiaResponse::new_error("Bad Content-Type")
+                                            .update_response(&mut res);
                                         return Ok((state, res));
                                     }
                                 };
@@ -129,7 +113,8 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                 if let Ok(members) = server.get_user(database).await {
                                     if let EventContent::Message { ref content } = msg.content {
                                         if content.insert_message(database).await.is_err() {
-                                            *res.body_mut() = "Cannot send message".into();
+                                            FydiaResponse::new_error("Cannot send message")
+                                                .update_response(&mut res);
                                             *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                                         } else {
                                             tokio::spawn(async move {
@@ -144,35 +129,36 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                             });
                                         }
                                     }
-
-                                    *res.body_mut() = "Message send".into();
-                                    *res.status_mut() = StatusCode::OK;
+                                    FydiaResponse::new_ok("Message send").update_response(&mut res);
                                 } else {
-                                    *res.body_mut() = "Cannot get users of the server".into();
+                                    FydiaResponse::new_error("Cannot get users of the server")
+                                        .update_response(&mut res);
                                     *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                                 }
                             } else {
-                                *res.body_mut() = "Bad Content-Type".into();
+                                FydiaResponse::new_error("Bad Content-Type")
+                                    .update_response(&mut res);
                                 return Ok((state, res));
                             }
                         } else {
-                            *res.body_mut() = "Where is the Content-Type".into();
+                            FydiaResponse::new_error("Where is the Content-Type")
+                                .update_response(&mut res);
                             return Ok((state, res));
-                        };
+                        }
                     } else {
-                        *res.body_mut() = "Unvalid channel".into();
+                        FydiaResponse::new_error("Unvalid channel").update_response(&mut res);
                     }
                 } else {
-                    *res.body_mut() = "unknow server".into();
+                    FydiaResponse::new_error("unknow server").update_response(&mut res);
                 }
             } else {
-                *res.body_mut() = "unknow server".into();
+                FydiaResponse::new_error("unknow server").update_response(&mut res);
             }
         } else {
-            *res.body_mut() = "unknow server".into();
+            FydiaResponse::new_error("unknow server").update_response(&mut res);
         }
     } else {
-        *res.body_mut() = "Token error".into();
+        FydiaResponse::new_error("Token error").update_response(&mut res);
     }
 
     Ok((state, res))
