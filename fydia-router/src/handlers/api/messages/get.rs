@@ -35,9 +35,7 @@ pub async fn get_message(state: State) -> HandlerResult {
                 if let Ok(server) = serverid.get_server(database).await {
                     if let Some(e) = server.channel.get_channel(channelid) {
                         if let Ok(message) = &e.get_messages(database).await {
-                            if let Ok(messages) = serde_json::to_string(&message) {
-                                FydiaResponse::new_ok(messages).update_response(&mut res);
-                            }
+                            FydiaResponse::new_ok_json(&message).update_response(&mut res);
                         }
                     }
                 }

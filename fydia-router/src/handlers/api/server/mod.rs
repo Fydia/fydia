@@ -40,9 +40,8 @@ pub async fn get_server(state: State) -> HandlerResult {
                 }
             }
         }
-        if let Ok(json) = serde_json::to_string(&getted_server) {
-            FydiaResponse::new_ok(json).update_response(&mut res);
-        }
+
+        FydiaResponse::new_ok_json(&getted_server).update_response(&mut res);
     }
 
     Ok((state, res))

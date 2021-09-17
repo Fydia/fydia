@@ -1,32 +1,40 @@
 use http::Response;
 use hyper::{header::CONTENT_TYPE, Body, StatusCode};
 use serde::Serialize;
+use serde_json::Value;
 #[derive(Serialize)]
 pub struct FydiaResponse {
     status: FydiaStatus,
     #[serde(rename(serialize = "content"))]
-    body: String,
+    body: FydiaResponseBody,
 }
-
 impl FydiaResponse {
     pub fn new<T: Into<String>>(status: FydiaStatus, body: T) -> Self {
+        let body: String = body.into();
         Self {
             status,
-            body: body.into(),
+            body: FydiaResponseBody::String(body),
         }
     }
-
     pub fn new_error<T: Into<String>>(body: T) -> Self {
-        Self {
-            status: FydiaStatus::Error,
-            body: body.into(),
-        }
+        Self::new(FydiaStatus::Error, body)
     }
 
     pub fn new_ok<T: Into<String>>(body: T) -> Self {
-        Self {
-            status: FydiaStatus::OK,
-            body: body.into(),
+        Self::new(FydiaStatus::OK, body)
+    }
+    pub fn new_ok_json<S: Serialize>(body: S) -> Self
+    where
+        S: Serialize,
+    {
+        match serde_json::to_string(&body) {
+            Ok(body) => Self {
+                status: FydiaStatus::OK,
+                body: FydiaResponseBody::Json(
+                    serde_json::from_str::<Value>(&body).unwrap_or_default(),
+                ),
+            },
+            Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{}}}"#, e)),
         }
     }
 
@@ -50,7 +58,6 @@ impl FydiaResponse {
                 }
             }
         }
-
         match serde_json::to_string(self) {
             Ok(e) => *res.body_mut() = e.into(),
             Err(e) => {
@@ -67,4 +74,10 @@ impl FydiaResponse {
 pub enum FydiaStatus {
     OK,
     Error,
+}
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum FydiaResponseBody {
+    String(String),
+    Json(Value),
 }
