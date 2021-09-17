@@ -23,7 +23,7 @@ pub fn hash(to_hash: String) -> String {
     let argon2 = Argon2::default();
 
     argon2
-        .hash_password_simple(to_hash.as_ref(), salt.as_ref())
+        .hash_password(to_hash.as_ref(), salt.as_ref())
         .unwrap()
         .to_string()
 }
