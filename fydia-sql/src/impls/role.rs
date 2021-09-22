@@ -1,182 +1,151 @@
+use std::sync::Arc;
+
+use crate::entity;
 use crate::sqlpool::parse_array;
-use crate::sqlpool::FydiaPool;
-use crate::sqlpool::ToAnyRows;
 use fydia_struct::permission::Permission;
 use fydia_struct::{roles::Role, server::ServerId};
-use sqlx::Row;
+
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[async_trait::async_trait]
 pub trait SqlRoles {
     async fn get_roles_by_server_id(
         shortid: String,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<Vec<Role>, String>;
-    async fn get_role_by_id(role_id: i32, executor: &FydiaPool) -> Result<(), String>;
-    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String>;
-    async fn update_color(&mut self, color: String, executor: &FydiaPool) -> Result<(), String>;
-    async fn delete_role(&self, executor: &FydiaPool) -> Result<(), String>;
+    async fn get_role_by_id(
+        role_id: i32,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<Role, String>;
+    async fn update_name(
+        &mut self,
+        name: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String>;
+    async fn update_color(
+        &mut self,
+        color: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String>;
+    async fn delete_role(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlRoles for Role {
     async fn get_roles_by_server_id(
         shortid: String,
-        executor: &FydiaPool,
+        executor: &Arc<DatabaseConnection>,
     ) -> Result<Vec<Self>, String> {
-        let rawquery = "SELECT id, serverid, name, color, channel_access, permission FROM Roles WHERE serverid = ?;";
-        let sqlresult = match executor {
-            FydiaPool::Mysql(e) => match sqlx::query(rawquery).bind(shortid).fetch_all(e).await {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-
-            FydiaPool::PgSql(e) => match sqlx::query(rawquery).bind(shortid).fetch_all(e).await {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-            FydiaPool::Sqlite(e) => match sqlx::query(rawquery).bind(shortid).fetch_all(e).await {
-                Ok(e) => e.to_anyrows(),
-                Err(e) => return Err(e.to_string()),
-            },
-        };
         let mut result = Vec::new();
-        for i in sqlresult {
-            result.push(Self {
-                id: i.get("id"),
-                server_id: ServerId::new(i.get("serverid")),
-                name: i.get("name"),
-                color: i.get("color"),
-                channel_access: parse_array(i.get("channel_access")),
-                permission: Permission::from_string(i.get("permission")),
-            });
+        let query = crate::entity::roles::Entity::find()
+            .filter(entity::roles::Column::Serverid.eq(shortid))
+            .all(executor)
+            .await;
+        if let Ok(query) = query {
+            for i in query {
+                result.push(Self {
+                    id: i.id,
+                    server_id: ServerId::new(i.serverid),
+                    name: i.name,
+                    color: i.color,
+                    channel_access: parse_array(
+                        i.channel_access.unwrap_or_else(|| String::from("[]")),
+                    ),
+                    permission: Permission::from_string(i.permission.unwrap_or_default()),
+                });
+            }
         }
 
         Ok(result)
     }
 
-    async fn get_role_by_id(role_id: i32, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "SELECT * FROM Roles WHERE id = ?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(role_id).execute(mysql).await {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(role_id).execute(pgsql).await {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery).bind(role_id).execute(sqlite).await {
-                    return Err(e.to_string());
-                };
-            }
+    async fn get_role_by_id(
+        role_id: i32,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<Self, String> {
+        let query = entity::roles::Entity::find()
+            .filter(entity::roles::Column::Id.eq(role_id))
+            .one(executor)
+            .await;
+        match query {
+            Ok(Some(model)) => Ok(Role {
+                id: model.id,
+                name: model.name,
+                color: model.color,
+                server_id: ServerId::new(model.serverid),
+                channel_access: parse_array(
+                    model.channel_access.unwrap_or_else(|| String::from("[]")),
+                ),
+                permission: Permission::from_string(model.permission.unwrap_or_default()),
+            }),
+            Err(e) => Err(e.to_string()),
+            _ => Err(String::from("No Role with this id")),
         }
-
-        Ok(())
     }
 
-    async fn update_name(&mut self, name: String, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "UPDATE Roles SET name=? WHERE id=?";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.id)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
+    async fn update_name(
+        &mut self,
+        name: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String> {
+        let active_model = entity::roles::ActiveModel {
+            name: Set(name.clone()),
+            ..Default::default()
+        };
+
+        match entity::roles::Entity::update(active_model)
+            .filter(entity::messages::Column::Id.eq(self.id))
+            .exec(executor)
+            .await
+        {
+            Ok(_) => {
+                self.name = name;
+                Ok(())
             }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.id)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&name)
-                    .bind(&self.id)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
+            Err(e) => Err(e.to_string()),
         }
-
-        self.name = name;
-
-        Ok(())
     }
 
-    async fn update_color(&mut self, color: String, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "UPDATE Roles SET color=? WHERE id=?";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&color)
-                    .bind(&self.id)
-                    .execute(mysql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
+    async fn update_color(
+        &mut self,
+        color: String,
+        executor: &Arc<DatabaseConnection>,
+    ) -> Result<(), String> {
+        let active_model = entity::roles::ActiveModel {
+            color: Set(color.clone()),
+            ..Default::default()
+        };
+
+        match entity::roles::Entity::update(active_model)
+            .filter(entity::messages::Column::Id.eq(self.id))
+            .exec(executor)
+            .await
+        {
+            Ok(_) => {
+                self.color = color;
+                Ok(())
             }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&color)
-                    .bind(&self.id)
-                    .execute(pgsql)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery)
-                    .bind(&self.id)
-                    .bind(&color)
-                    .execute(sqlite)
-                    .await
-                {
-                    return Err(e.to_string());
-                };
-            }
+            Err(e) => Err(e.to_string()),
         }
-
-        self.color = color;
-
-        Ok(())
     }
 
-    async fn delete_role(&self, executor: &FydiaPool) -> Result<(), String> {
-        let rawquery = "DELETE FROM Roles WHERE id=?;";
-        match executor {
-            FydiaPool::Mysql(mysql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(mysql).await {
-                    return Err(e.to_string());
-                };
-            }
-            FydiaPool::PgSql(pgsql) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(pgsql).await {
-                    return Err(e.to_string());
+    async fn delete_role(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+        match entity::roles::Entity::find_by_id(self.id)
+            .one(executor)
+            .await
+        {
+            Ok(Some(model)) => {
+                let active_model: entity::roles::ActiveModel = model.into();
+                match entity::roles::Entity::delete(active_model)
+                    .exec(executor)
+                    .await
+                {
+                    Ok(_) => return Ok(()),
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            FydiaPool::Sqlite(sqlite) => {
-                if let Err(e) = sqlx::query(rawquery).bind(&self.id).execute(sqlite).await {
-                    return Err(e.to_string());
-                };
-            }
+            Err(e) => Err(e.to_string()),
+            _ => Err(String::from("This role not exists")),
         }
-
-        Ok(())
     }
 }
