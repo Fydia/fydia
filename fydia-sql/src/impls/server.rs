@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fydia_struct::{
     channel::{Channel, ParentId},
+    roles::Role,
     server::{Members, Server, ServerId},
     user::User,
 };
@@ -9,7 +10,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use crate::entity::server;
 
-use super::{channel::SqlChannel, user::SqlUser};
+use super::{channel::SqlChannel, role::SqlRoles, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -80,10 +81,11 @@ impl SqlServer for Server {
                     }
                 };
 
-                /*let roles = match Role::get_roles_by_server_id(model.shortid, executor).await {
-                    Ok(e) => e,
-                    Err(e) => return Err(e),
-                };*/
+                let roles =
+                    match Role::get_roles_by_server_id(model.shortid.clone(), executor).await {
+                        Ok(e) => e,
+                        Err(e) => return Err(e),
+                    };
 
                 let channel =
                     match Channel::get_channels_by_server_id(model.shortid.clone(), executor).await
@@ -100,6 +102,7 @@ impl SqlServer for Server {
                     icon: model.icon.unwrap_or_else(|| "Error".to_string()),
                     members,
                     channel,
+                    roles,
                     ..Default::default()
                 })
             }
