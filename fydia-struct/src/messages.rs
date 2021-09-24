@@ -116,8 +116,7 @@ impl Serialize for SqlDate {
     where
         S: Serializer,
     {
-        //serde::ser::SerializeStruct::serialize_field(&mut serializer, "timestamp")
-        serializer.serialize_str(datetime_to_sqltime(self.0).as_str())
+        serializer.serialize_i64(self.0.timestamp())
     }
 }
 
