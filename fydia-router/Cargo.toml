@@ -25,7 +25,7 @@ base64 = "0.13"
 mime = "0.3.12"
 multipart = { version="0.18.0", default-features=false, features=["server"] }
 multer = "2.0.0"
-serde_json = "1.0.64"
+serde_json = "1.0.68"
 serde = "1.0.126"
 reqwest = "0.11.4"
 rayon = "1.5.1"
