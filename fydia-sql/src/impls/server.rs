@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fydia_struct::{
-    channel::Channel,
+    channel::{Channel, ParentId},
     server::{Members, Server, ServerId},
     user::User,
 };
@@ -256,9 +256,13 @@ impl SqlServer for Server {
         channel: Channel,
         executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String> {
+        let parent_id = match channel.parent_id.clone() {
+            ParentId::DirectMessage(_) => return Err(String::from("Bad type of Channel")),
+            ParentId::ServerId(e) => e,
+        };
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(channel.id.clone()),
-            parent_id: Set(channel.server_id.short_id.clone()),
+            parent_id: Set(parent_id.short_id),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),
             channel_type: Set(Some(channel.channel_type.to_string())),

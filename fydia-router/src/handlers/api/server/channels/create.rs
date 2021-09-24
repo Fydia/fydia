@@ -35,7 +35,9 @@ pub async fn create_channel(mut state: State) -> HandlerResult {
                         .await
                         {
                             let mut channel = Channel::new();
-                            channel.server_id = ServerId::new(server.id.clone());
+                            channel.parent_id = fydia_struct::channel::ParentId::ServerId(
+                                ServerId::new(server.id.clone()),
+                            );
 
                             if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
                                 let name = value.get("name");

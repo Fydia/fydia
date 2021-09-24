@@ -3,12 +3,13 @@ use std::fmt::Display;
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
-use crate::server::ServerId;
+use crate::{server::ServerId, user::UserId};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChannelType {
     Voice,
     Text,
+    DirectMessage,
 }
 
 impl ChannelType {
@@ -25,6 +26,7 @@ impl Display for ChannelType {
         match self {
             ChannelType::Voice => write!(f, "VOICE"),
             ChannelType::Text => write!(f, "TEXT"),
+            ChannelType::DirectMessage => write!(f, "DIRECT_MESSAGE"),
         }
     }
 }
@@ -33,9 +35,21 @@ impl ChannelType {
     pub fn from_string(toparse: String) -> Self {
         match toparse.to_uppercase().as_str() {
             "VOICE" => Self::Voice,
+            "DIRECT_MESSAGE" => Self::DirectMessage,
             _ => Self::Text,
         }
     }
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DirectMessage {
+    pub users: Vec<UserId>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ParentId {
+    #[serde(rename = "direct_messages")]
+    DirectMessage(DirectMessage),
+    #[serde(rename = "server_id")]
+    ServerId(ServerId),
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -52,7 +66,7 @@ impl ChannelId {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Channel {
     pub id: String,
-    pub server_id: ServerId,
+    pub parent_id: ParentId,
     pub name: String,
     pub description: String,
     pub channel_type: ChannelType,
@@ -63,7 +77,7 @@ impl Channel {
         let gen = generate_string(15);
         Self {
             id: gen,
-            server_id: ServerId::new(String::new()),
+            parent_id: ParentId::ServerId(ServerId::new(String::new())),
             name: String::new(),
             description: String::new(),
             channel_type: ChannelType::Text,
