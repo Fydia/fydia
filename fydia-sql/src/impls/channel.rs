@@ -60,7 +60,7 @@ impl SqlChannel for Channel {
         }
         let mut channels: Vec<Channel> = Vec::new();
         match crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.eq(server_id))
+            .filter(crate::entity::channels::Column::ParentId.contains(&server_id))
             .all(executor)
             .await
         {
