@@ -179,7 +179,7 @@ impl SqlMessage for Message {
     }
 
     async fn delete_message(&mut self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
-        match crate::entity::messages::Entity::find_by_id(self.id.as_str())
+        match crate::entity::messages::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
         {

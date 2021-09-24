@@ -60,7 +60,7 @@ impl SqlChannel for Channel {
         }
         let mut channels: Vec<Channel> = Vec::new();
         match crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::Serverid.eq(server_id))
+            .filter(crate::entity::channels::Column::ParentId.eq(server_id))
             .all(executor)
             .await
         {
@@ -85,7 +85,7 @@ impl SqlChannel for Channel {
         name: String,
         executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.as_str())
+        match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
         {
@@ -120,7 +120,7 @@ impl SqlChannel for Channel {
         description: String,
         executor: &Arc<DatabaseConnection>,
     ) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.as_str())
+        match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
         {
@@ -151,7 +151,7 @@ impl SqlChannel for Channel {
     }
 
     async fn delete_channel(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.as_str())
+        match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
         {

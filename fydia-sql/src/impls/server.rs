@@ -7,7 +7,7 @@ use fydia_struct::{
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
-use crate::entity::server::{self};
+use crate::entity::server;
 
 use super::{channel::SqlChannel, user::SqlUser};
 
@@ -258,7 +258,7 @@ impl SqlServer for Server {
     ) -> Result<(), String> {
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(channel.id.clone()),
-            serverid: Set(channel.server_id.short_id.clone()),
+            parent_id: Set(channel.server_id.short_id.clone()),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),
             channel_type: Set(Some(channel.channel_type.to_string())),

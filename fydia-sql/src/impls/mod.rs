@@ -5,3 +5,4 @@ pub mod role;
 pub mod server;
 pub mod token;
 pub mod user;
+pub mod permission;
