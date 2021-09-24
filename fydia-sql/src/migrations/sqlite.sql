@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS "Channels" (
     id TEXT(15) NOT NULL PRIMARY KEY,
-    serverid TEXT(10) NOT NULL,
+    "parent_id" TEXT(10) NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    "type" TEXT(15) NOT NULL
+    "channel_type" TEXT(15) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "User" (
     id INTEGER NOT NULL PRIMARY KEY,

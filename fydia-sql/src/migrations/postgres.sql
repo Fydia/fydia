@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS "Channels" (
     "id" varchar(15) PRIMARY KEY NOT NULL,
-    serverid varchar(10) NOT NULL,
+    "parent_id" varchar(10) NOT NULL,
     "name" text NOT NULL,
     description text DEFAULT NULL,
-    "type" varchar(100) DEFAULT NULL
+    "channel_type" varchar(100) DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS "User" (
     "id" SERIAL PRIMARY KEY NOT NULL,

@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS `Channels` (
     `id` varchar(15) PRIMARY KEY NOT NULL,
-    `serverid` varchar(10) NOT NULL,
+    `parent_id` varchar(10) NOT NULL,
     `name` text NOT NULL,
     `description` text DEFAULT NULL,
-    `type` varchar(100) DEFAULT NULL
+    `channel_type` varchar(100) DEFAULT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `User` (
     `id` int(10) NOT NULL AUTO_INCREMENT,
