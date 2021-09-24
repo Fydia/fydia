@@ -38,7 +38,10 @@ impl Model {
         };
         let parent_id = match serde_json::from_str::<ParentId>(&self.parent_id) {
             Ok(e) => e,
-            Err(_) => return None,
+            Err(e) => {
+                error!(e.to_string());
+                return None;
+            }
         };
         Some(Channel {
             id: self.id.clone(),
