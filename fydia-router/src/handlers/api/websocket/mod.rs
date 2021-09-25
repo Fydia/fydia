@@ -49,7 +49,7 @@ impl Websockets {
         e.remove_unvalid_channel();
         e.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
-                if i.user.instance.domain == "localhost" {
+                if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
                     if let Err(e) = i
                         .channel
                         .send(ChannelMessage::Message(Box::new(msg.clone())))
