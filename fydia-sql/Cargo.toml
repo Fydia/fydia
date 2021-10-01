@@ -16,7 +16,7 @@ sqlx = { version="0.5", default-features=false, features=[
     "time",
 ] }
 
-sea-orm =  {version = "0.2.3", features = [ "sqlx-all", "runtime-tokio-rustls", "macros" ]}
+sea-orm =  {version = "0.2.4", features = [ "sqlx-all", "runtime-tokio-rustls", "macros" ]}
 futures = "0.3.15"
 gotham = "0.6.0"
 gotham_derive = "0.6.0"
