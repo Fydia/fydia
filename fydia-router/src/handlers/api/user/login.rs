@@ -7,7 +7,7 @@ use gotham::{
 use serde_json::value;
 
 use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
-use fydia_struct::{error::FydiaResponse, user::User};
+use fydia_struct::{response::FydiaResponse, user::User};
 
 pub async fn user_login(mut state: State) -> HandlerResult {
     let database = &SqlPool::borrow_from(&state).clone().get_pool();

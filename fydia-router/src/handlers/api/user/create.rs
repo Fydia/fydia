@@ -1,5 +1,5 @@
 use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
-use fydia_struct::{error::FydiaResponse, instance::Instance, user::User};
+use fydia_struct::{instance::Instance, response::FydiaResponse, user::User};
 use gotham::{
     handler::HandlerResult,
     helpers::http::response::create_empty_response,

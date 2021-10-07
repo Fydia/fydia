@@ -1,8 +1,8 @@
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::SqlPool;
 use fydia_struct::channel::{Channel, ChannelId};
-use fydia_struct::error::FydiaResponse;
 use fydia_struct::pathextractor::ChannelExtractor;
+use fydia_struct::response::FydiaResponse;
 use gotham::{
     handler::HandlerResult,
     helpers::http::response::create_response,

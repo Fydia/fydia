@@ -14,8 +14,8 @@ use fydia_sql::{impls::channel::SqlChannel, sqlpool::SqlPool};
 
 use fydia_struct::{
     channel::{Channel, ChannelId},
-    error::FydiaResponse,
     pathextractor::ChannelExtractor,
+    response::FydiaResponse,
 };
 
 pub async fn info_channel(state: State) -> HandlerResult {

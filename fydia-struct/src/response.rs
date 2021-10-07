@@ -7,6 +7,8 @@ pub struct FydiaResponse {
     status: FydiaStatus,
     #[serde(rename(serialize = "content"))]
     body: FydiaResponseBody,
+    #[serde(skip)]
+    custom_statuscode: Option<StatusCode>,
 }
 impl FydiaResponse {
     pub fn new<T: Into<String>>(status: FydiaStatus, body: T) -> Self {
@@ -14,10 +16,17 @@ impl FydiaResponse {
         Self {
             status,
             body: FydiaResponseBody::String(body),
+            custom_statuscode: None,
         }
     }
     pub fn new_error<T: Into<String>>(body: T) -> Self {
         Self::new(FydiaStatus::Error, body)
+    }
+
+    pub fn new_error_custom_status<T: Into<String>>(body: T, status_code: StatusCode) -> Self {
+        let mut s = Self::new(FydiaStatus::Error, body);
+        s.custom_statuscode = Some(status_code);
+        s
     }
 
     pub fn new_ok<T: Into<String>>(body: T) -> Self {
@@ -33,6 +42,7 @@ impl FydiaResponse {
                 body: FydiaResponseBody::Json(
                     serde_json::from_str::<Value>(&body).unwrap_or_default(),
                 ),
+                custom_statuscode: None,
             },
             Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{}}}"#, e)),
         }
@@ -48,8 +58,12 @@ impl FydiaResponse {
         }
         match self.status {
             FydiaStatus::Error => {
-                if res.status() != StatusCode::BAD_REQUEST {
-                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                if let Some(status_code) = self.custom_statuscode {
+                    *res.status_mut() = status_code;
+                } else {
+                    if res.status() != StatusCode::BAD_REQUEST {
+                        *res.status_mut() = StatusCode::BAD_REQUEST;
+                    }
                 }
             }
             FydiaStatus::OK => {

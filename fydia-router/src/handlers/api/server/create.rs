@@ -1,7 +1,7 @@
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::SqlPool;
-use fydia_struct::error::FydiaResponse;
+use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::Server;
 use fydia_struct::user::{Token, User};
 use gotham::handler::HandlerResult;

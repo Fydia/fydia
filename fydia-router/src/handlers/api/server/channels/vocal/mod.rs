@@ -1,6 +1,6 @@
 use fydia_sql::impls::channel::SqlChannelId;
 use fydia_sql::sqlpool::SqlPool;
-use fydia_struct::error::FydiaResponse;
+use fydia_struct::response::FydiaResponse;
 use fydia_struct::{channel::ChannelId, pathextractor::ChannelExtractor, server::ServerId};
 use gotham::state::FromState;
 use gotham::{
