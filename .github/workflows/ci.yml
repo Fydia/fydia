@@ -15,7 +15,7 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
-    name: Buidl Fydia
+    name: Build Fydia
     strategy:
       matrix:
         os: [ubuntu-18.04]
@@ -42,6 +42,6 @@ jobs:
     steps:
       - uses: kolpav/purge-artifacts-action@v1
         with:
-          token: $
-          expire-in: 7days # Set this to 0 to delete all artifacts
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
       
