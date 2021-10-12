@@ -60,10 +60,8 @@ impl FydiaResponse {
             FydiaStatus::Error => {
                 if let Some(status_code) = self.custom_statuscode {
                     *res.status_mut() = status_code;
-                } else {
-                    if res.status() != StatusCode::BAD_REQUEST {
-                        *res.status_mut() = StatusCode::BAD_REQUEST;
-                    }
+                } else if res.status() != StatusCode::BAD_REQUEST {
+                    *res.status_mut() = StatusCode::BAD_REQUEST;
                 }
             }
             FydiaStatus::OK => {
