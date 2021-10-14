@@ -8,3 +8,8 @@ pub struct ChannelExtractor {
 pub struct ServerExtractor {
     pub serverid: String,
 }
+
+#[derive(serde::Deserialize, StateData, StaticResponseExtender, Debug)]
+pub struct UserExtractor {
+    pub id: String,
+}
