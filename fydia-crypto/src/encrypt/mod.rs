@@ -25,13 +25,15 @@ pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, Str
 
 /// Return encrypted AES key with RSA Public Key and Encrypted Body with aes key
 /// If ok, the first Vec<u8> is encrypted key and the second is encrypted data
+/// ```
 ///                                 1                               3
 /// 0                               6                               1
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-/// |             IV                |               KEY(16+32)       
+/// |             IV                |               KEY(16..48)       
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///              KEY(16+32)         |              BODY(48..n)      |
+///              KEY(16..48)         |              BODY(48..n)     |
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// ```
 pub fn aes_encrypt(
     rsa: PublicKey,
     string: String,
