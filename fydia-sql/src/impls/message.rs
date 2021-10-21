@@ -6,7 +6,6 @@ use fydia_struct::{
     user::User,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
-use std::sync::Arc;
 
 use super::user::SqlUser;
 
@@ -14,26 +13,26 @@ use super::user::SqlUser;
 pub trait SqlMessage {
     async fn get_messages_by_user_id(
         id: i32,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
     async fn get_messages_by_channel(
         channel_id: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
-    async fn insert_message(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_message(
         &mut self,
         content: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn delete_message(&mut self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlMessage for Message {
     async fn get_messages_by_user_id(
         id: i32,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
         let mut query = crate::entity::messages::Entity::find()
@@ -72,7 +71,7 @@ impl SqlMessage for Message {
 
     async fn get_messages_by_channel(
         channel_id: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
         let mut query = crate::entity::messages::Entity::find()
@@ -128,7 +127,7 @@ impl SqlMessage for Message {
         Ok(messages)
     }
 
-    async fn insert_message(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_model = crate::entity::messages::ActiveModel {
             id: Set(self.id.clone()),
             content: Set(Some(self.content.clone())),
@@ -154,7 +153,7 @@ impl SqlMessage for Message {
     async fn update_message(
         &mut self,
         content: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let active_model = crate::entity::messages::ActiveModel {
             content: Set(Some(content.to_string())),
@@ -178,7 +177,7 @@ impl SqlMessage for Message {
         }
     }
 
-    async fn delete_message(&mut self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         match crate::entity::messages::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await

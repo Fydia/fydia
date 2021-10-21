@@ -1,4 +1,4 @@
-use sea_orm::{DbConn, DbErr, Statement};
+use sea_orm::{ConnectionTrait, DbConn, DbErr, Statement};
 
 pub async fn create_tables(db: &DbConn) -> Result<(), DbErr> {
     let builder = db.get_database_backend();

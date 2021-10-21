@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use fydia_struct::{
     channel::{Channel, ParentId},
     roles::Role,
@@ -14,33 +12,33 @@ use super::{channel::SqlChannel, role::SqlRoles, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
-    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Members, String>;
+    async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String>;
     async fn get_server_by_id(
         id: ServerId,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Server, String>;
-    async fn insert_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
-    async fn delete_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn insert_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn join(
         &mut self,
         mut user: &mut User,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn insert_channel(
         &mut self,
         channel: Channel,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlServer for Server {
-    async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Result<Members, String> {
+    async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String> {
         match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Id.eq(self.id.as_str()))
             .one(executor)
@@ -65,7 +63,7 @@ impl SqlServer for Server {
 
     async fn get_server_by_id(
         id: ServerId,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Server, String> {
         match crate::entity::server::Entity::find()
             .filter(server::Column::Shortid.eq(id.short_id))
@@ -116,7 +114,7 @@ impl SqlServer for Server {
             }
         }
     }
-    async fn insert_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn insert_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let members_json = match serde_json::to_string(&Members::new()) {
             Ok(e) => e,
             Err(e) => return Err(e.to_string()),
@@ -138,7 +136,7 @@ impl SqlServer for Server {
         }
     }
 
-    async fn delete_server(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = crate::entity::server::ActiveModel {
             id: Set(self.id.clone()),
             ..Default::default()
@@ -155,7 +153,7 @@ impl SqlServer for Server {
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         match crate::entity::server::Entity::find()
             .filter(server::Column::Shortid.contains(self.shortid.as_str()))
@@ -188,11 +186,7 @@ impl SqlServer for Server {
         Ok(())
     }
 
-    async fn join(
-        &mut self,
-        user: &mut User,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Result<(), String> {
+    async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
         let server = match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Shortid.eq(self.shortid.as_str()))
             .one(executor)
@@ -257,7 +251,7 @@ impl SqlServer for Server {
     async fn insert_channel(
         &mut self,
         channel: Channel,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let parent_id = match channel.parent_id.clone() {
             ParentId::DirectMessage(_) => return Err(String::from("Bad type of Channel")),
@@ -285,12 +279,12 @@ impl SqlServer for Server {
 
 #[async_trait::async_trait]
 pub trait SqlServerId {
-    async fn get_server(&self, executor: &Arc<DatabaseConnection>) -> Result<Server, String>;
+    async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
-    async fn get_server(&self, executor: &Arc<DatabaseConnection>) -> Result<Server, String> {
+    async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
         Server::get_server_by_id(ServerId::new(self.id.clone()), executor).await
     }
 }

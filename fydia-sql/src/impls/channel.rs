@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::message::SqlMessage;
 use fydia_struct::{
     channel::{Channel, ChannelId},
@@ -10,37 +8,28 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
-    async fn get_channel_by_id(
-        id: ChannelId,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Option<Channel>;
+    async fn get_channel_by_id(id: ChannelId, executor: &DatabaseConnection) -> Option<Channel>;
     async fn get_channels_by_server_id(
         server_id: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Channels, String>;
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn update_description(
         &mut self,
         description: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn delete_channel(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
-    async fn get_messages(
-        &self,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Result<Vec<Message>, String>;
+    async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlChannel for Channel {
-    async fn get_channel_by_id(
-        id: ChannelId,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Option<Channel> {
+    async fn get_channel_by_id(id: ChannelId, executor: &DatabaseConnection) -> Option<Channel> {
         match crate::entity::channels::Entity::find_by_id(id.id)
             .one(executor)
             .await
@@ -52,7 +41,7 @@ impl SqlChannel for Channel {
 
     async fn get_channels_by_server_id(
         server_id: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
         let mut server_id = server_id;
         if server_id.len() > 10 {
@@ -83,7 +72,7 @@ impl SqlChannel for Channel {
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
@@ -118,7 +107,7 @@ impl SqlChannel for Channel {
     async fn update_description(
         &mut self,
         description: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
@@ -150,7 +139,7 @@ impl SqlChannel for Channel {
         }
     }
 
-    async fn delete_channel(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String> {
         match crate::entity::channels::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
@@ -176,22 +165,19 @@ impl SqlChannel for Channel {
         }
     }
 
-    async fn get_messages(
-        &self,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Result<Vec<Message>, String> {
+    async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
         Message::get_messages_by_channel(self.id.clone(), executor).await
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlChannelId {
-    async fn get_channel(&self, executor: &Arc<DatabaseConnection>) -> Option<Channel>;
+    async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel>;
 }
 
 #[async_trait::async_trait]
 impl SqlChannelId for ChannelId {
-    async fn get_channel(&self, executor: &Arc<DatabaseConnection>) -> Option<Channel> {
+    async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel> {
         Channel::get_channel_by_id(self.clone(), executor).await
     }
 }

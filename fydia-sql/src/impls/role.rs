@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::entity;
 use crate::sqlpool::parse_array;
 use fydia_struct::permission::Permission;
@@ -11,30 +9,27 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 pub trait SqlRoles {
     async fn get_roles_by_server_id(
         shortid: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Role>, String>;
-    async fn get_role_by_id(
-        role_id: i32,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Result<Role, String>;
+    async fn get_role_by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Role, String>;
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn update_color(
         &mut self,
         color: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn delete_role(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String>;
+    async fn delete_role(&self, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl SqlRoles for Role {
     async fn get_roles_by_server_id(
         shortid: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<Vec<Self>, String> {
         let mut result = Vec::new();
         let query = crate::entity::roles::Entity::find()
@@ -59,10 +54,7 @@ impl SqlRoles for Role {
         Ok(result)
     }
 
-    async fn get_role_by_id(
-        role_id: i32,
-        executor: &Arc<DatabaseConnection>,
-    ) -> Result<Self, String> {
+    async fn get_role_by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Self, String> {
         let query = entity::roles::Entity::find()
             .filter(entity::roles::Column::Id.eq(role_id))
             .one(executor)
@@ -86,7 +78,7 @@ impl SqlRoles for Role {
     async fn update_name(
         &mut self,
         name: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let active_model = entity::roles::ActiveModel {
             name: Set(name.clone()),
@@ -109,7 +101,7 @@ impl SqlRoles for Role {
     async fn update_color(
         &mut self,
         color: String,
-        executor: &Arc<DatabaseConnection>,
+        executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let active_model = entity::roles::ActiveModel {
             color: Set(color.clone()),
@@ -129,7 +121,7 @@ impl SqlRoles for Role {
         }
     }
 
-    async fn delete_role(&self, executor: &Arc<DatabaseConnection>) -> Result<(), String> {
+    async fn delete_role(&self, executor: &DatabaseConnection) -> Result<(), String> {
         match entity::roles::Entity::find_by_id(self.id)
             .one(executor)
             .await
