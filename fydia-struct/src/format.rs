@@ -1,8 +1,8 @@
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct UserFormat {
-    name: String,
-    domain: String,
-    port: Option<u16>,
+    pub name: String,
+    pub domain: String,
+    pub port: Option<u16>,
 }
 
 impl UserFormat {
@@ -19,7 +19,6 @@ impl UserFormat {
 
         let (username, domain) = from.split_at(n);
         let domain = domain.trim_start_matches("@");
-        println!("{}", domain);
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
@@ -51,11 +50,11 @@ impl UserFormat {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ServerFormat {
-    name: String,
-    domain: String,
-    port: Option<u16>,
+    pub name: String,
+    pub domain: String,
+    pub port: Option<u16>,
 }
 
 impl ServerFormat {
@@ -71,7 +70,6 @@ impl ServerFormat {
         }
         let (username, domain) = from.split_at(n);
         let domain = domain.trim_start_matches("$");
-        println!("{}", domain);
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
@@ -103,12 +101,12 @@ impl ServerFormat {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ChannelFormat {
-    channel: String,
-    server: String,
-    domain: String,
-    port: Option<u16>,
+    pub channel: String,
+    pub server: String,
+    pub domain: String,
+    pub port: Option<u16>,
 }
 
 impl ChannelFormat {
@@ -132,7 +130,6 @@ impl ChannelFormat {
 
         let (servername, domain) = part.split_at(n);
         let domain = domain.trim_start_matches("$");
-        println!("{}", domain);
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
