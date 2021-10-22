@@ -44,4 +44,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 7days
+  tests:
+    name: "Tests"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --tests
+    
       
