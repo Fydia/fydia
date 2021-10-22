@@ -9,7 +9,6 @@ members = [
     "fydia-config",
     "fydia-crypto",
     "fydia-dispatcher",
-    "fydia-test",
 ]
 
 [profile.release]
