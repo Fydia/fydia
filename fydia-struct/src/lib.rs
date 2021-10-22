@@ -16,3 +16,6 @@ pub mod response;
 pub mod roles;
 pub mod server;
 pub mod user;
+
+#[cfg(test)]
+mod test;
