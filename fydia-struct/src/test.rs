@@ -38,7 +38,7 @@ mod tests {
                 );
             }
         }
-        mod sever {
+        mod server {
             use crate::format::ServerFormat;
 
             #[test]
