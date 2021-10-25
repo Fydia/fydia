@@ -242,12 +242,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92cfa0fd5690b3cf8c1ef2cabbd9b7ef22fa53cf5e1f92b05103f6d5d1cf6e7"
 
 [[package]]
-name = "convert_case"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
-
-[[package]]
 name = "cookie"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1743,9 +1737,9 @@ dependencies = [
 
 [[package]]
 name = "sea-orm"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8c98e8b1816280783bffabc003b50ea10e96e5f137925eb1e2b9e7d8cf2b2bc"
+checksum = "22e50474d23364b40084498a41079f343a10a6c8700aa469eacdfb4ba00a2177"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1760,17 +1754,17 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "url",
  "uuid",
 ]
 
 [[package]]
 name = "sea-orm-macros"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54ed070f7c0c9dfda27895ac551b1ae9b652de4d938630cf8b04a4cafb5d49b8"
+checksum = "ce39282dcace4fa8fca48e7cea9d767848c2a05a51b5df57241f4c52847b18e3"
 dependencies = [
  "bae",
- "convert_case",
  "heck",
  "proc-macro2",
  "quote",
