@@ -15,7 +15,7 @@ fydia-dispatcher = { path="../fydia-dispatcher" }
 tokio = { version="1.12", default-features=false }
 futures = "0.3.15"
 tokio-tungstenite = "0.15.0"
-time = "0.3.3"
+time = "0.3.4"
 chrono = "0.4.19"
 gotham = "0.6.0"
 gotham_derive = "0.6.0"
