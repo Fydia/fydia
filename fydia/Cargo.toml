@@ -8,6 +8,6 @@ edition = "2018"
 [dependencies]
 gotham = "0.6.0"
 gotham_derive = "0.6.0"
-tokio = { version="1.12.0", default-features=false, features=["rt", "macros"] }
+tokio = { version="1.13.0", default-features=false, features=["rt", "macros"] }
 fydia-router = { path="../fydia-router" }
 fydia-config = { path="../fydia-config" }
