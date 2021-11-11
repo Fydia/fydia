@@ -1,27 +1,52 @@
-use fydia_sql::{impls::token::SqlToken, sqlpool::SqlPool};
-use fydia_struct::{pathextractor::UserExtractor, response::FydiaResponse, user::Token};
-use gotham::{
-    handler::HandlerResult,
-    helpers::http::response::create_response,
-    hyper::HeaderMap,
-    state::{FromState, State},
+use std::sync::Arc;
+
+use axum::extract::{BodyStream, Extension, Path};
+use axum::response::IntoResponse;
+use axum::{body::Body, http::Request};
+use fydia_sql::impls::{channel::SqlDirectMessages, token::SqlToken, user::UserIdSql};
+use fydia_sql::sqlpool::DbConnection;
+use fydia_struct::{
+    channel::DirectMessage,
+    format::UserFormat,
+    response::FydiaResponse,
+    user::{Token, UserId},
 };
 use reqwest::StatusCode;
 
-pub async fn create_direct_message(state: State) -> HandlerResult {
-    let database = &SqlPool::borrow_from(&state).clone().get_pool();
-    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, "");
-    let target_user = UserExtractor::borrow_from(&state);
-    let headers = HeaderMap::borrow_from(&state);
+use crate::new_response;
+
+pub async fn create_direct_message(
+    request: Request<Body>,
+    _body: BodyStream,
+    Path(target_user): Path<String>,
+    Extension(database): Extension<Arc<DbConnection>>,
+) -> impl IntoResponse {
+    let mut res = new_response();
+    let headers = request.headers();
     if let Some(token) = Token::from_headervalue(headers) {
-        if let Some(user) = token.get_user(database).await {
-            println!("{:?}", user);
+        if let Some(user) = token.get_user(&database).await {
+            if let Some(user) = UserFormat::from_string(&target_user) {
+                println!("{:?}", user);
+                FydiaResponse::new_error_custom_status("Soon may be", StatusCode::NOT_IMPLEMENTED)
+                    .update_response(&mut res);
+            } else if let Ok(id) = target_user.parse::<i32>() {
+                let target = UserId::new(id).get_user(&database).await;
+                println!("{:?}", target);
+                if let Some(target) = target {
+                    let dm = DirectMessage::new(vec![UserId::new(user.id), UserId::new(target.id)]);
+                    println!("{:?}", dm.insert(&database).await);
+                } else {
+                    FydiaResponse::new_error("Bad user id").update_response(&mut res);
+                }
+            } else {
+                FydiaResponse::new_error("Bad user id").update_response(&mut res);
+            }
         } else {
             FydiaResponse::new_error("Bad Token").update_response(&mut res);
         }
     } else {
         FydiaResponse::new_error("No Token").update_response(&mut res);
     }
-    info!(format!("{}", &target_user.id));
-    return Ok((state, res));
+    info!(&target_user.to_string());
+    res
 }

@@ -1,148 +1,160 @@
-use crate::handlers::api::websocket::{accept, requested, ChannelMessage, Websockets};
+#![allow(clippy::unwrap_used)]
+
+use crate::handlers::api::websocket::{ChannelMessage, WbUser};
+use crate::new_response;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Extension, Query};
+use axum::response::IntoResponse;
+
 use futures::prelude::*;
-use fydia_sql::impls::token::SqlToken;
-use fydia_sql::sqlpool::SqlPool;
+use fydia_sql::sqlpool::DbConnection;
+use fydia_struct::event::Event;
+use fydia_struct::instance::Instance;
 use fydia_struct::querystring::QsToken;
-use fydia_struct::user::Token;
-use gotham::handler::HandlerResult;
-use gotham::helpers::http::response::create_response;
-use gotham::hyper::upgrade::OnUpgrade;
-use gotham::hyper::{Body, HeaderMap, Response, StatusCode};
-use gotham::state::{FromState, State};
+use fydia_struct::user::{Token, User};
+use http::StatusCode;
 use logger::info;
 use serde::Serialize;
-use tokio_tungstenite::tungstenite::protocol::Message;
-use tokio_tungstenite::tungstenite::Error;
 
-const INDEX: &str = include_str!("../../../../index.html");
+use super::Websockets;
 
-pub async fn ws_handler(mut state: State) -> HandlerResult {
-    let headers = HeaderMap::take_from(&mut state);
-    let on_upgrade = OnUpgrade::try_take_from(&mut state);
-    let database = &SqlPool::borrow_from(&state).get_pool();
-    let token = Token(
-        QsToken::borrow_from(&state)
-            .token
-            .clone()
-            .unwrap_or_default(),
-    );
-    let mut res = Response::new(Body::from(INDEX));
-    info!(format!("Get one connection : {}", token.0));
-    if let Some(user) = token.get_user(database).await {
-        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<ChannelMessage>();
-        match on_upgrade {
-            Some(on_upgrade) if requested(&headers) => {
-                let (response, ws) = match accept(&headers, on_upgrade) {
-                    Ok(res) => res,
-                    Err(_) => {
-                        let res = create_response(
-                            &state,
-                            StatusCode::BAD_REQUEST,
-                            mime::TEXT_PLAIN_UTF_8,
-                            Body::empty(),
-                        );
-                        return Ok((state, res));
-                    }
-                };
+pub async fn ws_handler(
+    Extension(_): Extension<DbConnection>,
+    Extension(wbsocket): Extension<Websockets>,
+    Query(token): Query<QsToken>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    let _res = new_response();
+    let _token = Token(token.token.clone().unwrap_or_default());
+    //let user = token.get_user(&database).await;
+    let user = Some(User::new("name", "email", "password", Instance::default()));
+    let ws = ws
+        .on_upgrade(|e| connected(e, user, wbsocket))
+        .into_response();
+    return ws;
+}
 
-                Websockets::borrow_mut_from(&mut state)
-                    .channel
-                    .lock()
-                    .await
-                    .insert(sender.clone(), user);
-                Websockets::borrow_mut_from(&mut state)
-                    .channel
-                    .lock()
-                    .await
-                    .remove_unvalid_channel();
-                println!(
-                    "{:#?}",
-                    Websockets::borrow_mut_from(&mut state).channel.lock().await
-                );
+pub fn empty_response() -> impl IntoResponse {
+    (StatusCode::BAD_REQUEST, "")
+}
 
-                tokio::spawn(async move {
-                    match ws.await {
-                        Ok(ws) => connected(ws, sender, receiver).await,
-                        Err(err) => {
-                            eprintln!("websocket init error: {}", err);
-                            Err(())
-                        }
+async fn connected(
+    socket: WebSocket,
+    user: Option<User>,
+    wbsockets_channel: Websockets,
+) -> Result<String, String> {
+    if let Some(user) = user {
+        let mut user = user.clone();
+        user.password = None;
+        let (mut sink, mut stream) = socket.split();
+
+        let wblist = &wbsockets_channel;
+        let e = wblist.get_channels_clone().await.0;
+        let wbuser = {
+            let mut channels: Option<WbUser> = None;
+            for i in e.iter() {
+                println!("{:?}", i);
+                if i.user.eq(&user) {
+                    channels = Some(i.clone());
+                }
+            }
+
+            if channels.is_none() {
+                let (sender, receiver) = flume::unbounded::<ChannelMessage>();
+
+                let mut id = rand::random::<u32>();
+
+                e.iter().for_each(|e: &WbUser| {
+                    if e.id == id {
+                        id = rand::random::<u32>();
                     }
                 });
 
-                res = response;
+                let wbuser = WbUser::new(id, (sender, receiver), user);
+                wblist.insert(&wbuser).await;
+                channels = Some(wbuser);
             }
-            _ => res = Response::new(Body::from(INDEX)),
-        }
-    }
 
-    Ok((state, res))
-}
-
-async fn connected<S>(
-    stream: S,
-    sendchannel: tokio::sync::mpsc::UnboundedSender<ChannelMessage>,
-    mut receiverchannel: tokio::sync::mpsc::UnboundedReceiver<ChannelMessage>,
-) -> Result<(), ()>
-where
-    S: Stream<Item = Result<Message, Error>>
-        + Sink<Message, Error = Error>
-        + std::marker::Send
-        + 'static,
-{
-    let (mut sink, mut stream) = stream.split();
-
-    let websocket_stream = sendchannel.clone();
-    let task = tokio::spawn(async move {
-        while let Ok(Some(message)) = stream
-            .next()
-            .await
-            .transpose()
-            .map_err(|error| println!("Websocket receive error: {}", error))
-        {
-            if websocket_stream
-                .send(ChannelMessage::WebsocketMessage(message))
-                .is_err()
+            channels.unwrap()
+        };
+        println!("{:#?}", wbsockets_channel);
+        let sendchannel = wbuser.channel.0.clone();
+        let task = tokio::spawn(async move {
+            while let Ok(Some(message)) = stream
+                .next()
+                .await
+                .transpose()
+                .map_err(|error| println!("Websocket receive error: {}", error))
             {
-                error!("Can't send message");
-            }
-        }
-    });
-
-    while let Some(msg) = receiverchannel.recv().await {
-        match msg {
-            ChannelMessage::WebsocketMessage(msg) => match sink.send(msg).await {
-                Ok(()) => {}
-                Err(Error::ConnectionClosed) => {}
-                Err(error) => {
-                    println!("{:?}", error);
-                    return Err(());
-                }
-            },
-            ChannelMessage::Kill => {
-                if sink.close().await.is_err() {
-                    error!("Can't close channel");
+                let a = match message {
+                    axum::extract::ws::Message::Text(string) => {
+                        if let Ok(e) = serde_json::from_str::<Event>(string.as_str()) {
+                            ChannelMessage::Message(Box::new(e))
+                        } else {
+                            ChannelMessage::WebsocketMessage(Message::Text(string))
+                        }
+                    }
+                    axum::extract::ws::Message::Binary(value) => {
+                        ChannelMessage::WebsocketMessage(Message::Binary(value))
+                    }
+                    axum::extract::ws::Message::Ping(value) => {
+                        ChannelMessage::WebsocketMessage(Message::Ping(value))
+                    }
+                    axum::extract::ws::Message::Pong(value) => {
+                        ChannelMessage::WebsocketMessage(Message::Pong(value))
+                    }
+                    axum::extract::ws::Message::Close(_) => ChannelMessage::Kill,
                 };
-                break;
+
+                if sendchannel.send(a).is_err() {
+                    error!("Can't send message");
+                }
             }
-            ChannelMessage::Message(msg) => {
-                if let Ok(msg) = to_websocketmessage(&msg) {
-                    match sink.send(msg).await {
-                        Ok(()) => {}
-                        Err(Error::ConnectionClosed) => {}
-                        Err(error) => {
-                            println!("{:?}", error);
-                            return Err(());
+        });
+
+        while let Ok(msg) = wbuser.channel.1.recv() {
+            match msg {
+                ChannelMessage::WebsocketMessage(msg) => match sink.send(msg).await {
+                    Ok(()) => {}
+                    Err(error) => {
+                        println!("{:?}", error);
+                        return Err(error.to_string());
+                    }
+                },
+                ChannelMessage::Kill => {
+                    if sink.close().await.is_err() {
+                        error!("Can't close channel");
+                    };
+                    break;
+                }
+                ChannelMessage::Message(msg) => {
+                    if let Ok(msg) = to_websocketmessage(&msg) {
+                        match sink.send(msg).await {
+                            Ok(()) => {}
+                            Err(error) => {
+                                println!("{:?}", error);
+                                if wblist.remove(wbuser.id).await.is_err() {
+                                    info!("Can't Remove");
+                                    return Err(String::from("Can't Remove"));
+                                }
+                                return Err(error.to_string());
+                            }
                         }
                     }
                 }
             }
         }
+        task.abort();
+        if wblist.remove(wbuser.id).await.is_err() {
+            info!("Can't Remove");
+            return Err("Can't Remove".to_string());
+        }
+        println!("Connection Closed");
+    } else {
+        return Err(String::from("Token Error"));
     }
 
-    task.abort();
-
-    Ok(())
+    Ok(String::from("Connection finished"))
 }
 
 pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>
@@ -150,7 +162,7 @@ where
     T: Serialize,
 {
     match serde_json::to_string(msg) {
-        Ok(json) => Ok(Message::from(json)),
+        Ok(json) => Ok(Message::from(axum::extract::ws::Message::Text(json))),
         Err(e) => Err(e.to_string()),
     }
 }

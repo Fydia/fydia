@@ -1,7 +1,7 @@
 use fydia_crypto::{PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 
-#[derive(StateData, Clone)]
+#[derive(Clone)]
 pub struct RsaData(pub PrivateKey, pub PublicKey);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
@@ -25,7 +25,7 @@ impl Protocol {
     }
 }
 
-#[derive(Debug, StateData, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
 pub struct Instance {
     pub protocol: Protocol,
     pub domain: String,

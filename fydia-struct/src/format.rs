@@ -69,7 +69,7 @@ impl ServerFormat {
             }
         }
         let (username, domain) = from.split_at(n);
-        let domain = domain.trim_start_matches("$");
+        let domain = domain.trim_start_matches('$');
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
@@ -129,14 +129,14 @@ impl ChannelFormat {
         }
 
         let (servername, domain) = part.split_at(n);
-        let domain = domain.trim_start_matches("$");
+        let domain = domain.trim_start_matches('$');
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
                     Some(port) => {
                         return Some(Self {
                             channel: channelname.to_string(),
-                            server: servername.trim_start_matches("#").to_string(),
+                            server: servername.trim_start_matches('#').to_string(),
                             domain: domain.to_string(),
                             port: Some(port),
                         });
@@ -144,7 +144,7 @@ impl ChannelFormat {
                     None => {
                         return Some(Self {
                             channel: channelname.to_string(),
-                            server: servername.trim_start_matches("#").to_string(),
+                            server: servername.trim_start_matches('#').to_string(),
                             domain: domain.to_string(),
                             port: None,
                         });

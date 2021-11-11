@@ -1,28 +1,19 @@
-use futures::Future;
+use flume::{Receiver, Sender};
 use fydia_dispatcher::message::send::encrypt_message;
 use fydia_struct::event::Event;
 use fydia_struct::instance::{Instance, RsaData};
 use fydia_struct::user::User;
-use gotham::hyper::header::{
-    HeaderValue, CONNECTION, SEC_WEBSOCKET_ACCEPT, SEC_WEBSOCKET_KEY, UPGRADE,
-};
-use gotham::hyper::upgrade::{OnUpgrade, Upgraded};
-use gotham::hyper::{Body, HeaderMap, Response, StatusCode};
-use rayon::iter::IntoParallelRefIterator;
-use rayon::prelude::*;
-use std::panic::RefUnwindSafe;
+
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use std::fmt::Debug;
 use std::sync::Arc;
-use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::protocol::Role;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
+use tokio::sync::{Mutex, MutexGuard};
 
 pub mod messages;
 
-#[derive(StateData, Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct Websockets {
-    pub channel: Arc<Mutex<WbList>>,
+    channels: Arc<Mutex<WbList>>,
 }
 
 impl Default for Websockets {
@@ -34,24 +25,42 @@ impl Default for Websockets {
 impl Websockets {
     pub fn new() -> Self {
         Self {
-            channel: Arc::new(Mutex::new(WbList::new())),
+            channels: Arc::new(Mutex::new(WbList::new())),
         }
     }
 
+    pub async fn get_channels_clone(&self) -> WbList {
+        self.channels.lock().await.clone()
+    }
+
+    pub async fn get_channels(&self) -> MutexGuard<'_, WbList> {
+        self.channels.lock().await
+    }
+
+    pub async fn insert(&self, wbuser: &WbUser) {
+        let mut res = self.channels.lock().await;
+        res.insert(wbuser);
+    }
+    pub async fn remove_wbuser(&self, wbuser: &WbUser) -> Result<(), ()> {
+        self.channels.lock().await.remove_wbuser(wbuser)
+    }
+    pub async fn remove(&self, id: u32) -> Result<(), ()> {
+        self.channels.lock().await.remove(id)
+    }
+
     pub async fn send(
-        &mut self,
+        &self,
         msg: &Event,
         user: Vec<User>,
         keys: Option<&RsaData>,
         _origin: Option<Instance>,
     ) {
-        let mut e = self.channel.lock().await;
-        e.remove_unvalid_channel();
-        e.0.par_iter().for_each(|i| {
+        self.get_channels().await.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
                 if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
                     if let Err(e) = i
                         .channel
+                        .0
                         .send(ChannelMessage::Message(Box::new(msg.clone())))
                     {
                         error!(format!("Cannot send message : {}", e.to_string()));
@@ -67,9 +76,6 @@ impl Websockets {
     }
 }
 
-unsafe impl Send for Websockets {}
-impl RefUnwindSafe for Websockets {}
-
 #[derive(Debug, Clone)]
 pub struct WbList(pub Vec<WbUser>);
 
@@ -77,8 +83,8 @@ impl WbList {
     pub fn new() -> Self {
         Self { 0: Vec::new() }
     }
-    pub fn insert(&mut self, channel: UnboundedSender<ChannelMessage>, user: User) {
-        self.0.push(WbUser::new(channel, user));
+    pub fn insert(&mut self, wbuser: &WbUser) {
+        self.0.push(wbuser.clone());
     }
     pub fn get_user_by_id(&self, id: i32) -> Option<WbUser> {
         for i in &self.0 {
@@ -99,18 +105,58 @@ impl WbList {
 
         None
     }
-    pub fn get(&self) -> Vec<WbUser> {
-        self.0.clone()
+
+    pub async fn send(
+        &mut self,
+        msg: &Event,
+        user: Vec<User>,
+        keys: Option<&RsaData>,
+        _origin: Option<Instance>,
+    ) -> Result<(), ()> {
+        self.0.par_iter().for_each(|i| {
+            if user.contains(&i.user) {
+                if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
+                    if let Err(e) = i
+                        .channel
+                        .0
+                        .send(ChannelMessage::Message(Box::new(msg.clone())))
+                    {
+                        error!(format!("Cannot send message : {}", e.to_string()));
+                    }
+                } else if let Some(rsa) = keys {
+                    if let Ok(public_key) = i.user.instance.get_public_key() {
+                        let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
+                        //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
+                    }
+                }
+            }
+        });
+
+        Ok(())
     }
-    pub fn remove_unvalid_channel(&mut self) {
-        if self.0.is_empty() {
-            return;
+
+    pub fn remove(&mut self, id: u32) -> Result<(), ()> {
+        let a = &self.0;
+        for (n, i) in a.iter().enumerate() {
+            if i.id == id {
+                self.0.remove(n);
+                return Ok(());
+            }
         }
-        for (index, wbuser) in self.0.clone().iter().enumerate() {
-            if wbuser.channel.is_closed() {
-                self.0.remove(index);
-            };
+
+        Err(())
+    }
+
+    pub fn remove_wbuser(&mut self, wbuser: &WbUser) -> Result<(), ()> {
+        let a = &self.0;
+        for (n, i) in a.iter().enumerate() {
+            if i == wbuser {
+                self.0.remove(n);
+                return Ok(());
+            }
         }
+
+        Err(())
     }
 }
 
@@ -122,76 +168,42 @@ impl Default for WbList {
 
 #[derive(Debug, Clone)]
 pub struct WbUser {
-    pub channel: UnboundedSender<ChannelMessage>,
+    pub id: u32,
+    pub channel: (Sender<ChannelMessage>, Receiver<ChannelMessage>),
     pub user: User,
 }
 
+impl Default for WbUser {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            channel: flume::unbounded(),
+            user: Default::default(),
+        }
+    }
+}
+
+impl PartialEq for WbUser {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.user == other.user
+    }
+}
+
 impl WbUser {
-    pub fn new(channel: UnboundedSender<ChannelMessage>, user: User) -> Self {
-        Self { channel, user }
+    pub fn new(
+        id: u32,
+        channel: (Sender<ChannelMessage>, Receiver<ChannelMessage>),
+        user: User,
+    ) -> Self {
+        let mut user = user.clone();
+        user.password = None;
+        Self { id, channel, user }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum ChannelMessage {
-    WebsocketMessage(Message),
+    WebsocketMessage(axum::extract::ws::Message),
     Message(Box<Event>),
     Kill,
-}
-
-const PROTO_WEBSOCKET: &str = "websocket";
-
-/// Check if a WebSocket upgrade was requested.
-pub fn requested(headers: &HeaderMap) -> bool {
-    headers.get(UPGRADE) == Some(&HeaderValue::from_static(PROTO_WEBSOCKET))
-}
-
-/// Accept a WebSocket upgrade request.
-///
-/// Returns HTTP response, and a future that eventually resolves
-/// into websocket object.
-pub fn accept(
-    headers: &HeaderMap,
-    on_upgrade: OnUpgrade,
-) -> Result<
-    (
-        Response<Body>,
-        impl Future<Output = Result<WebSocketStream<Upgraded>, gotham::hyper::Error>>,
-    ),
-    String,
-> {
-    let res = response(headers)?;
-    let ws = async move {
-        let upgraded = on_upgrade.await?;
-        Ok(WebSocketStream::from_raw_socket(upgraded, Role::Server, None).await)
-    };
-
-    Ok((res, ws))
-}
-
-fn response(headers: &HeaderMap) -> Result<Response<Body>, String> {
-    let key = if let Some(key) = headers.get(SEC_WEBSOCKET_KEY) {
-        key
-    } else {
-        return Err("Cannot get the key".into());
-    };
-
-    match Response::builder()
-        .header(UPGRADE, PROTO_WEBSOCKET)
-        .header(CONNECTION, "upgrade")
-        .header(SEC_WEBSOCKET_ACCEPT, accept_key(key.as_bytes()))
-        .status(StatusCode::SWITCHING_PROTOCOLS)
-        .body(Body::empty())
-    {
-        Ok(res) => Ok(res),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
-fn accept_key(key: &[u8]) -> String {
-    const WS_GUID: &[u8] = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    let mut sha1 = sha1::Sha1::default();
-    sha1.update(key);
-    sha1.update(WS_GUID);
-    base64::encode(&sha1.digest().bytes())
 }

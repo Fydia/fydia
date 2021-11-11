@@ -1,23 +1,27 @@
-use gotham::{
-    handler::HandlerResult,
-    helpers::http::response::create_response,
-    hyper::{body, Body, StatusCode},
-    state::{FromState, State},
-};
+use axum::extract::{BodyStream, Extension};
+use axum::http::Request;
+use axum::{body::Body, response::IntoResponse};
+use futures::StreamExt;
+use fydia_sql::sqlpool::DbConnection;
 use serde_json::value;
 
-use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
+use fydia_sql::impls::user::SqlUser;
 use fydia_struct::{response::FydiaResponse, user::User};
 
-pub async fn user_login(mut state: State) -> HandlerResult {
-    let database = &SqlPool::borrow_from(&state).clone().get_pool();
-    let mut res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, "");
+use crate::new_response;
 
-    if let Ok(body_bytes) = body::to_bytes(Body::take_from(&mut state)).await {
+pub async fn user_login(
+    _request: Request<Body>,
+    mut body: BodyStream,
+    Extension(database): Extension<DbConnection>,
+) -> impl IntoResponse {
+    let mut res = new_response();
+
+    if let Some(Ok(body_bytes)) = body.next().await {
         let body = body_bytes.to_vec();
         if body.is_empty() {
             FydiaResponse::new_error("Bad Body").update_response(&mut res);
-            return Ok((state, res));
+            return res;
         }
         if let Ok(stringed_body) = String::from_utf8(body) {
             if let Ok(json) = serde_json::from_str::<value::Value>(stringed_body.as_str()) {
@@ -27,13 +31,13 @@ pub async fn user_login(mut state: State) -> HandlerResult {
                             let user = User::get_user_by_email_and_password(
                                 email.to_string(),
                                 password.to_string(),
-                                database,
+                                &database,
                             )
                             .await;
 
                             match user {
                                 Some(mut user) => {
-                                    if let Ok(token) = user.update_token(database).await {
+                                    if let Ok(token) = user.update_token(&database).await {
                                         FydiaResponse::new_ok(token).update_response(&mut res);
                                     } else {
                                         FydiaResponse::new_error("Token error")
@@ -58,5 +62,5 @@ pub async fn user_login(mut state: State) -> HandlerResult {
         }
     }
 
-    Ok((state, res))
+    res
 }

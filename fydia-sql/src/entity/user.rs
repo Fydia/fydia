@@ -38,7 +38,7 @@ impl Model {
             email: self.email.clone(),
             instance: Instance::default(),
             token: Some(self.token.clone()),
-            password: self.password.clone(),
+            password: Some(self.password.clone()),
             server,
         })
     }

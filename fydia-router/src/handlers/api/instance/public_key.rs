@@ -1,19 +1,13 @@
-use fydia_struct::instance::RsaData;
-use gotham::handler::HandlerResult;
-use gotham::helpers::http::response::create_response;
-use gotham::hyper::StatusCode;
-use gotham::state::{FromState, State};
+use std::sync::Arc;
 
-pub async fn public_key(state: State) -> HandlerResult {
-    let mut res = create_response(
-        &state,
-        StatusCode::BAD_REQUEST,
-        mime::TEXT_PLAIN_UTF_8,
-        format!(""),
-    );
-    let rsa = RsaData::borrow_from(&state);
+use axum::{extract::Extension, response::IntoResponse};
+use fydia_struct::instance::RsaData;
+use http::StatusCode;
+
+pub async fn public_key(Extension(rsa): Extension<Arc<RsaData>>) -> impl IntoResponse {
     if let Some(pem) = fydia_crypto::pem::key_to_string(&rsa.1) {
-        res = create_response(&state, StatusCode::OK, mime::TEXT_PLAIN_UTF_8, pem);
+        (StatusCode::OK, pem)
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "".to_string())
     }
-    Ok((state, res))
 }

@@ -1,6 +1,6 @@
 use crate::{instance::Instance, server::Servers};
 use fydia_utils::hash;
-use gotham::hyper::HeaderMap;
+use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Default)]
@@ -13,7 +13,7 @@ pub struct User {
     #[serde(skip)]
     pub email: String,
     #[serde(skip)]
-    pub password: String,
+    pub password: Option<String>,
     #[serde(skip)]
     pub description: Option<String>,
     #[serde(skip)]
@@ -28,7 +28,7 @@ impl User {
             instance,
             token: None,
             description: None,
-            password: hash(password.into()),
+            password: Some(hash(password.into())),
             server: Servers::new(),
             email: email.into(),
         }
@@ -44,9 +44,12 @@ impl UserId {
     pub fn new(id: i32) -> Self {
         Self { id }
     }
-    /*pub async fn get_user(&self, executor: &FydiaPool) -> Option<User> {
-        User::get_user_by_id(self.id, executor).await
-    }*/
+    pub fn to_string(&self) -> Result<String, String> {
+        match serde_json::to_string(&self) {
+            Ok(r) => Ok(r),
+            Err(err) => Err(err.to_string()),
+        }
+    }
 }
 
 pub struct Token(pub String);

@@ -7,37 +7,8 @@
 </head>
 
 <body onload="onLoad()">
+  <button onclick="spam_ws()">SPAMMMMMMMINNNNNNG</button>
   <div class="container">
-    <ul class="channels channel-container">
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-      <li class="channel">
-        <p>eee</p>
-      </li>
-    </ul>
-
     <div class="messages">
       <div class="form-container">
         <form class="form" action="">
@@ -164,7 +135,22 @@
 </style>
 <script>
   url = window.location;
+  function spam_ws() {
+    for (let index = 0; index < 50; index++) {
 
+      let sock = new WebSocket(
+        `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+      );
+      sock.onopen = () => {
+        console.log("Spam once")
+      }
+      sock.onclose = onReveiceMessage.bind(window, "Disconnected");
+      sock.onmessage = function (msg) {
+        onReveiceMessage(msg.data);
+      };
+    }
+
+  }
   function onLoad() {
     //alert("Welcome this is a experimental version of Fydia");
     //addMessage("Rheydskey@rheydskey.studio", "eeeee")

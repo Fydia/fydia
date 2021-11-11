@@ -1,7 +1,7 @@
 use fydia_crypto::decrypt::public_decrypt;
 use fydia_crypto::structs::{AesKeyEncrypt, EncryptedBody, Iv};
 use fydia_struct::instance::{Instance, RsaData};
-use gotham::hyper::HeaderMap;
+use hyper::HeaderMap;
 
 pub async fn receive_message(headers: &HeaderMap, body: Vec<u8>, rsa: &RsaData) -> Option<String> {
     let origin = headers.get("origin").unwrap().to_str().unwrap().to_string();

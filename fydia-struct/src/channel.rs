@@ -3,7 +3,10 @@ use std::fmt::Display;
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
-use crate::{server::ServerId, user::UserId};
+use crate::{
+    server::ServerId,
+    user::{User, UserId},
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChannelType {
@@ -42,14 +45,35 @@ impl ChannelType {
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DirectMessage {
-    pub users: Vec<UserId>,
+    pub users: DirectMessageValue,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum DirectMessageValue {
+    Users(Vec<User>),
+    UsersId(Vec<UserId>),
+}
+
+impl DirectMessage {
+    pub fn new(users: Vec<UserId>) -> Self {
+        Self {
+            users: DirectMessageValue::UsersId(users),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ParentId {
-    #[serde(rename = "direct_messages")]
+    #[serde(rename = "direct_message")]
     DirectMessage(DirectMessage),
     #[serde(rename = "server_id")]
     ServerId(ServerId),
+}
+
+impl ParentId {
+    pub fn to_string(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -58,14 +82,15 @@ pub struct ChannelId {
 }
 
 impl ChannelId {
-    pub fn new(id: String) -> Self {
-        Self { id }
+    pub fn new<T: Into<String>>(id: T) -> Self {
+        Self { id: id.into() }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Channel {
     pub id: String,
+    #[serde(flatten)]
     pub parent_id: ParentId,
     pub name: String,
     pub description: String,

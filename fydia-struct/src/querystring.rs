@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Deserialize, StateData, StaticResponseExtender)]
+#[derive(Debug, Deserialize)]
 pub struct QsToken {
     pub token: Option<String>,
 }

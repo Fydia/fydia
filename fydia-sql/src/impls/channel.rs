@@ -1,8 +1,10 @@
 use super::message::SqlMessage;
+use crate::impls::user::UserIdSql;
 use fydia_struct::{
-    channel::{Channel, ChannelId},
+    channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageValue, ParentId},
     messages::Message,
     server::Channels,
+    user::UserId,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -13,6 +15,7 @@ pub trait SqlChannel {
         server_id: String,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String>;
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name(
         &mut self,
         name: String,
@@ -68,7 +71,26 @@ impl SqlChannel for Channel {
 
         Ok(Channels(channels))
     }
-
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
+        let parent_id = match self.parent_id.to_string() {
+            Ok(e) => e,
+            Err(e) => return Err(e.to_string()),
+        };
+        let active_channel = crate::entity::channels::ActiveModel {
+            id: Set(self.id.clone()),
+            parent_id: Set(parent_id),
+            name: Set(self.name.clone()),
+            description: Set(Some(self.description.clone())),
+            channel_type: Set(Some(self.channel_type.to_string())),
+        };
+        match crate::entity::channels::Entity::insert(active_channel)
+            .exec(executor)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
     async fn update_name(
         &mut self,
         name: String,
@@ -179,5 +201,67 @@ pub trait SqlChannelId {
 impl SqlChannelId for ChannelId {
     async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel> {
         Channel::get_channel_by_id(self.clone(), executor).await
+    }
+}
+
+#[async_trait::async_trait]
+pub trait SqlDirectMessages {
+    async fn get_by_userid(
+        executor: &DatabaseConnection,
+        userid: UserId,
+    ) -> Result<Vec<Channel>, String>;
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
+}
+
+#[async_trait::async_trait]
+impl SqlDirectMessages for DirectMessage {
+    async fn get_by_userid(
+        executor: &DatabaseConnection,
+        userid: UserId,
+    ) -> Result<Vec<Channel>, String> {
+        let user = userid.to_string()?;
+        let one = crate::entity::channels::Entity::find()
+            .filter(crate::entity::channels::Column::ParentId.contains(&user))
+            .all(executor)
+            .await;
+        let mut r = Vec::new();
+        match one {
+            Ok(result) => {
+                for i in result {
+                    if let Some(e) = i.to_channel() {
+                        r.push(e);
+                    } else {
+                        return Err("Not Exists".to_string());
+                    }
+                }
+            }
+            Err(e) => return Err(e.to_string()),
+        };
+        Ok(r)
+    }
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
+        let mut channel = Channel::new();
+        channel.channel_type = ChannelType::DirectMessage;
+        channel.parent_id = ParentId::DirectMessage(self.clone());
+        channel.insert(executor).await
+    }
+    async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+        let mut users = Vec::new();
+        match &mut self.users {
+            DirectMessageValue::Users(_) => {}
+            DirectMessageValue::UsersId(e) => {
+                for i in e {
+                    match i.get_user(executor).await {
+                        Some(e) => users.push(e),
+                        None => return Err("User not exists".to_string()),
+                    };
+                }
+
+                self.users = DirectMessageValue::Users(users);
+            }
+        }
+
+        Ok(())
     }
 }

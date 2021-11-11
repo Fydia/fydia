@@ -2,9 +2,6 @@
 #![deny(clippy::expect_used)]
 
 #[macro_use]
-extern crate gotham_derive;
-
-#[macro_use]
 extern crate logger;
 
 pub mod connection;

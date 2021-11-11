@@ -3,6 +3,7 @@ use crate::entity::user::Entity as UserEntity;
 use async_trait::async_trait;
 use fydia_struct::server::Servers;
 use fydia_struct::user::Token;
+use fydia_struct::user::UserId;
 use fydia_struct::{server::ServerId, user::User};
 use fydia_utils::generate_string;
 use fydia_utils::hash;
@@ -160,7 +161,7 @@ impl SqlUser for User {
 
                 match UserEntity::update(active_model).exec(executor).await {
                     Ok(_) => {
-                        self.password = password;
+                        self.password = Some(password);
                         Ok(())
                     }
                     Err(e) => {
@@ -213,21 +214,24 @@ impl SqlUser for User {
             Ok(json) => json,
             Err(error) => return Err(error.to_string()),
         };
-        let active_model = UserActiveModel {
-            name: Set(self.name.clone()),
-            token: Set("".to_string()),
-            email: Set(self.email.clone()),
-            password: Set(self.password.clone()),
-            server: Set(Some(json)),
-            ..Default::default()
-        };
-
-        match UserEntity::insert(active_model).exec(executor).await {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                error!("Error");
-                return Err(e.to_string());
+        if let Some(password) = self.password.clone() {
+            let active_model = UserActiveModel {
+                name: Set(self.name.clone()),
+                token: Set("".to_string()),
+                email: Set(self.email.clone()),
+                password: Set(password),
+                server: Set(Some(json)),
+                ..Default::default()
+            };
+            match UserEntity::insert(active_model).exec(executor).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("Error");
+                    return Err(e.to_string());
+                }
             }
+        } else {
+            Err(String::from("Password is empty"))
         }
     }
 
@@ -253,5 +257,16 @@ impl SqlUser for User {
 
     async fn get_user_message() -> Vec<String> {
         Vec::new()
+    }
+}
+#[async_trait]
+pub trait UserIdSql {
+    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User>;
+}
+
+#[async_trait]
+impl UserIdSql for UserId {
+    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
+        User::get_user_by_id(self.id, executor).await
     }
 }

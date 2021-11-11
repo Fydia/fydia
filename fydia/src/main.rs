@@ -7,8 +7,12 @@ use fydia_config::get_config_or_init;
 #[tokio::main]
 async fn main() {
     let config = get_config_or_init();
-
-    gotham::init_server(config.format_ip(), fydia_router::get_router(config).await)
+    axum::Server::bind(&(config.format_ip().as_str()).parse().unwrap())
+        .serve(
+            fydia_router::get_axum_router(config)
+                .await
+                .into_make_service(),
+        )
         .await
         .unwrap()
 }

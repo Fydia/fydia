@@ -1,18 +1,24 @@
-use fydia_sql::{impls::user::SqlUser, sqlpool::SqlPool};
-use fydia_struct::{instance::Instance, response::FydiaResponse, user::User};
-use gotham::{
-    handler::HandlerResult,
-    helpers::http::response::create_empty_response,
-    hyper::{body, Body},
-    state::{FromState, State},
+use axum::{
+    body::Body,
+    extract::{BodyStream, Extension},
+    response::IntoResponse,
 };
-use reqwest::StatusCode;
+use futures::StreamExt;
+use fydia_sql::{impls::user::SqlUser, sqlpool::DbConnection};
+use fydia_struct::{instance::Instance, response::FydiaResponse, user::User};
+
+use axum::http::Request;
 use serde_json::Value;
 
-pub async fn create_user(mut state: State) -> HandlerResult {
-    let database = &SqlPool::borrow_from(&state).clone().get_pool();
-    let mut res = create_empty_response(&state, StatusCode::OK);
-    if let Ok(body_bytes) = body::to_bytes(Body::take_from(&mut state)).await {
+use crate::new_response;
+
+pub async fn create_user(
+    _request: Request<Body>,
+    mut body: BodyStream,
+    Extension(database): Extension<DbConnection>,
+) -> impl IntoResponse {
+    let mut res = new_response();
+    while let Some(Ok(body_bytes)) = body.next().await {
         let body = body_bytes.to_vec();
         if let Ok(e) = String::from_utf8(body) {
             if let Ok(json) = serde_json::from_str::<Value>(&e) {
@@ -26,7 +32,7 @@ pub async fn create_user(mut state: State) -> HandlerResult {
                             (Some(name), Some(email), Some(password)) => {
                                 if let Err(e) =
                                     User::new(name, email, password, Instance::default())
-                                        .insert_user(database)
+                                        .insert_user(&database)
                                         .await
                                 {
                                     error!(e);
@@ -54,5 +60,5 @@ pub async fn create_user(mut state: State) -> HandlerResult {
         }
     }
 
-    Ok((state, res))
+    res
 }

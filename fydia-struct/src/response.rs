@@ -1,5 +1,4 @@
-use http::Response;
-use hyper::{header::CONTENT_TYPE, Body, StatusCode};
+use hyper::{header::CONTENT_TYPE, HeaderMap, StatusCode};
 use serde::Serialize;
 use serde_json::Value;
 #[derive(Serialize)]
@@ -48,35 +47,39 @@ impl FydiaResponse {
         }
     }
 
-    pub fn update_response(&self, res: &mut Response<Body>) {
-        if let Some(header) = res.headers_mut().get_mut(CONTENT_TYPE) {
+    pub fn update_response(&self, res: &mut (StatusCode, HeaderMap, String)) {
+        if let Some(header) = res.1.get_mut(CONTENT_TYPE) {
             if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
                 if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
                     *header = content_type;
                 }
             }
+        } else {
+            if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
+                res.1.insert(CONTENT_TYPE, e);
+            }
         }
         match self.status {
             FydiaStatus::Error => {
                 if let Some(status_code) = self.custom_statuscode {
-                    *res.status_mut() = status_code;
-                } else if res.status() != StatusCode::BAD_REQUEST {
-                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                    res.0 = status_code;
+                } else if res.0 != StatusCode::BAD_REQUEST {
+                    res.0 = StatusCode::BAD_REQUEST;
                 }
             }
             FydiaStatus::OK => {
-                if res.status() != StatusCode::OK {
-                    *res.status_mut() = StatusCode::OK;
+                if res.0 != StatusCode::OK {
+                    res.0 = StatusCode::OK;
                 }
             }
         }
         match serde_json::to_string(self) {
-            Ok(e) => *res.body_mut() = e.into(),
+            Ok(response) => res.2 = response.into(),
             Err(e) => {
-                if res.status() != StatusCode::BAD_REQUEST {
-                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                if res.0 != StatusCode::BAD_REQUEST {
+                    res.0 = StatusCode::BAD_REQUEST;
                 }
-                *res.body_mut() = format!(r#"{{"status":"Error", "content":{}}}"#, e).into();
+                res.2 = format!(r#"{{"status":"Error", "content":{}}}"#, e).into();
             }
         }
     }

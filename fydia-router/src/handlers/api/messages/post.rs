@@ -1,63 +1,64 @@
 use crate::handlers::api::websocket::Websockets;
+use crate::new_response;
+use axum::body::{Body, Bytes};
+use axum::extract::{Extension, Path};
+use axum::response::IntoResponse;
 use chrono::DateTime;
+use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::{SqlServer, SqlServerId};
 use fydia_sql::impls::token::SqlToken;
-use fydia_sql::sqlpool::SqlPool;
+use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Message, MessageType, SqlDate};
-use fydia_struct::pathextractor::ChannelExtractor;
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::{Token, User};
 use fydia_utils::generate_string;
-use gotham::handler::HandlerResult;
-use gotham::helpers::http::response::create_response;
-use gotham::hyper::header::CONTENT_TYPE;
-use gotham::hyper::{body, body::Body, HeaderMap, StatusCode};
-use gotham::state::{FromState, State};
+use http::header::CONTENT_TYPE;
+use http::{HeaderMap, Request, StatusCode};
 use mime::Mime;
 use serde_json::Value;
+use std::convert::Infallible;
 use std::io::{Read, Write};
 use std::str::FromStr;
 use std::time::SystemTime;
 
 const BOUNDARY: &str = "boundary=";
 
-pub async fn post_messages(mut state: State) -> HandlerResult {
-    let mut body = Body::take_from(&mut state);
-    let mut res = create_response(
-        &state,
-        StatusCode::BAD_REQUEST,
-        mime::TEXT_PLAIN_UTF_8,
-        "Error".to_string(),
-    );
+pub async fn post_messages(
+    request: Request<Body>,
+    body: Bytes,
+    Extension(database): Extension<DbConnection>,
+    Extension(rsa): Extension<RsaData>,
+    Extension(wbsocket): Extension<Websockets>,
+    Path((serverid, channelid)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let mut res = new_response();
 
-    let headers = HeaderMap::borrow_from(&state);
-    let database = &SqlPool::borrow_from(&state).get_pool();
-    let extracted = ChannelExtractor::borrow_from(&state);
-    let serverid = ServerId::new(extracted.serverid.clone());
+    let headers = request.headers();
+    let serverid = ServerId::new(serverid.clone());
 
-    let channelid = extracted.channelid.clone();
+    let channelid = channelid.clone();
     let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
         FydiaResponse::new_error("Bad Token").update_response(&mut res);
-        return Ok((state, res));
+        return res;
     };
 
-    if let Some(user) = token.get_user(database).await {
+    if let Some(user) = token.get_user(&database).await {
         if user.server.is_join(serverid.clone()) {
             if let Some(serverid) = user.server.get(serverid.clone().short_id) {
-                if let Ok(server) = serverid.get_server(database).await {
+                if let Ok(server) = serverid.get_server(&database).await {
                     if server.channel.is_exists(channelid.clone()) {
                         if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
                             if let Ok(content_type) = header_content_type.to_str() {
                                 let msg = match messages_dispatcher(
                                     content_type,
-                                    &mut body,
+                                    body.to_vec(),
                                     headers,
                                     &user,
                                     &ChannelId::new(channelid),
@@ -68,14 +69,14 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                     Ok(event) => event,
                                     Err(err) => {
                                         err.update_response(&mut res);
-                                        return Ok((state, res));
+                                        return res;
                                     }
                                 };
-                                let mut websocket = Websockets::borrow_mut_from(&mut state).clone();
-                                let key = RsaData::borrow_from(&state).clone();
-                                if let Ok(members) = server.get_user(database).await {
+                                let mut websocket = wbsocket.get_channels().await.clone();
+                                let key = rsa.clone();
+                                if let Ok(members) = server.get_user(&database).await {
                                     if let EventContent::Message { ref content } = msg.content {
-                                        if content.insert_message(database).await.is_err() {
+                                        if content.insert_message(&database).await.is_err() {
                                             FydiaResponse::new_error_custom_status(
                                                 "Cannot send message",
                                                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -83,14 +84,18 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
                                             .update_response(&mut res);
                                         } else {
                                             tokio::spawn(async move {
-                                                websocket
+                                                if websocket
                                                     .send(
                                                         &msg.clone(),
                                                         members.members.clone(),
                                                         Some(&key),
                                                         None,
                                                     )
-                                                    .await;
+                                                    .await
+                                                    .is_err()
+                                                {
+                                                    error!("Error");
+                                                };
                                             });
                                         }
                                     }
@@ -126,28 +131,22 @@ pub async fn post_messages(mut state: State) -> HandlerResult {
         FydiaResponse::new_error("Token error").update_response(&mut res);
     }
 
-    Ok((state, res))
+    res
 }
 
 pub async fn messages_dispatcher(
     content_type: &str,
-    body: &mut Body,
+    body: Vec<u8>,
     headers: &HeaderMap,
     user: &User,
     channelid: &ChannelId,
     serverid: &ServerId,
 ) -> Result<Event, FydiaResponse> {
     match content_type {
-        "application/json" | "application/json; charset=utf-8" => {
-            let bytes = body::to_bytes(body)
-                .await
-                .map_err(|e| FydiaResponse::new_error(e.to_string()))?;
-
-            match String::from_utf8(bytes.to_vec()) {
-                Ok(string_body) => json_message(string_body, user, channelid, serverid),
-                Err(_) => Err(FydiaResponse::new_error("Utf-8 Error")),
-            }
-        }
+        "application/json" | "application/json; charset=utf-8" => match String::from_utf8(body) {
+            Ok(string_body) => json_message(string_body, user, channelid, serverid),
+            Err(_) => Err(FydiaResponse::new_error("Utf-8 Error")),
+        },
 
         "multipart/form-data" | "multipart/form-data;" => {
             multipart_to_event(body, headers, &user.clone(), channelid, serverid).await
@@ -158,7 +157,7 @@ pub async fn messages_dispatcher(
 }
 
 pub async fn multipart_to_event(
-    body: &mut Body,
+    body: Vec<u8>,
     headers: &HeaderMap,
     user: &User,
     channelid: &ChannelId,
@@ -169,7 +168,10 @@ pub async fn multipart_to_event(
         let idx = ct.find(BOUNDARY)?;
         Some(ct[idx + BOUNDARY.len()..].to_string())
     }) {
-        let mut multer = multer::Multipart::new(body, boundary.clone());
+        let a = once(async move {
+            Result::<Bytes, Infallible>::Ok(Bytes::copy_from_slice(body.as_slice()))
+        });
+        let mut multer = multer::Multipart::new(a, boundary.clone());
         let name = generate_string(32);
         if let Ok(mut file) = std::fs::File::create(&name) {
             while let Ok(Some(mut field)) = multer.next_field().await {

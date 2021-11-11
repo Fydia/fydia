@@ -10,42 +10,40 @@ pub mod handlers;
 pub mod routes;
 
 #[macro_use]
-extern crate gotham_derive;
-
-#[macro_use]
 extern crate logger;
 
-use std::process::exit;
-
 use crate::handlers::api::websocket::Websockets;
-use crate::handlers::default;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
+use axum::body::Body;
+use axum::handler::Handler;
+use axum::response::{Html, IntoResponse};
+use axum::AddExtensionLayer;
 use fydia_config::Config;
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
-use fydia_sql::sqlpool::{Repo, SqlPool};
+use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::instance::{Instance, RsaData};
-use gotham::handler::HandlerResult;
-use gotham::hyper::{Body, Response};
-use gotham::middleware::state::StateMiddleware;
-use gotham::pipeline::new_pipeline;
-use gotham::pipeline::single::single_pipeline;
-use gotham::router::builder::*;
-use gotham::router::builder::{build_router, DrawRoutes};
-use gotham::router::Router;
-use gotham::state::State;
-/// Return gotham's router
-pub async fn get_router(config: Config) -> Router {
+use http::{HeaderMap, HeaderValue, StatusCode};
+use std::process::exit;
+use std::sync::Arc;
+use tower::ServiceBuilder;
+use tower_http::trace::{OnRequest, TraceLayer};
+
+pub fn new_response() -> (StatusCode, HeaderMap<HeaderValue>, String) {
+    (StatusCode::OK, HeaderMap::new(), String::new())
+}
+
+pub async fn get_axum_router(config: Config) -> axum::Router {
     info!(format!("Fydia - {}", env!("CARGO_PKG_VERSION")));
     info!("Waiting database");
-    let database = Repo::new(get_connection(&config.database).await);
+    let database = Arc::new(get_connection(&config.database).await) as DbConnection;
     success!("Database connected");
     info!("Info init database");
-    if let Err(e) = create_tables(&database.get_pool()).await {
+    if let Err(e) = create_tables(&database).await {
         error!(format!("Error: {}", e.to_string()));
         exit(0);
     }
@@ -61,9 +59,8 @@ pub async fn get_router(config: Config) -> Router {
             exit(0);
         }
     };
-
     info!("try to get ip adress of the server");
-    let domain = if config.instance.domain.is_empty() {
+    let domain = /*if config.instance.domain.is_empty() {
         if let Ok(req) = reqwest::Client::new()
             .get("http://ifconfig.io")
             .header("User-Agent", "curl/7.55.1")
@@ -80,7 +77,8 @@ pub async fn get_router(config: Config) -> Router {
         }
     } else {
         config.instance.domain.clone()
-    };
+    };*/
+    "127.0.0.1".to_string();
 
     success!(format!("Ip is : {}", domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
@@ -90,36 +88,55 @@ pub async fn get_router(config: Config) -> Router {
         panic!("Public key error");
     };
 
-    let (chain, pipelineset) = single_pipeline(
-        new_pipeline()
-            .add(StateMiddleware::new(SqlPool::new(database)))
-            .add(StateMiddleware::new(Websockets::new()))
-            .add(StateMiddleware::new(RsaData(
-                privatekey.clone(),
-                public_key,
-            )))
-            .add(StateMiddleware::new(Instance::new(
-                fydia_struct::instance::Protocol::HTTP,
-                domain,
-                config.server.port as u16,
-            )))
-            .build(),
-    );
+    axum::Router::new()
+        .route("/", axum::routing::get(client))
+        .nest(
+            "/api",
+            axum::Router::new()
+                .nest("/instance", instance_routes())
+                .nest("/user", user_routes())
+                .nest("/server", server_routes())
+                .nest("/federation", federation_routes()),
+        )
+        .fallback(not_found.into_service())
+        .layer(AddExtensionLayer::new(database as DbConnection))
+        .layer(AddExtensionLayer::new(Arc::new(Instance::new(
+            fydia_struct::instance::Protocol::HTTP,
+            domain,
+            config.server.port as u16,
+        ))))
+        .layer(AddExtensionLayer::new(Arc::new(Websockets::new())))
+        .layer(AddExtensionLayer::new(RsaData(
+            privatekey.clone(),
+            public_key,
+        )))
+        .layer(AddExtensionLayer::new(Websockets::new()))
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http().on_request(Log)),
+        )
+}
 
-    build_router(chain, pipelineset, |router| {
-        router.get("/").to_async(get_client);
-        //router.get("/json").to_async(json);
-        router.scope("/api", |router| {
-            router.get("/").to(default);
-            router.scope("/instance", instance_routes);
-            router.scope("/user", user_routes);
-            router.scope("/server", server_routes);
-            router.scope("/federation", federation_routes);
-        });
-    })
+#[derive(Clone)]
+struct Log;
+
+impl OnRequest<Body> for Log {
+    fn on_request(&mut self, request: &http::Request<Body>, _: &tracing::Span) {
+        logger::info!(format!("{} {}", request.method(), request.uri()));
+    }
 }
-const INDEX: &str = include_str!("../index.html");
+
 /// Return index client
-pub async fn get_client(state: State) -> HandlerResult {
-    Ok((state, Response::new(Body::from(INDEX))))
+async fn not_found() -> impl IntoResponse {
+    (
+        http::StatusCode::NOT_FOUND,
+        String::from("Route Not Found : 404"),
+    )
 }
+
+/// Return index client
+pub async fn client() -> Html<String> {
+    Html(INDEX.to_string())
+}
+
+const INDEX: &str = include_str!("../index.html");
