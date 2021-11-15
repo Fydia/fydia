@@ -564,7 +564,7 @@ dependencies = [
  "fydia-config",
  "fydia-router",
  "gotham",
- "gotham_derive",
+ "gotham_derive 0.6.0",
  "tokio",
 ]
 
@@ -592,7 +592,7 @@ dependencies = [
  "fydia-struct",
  "fydia-utils",
  "gotham",
- "gotham_derive",
+ "gotham_derive 0.6.0",
  "reqwest",
  "serde",
  "serde_json",
@@ -614,7 +614,7 @@ dependencies = [
  "fydia-struct",
  "fydia-utils",
  "gotham",
- "gotham_derive",
+ "gotham_derive 0.6.0",
  "infer",
  "logger",
  "mime",
@@ -640,7 +640,7 @@ dependencies = [
  "fydia-struct",
  "fydia-utils",
  "gotham",
- "gotham_derive",
+ "gotham_derive 0.6.0",
  "logger",
  "sea-orm",
  "serde",
@@ -658,7 +658,7 @@ dependencies = [
  "fydia-crypto",
  "fydia-utils",
  "gotham",
- "gotham_derive",
+ "gotham_derive 0.6.0",
  "http",
  "hyper",
  "mime",
@@ -700,22 +700,20 @@ dependencies = [
 
 [[package]]
 name = "gotham"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52aeb8c70641bedbf18466e0537af9aff917a23468004b5ecca210116a2bfbbc"
+checksum = "ebae9b1095f59f0958a6631af024be8adda125fd6f0a09f759ca781a43c0a0fe"
 dependencies = [
  "anyhow",
  "base64",
  "bincode",
  "borrow-bag",
  "bytes",
- "chrono",
  "cookie",
- "futures",
- "http",
- "httpdate 0.3.2",
+ "futures-util",
+ "gotham_derive 0.7.0",
+ "httpdate",
  "hyper",
- "itertools",
  "linked-hash-map",
  "log",
  "mime",
@@ -727,9 +725,9 @@ dependencies = [
  "rand_chacha",
  "regex",
  "serde",
- "serde_derive",
+ "thiserror",
+ "time 0.3.4",
  "tokio",
- "tokio-rustls",
  "uuid",
 ]
 
@@ -738,6 +736,16 @@ name = "gotham_derive"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "759a0e44326c652a7535f1ded7a9df63238e2dd601def67f6ca940d04af3a547"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "gotham_derive"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61e79280f61fb5410e8ad53df1a10329104082a4324e5e5bab5d5cfd2ff30166"
 dependencies = [
  "quote",
  "syn",
@@ -844,12 +852,6 @@ checksum = "acd94fdbe1d4ff688b67b04eee2e17bd50995534a61539e45adfefb45e5e5503"
 
 [[package]]
 name = "httpdate"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
-
-[[package]]
-name = "httpdate"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6456b8a6c8f33fee7d958fcd1b60d55b11940a79e63ae87013e6d22e26034440"
@@ -868,7 +870,7 @@ dependencies = [
  "http",
  "http-body",
  "httparse",
- "httpdate 1.0.1",
+ "httpdate",
  "itoa",
  "pin-project-lite",
  "socket2",
@@ -2262,7 +2264,7 @@ dependencies = [
  "libc",
  "standback",
  "stdweb",
- "time-macros",
+ "time-macros 0.1.1",
  "version_check",
  "winapi",
 ]
@@ -2273,7 +2275,9 @@ version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99beeb0daeac2bd1e86ac2c21caddecb244b39a093594da1a661ec2060c7aedd"
 dependencies = [
+ "itoa",
  "libc",
+ "time-macros 0.2.3",
 ]
 
 [[package]]
@@ -2285,6 +2289,12 @@ dependencies = [
  "proc-macro-hack",
  "time-macros-impl",
 ]
+
+[[package]]
+name = "time-macros"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25eb0ca3468fc0acc11828786797f6ef9aa1555e4a211a60d64cc8e4d1be47d6"
 
 [[package]]
 name = "time-macros-impl"

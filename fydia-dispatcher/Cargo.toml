@@ -16,5 +16,5 @@ reqwest = "0.11.5"
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
-gotham = "0.6.0"
+gotham = "0.7.0"
 gotham_derive = "0.6.0"

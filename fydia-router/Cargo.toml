@@ -17,7 +17,7 @@ futures = "0.3.15"
 tokio-tungstenite = "0.15.0"
 time = "0.3.4"
 chrono = "0.4.19"
-gotham = "0.6.0"
+gotham = "0.7.0"
 gotham_derive = "0.6.0"
 logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 sha1 = "0.6"
