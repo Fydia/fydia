@@ -9,7 +9,7 @@ edition = "2018"
 fydia-crypto =  {path = "../fydia-crypto"}
 fydia-utils = { path="../fydia-utils" }
 serde = { version="1.0.126", features=["derive"] }
-serde_json = { version="1.0.69" }
+serde_json = { version="1.0.70" }
 gotham_derive = "0.6.0"
 gotham = "0.6.0"
 chrono = "0.4.19"
