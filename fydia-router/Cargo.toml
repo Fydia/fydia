@@ -12,7 +12,7 @@ fydia-sql = { path="../fydia-sql" }
 fydia-utils = { path="../fydia-utils" }
 fydia-crypto = { path="../fydia-crypto" }
 fydia-dispatcher = { path="../fydia-dispatcher" }
-tokio = { version="1.12", default-features=false }
+tokio = { version="1.14", default-features=false }
 futures = "0.3.17"
 futures-util = "0.3.17"
 tokio-tungstenite = "0.16.0"
