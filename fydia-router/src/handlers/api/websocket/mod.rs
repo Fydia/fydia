@@ -9,68 +9,11 @@ use fydia_struct::{
     instance::{Instance, RsaData},
     user::User,
 };
-use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
-use tokio::sync::{oneshot, Mutex};
+use tokio::sync::oneshot;
 
 pub mod messages;
-
-pub type Websockets = Arc<Mutex<WebsocketInner>>;
-
-/*#[async_trait::async_trait]
-pub trait WebsocketsTrait {
-    fn new_websocket() -> Self;
-    async fn get_channels_of_user(
-        &self,
-        user: User,
-    ) -> Option<Vec<UnboundedSender<ChannelMessage>>>;
-    async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>);
-    async fn remove_channel_of_user(
-        &mut self,
-        user: User,
-        sender: &UnboundedSender<ChannelMessage>,
-    );
-    async fn send(
-        &self,
-        msg: &Event,
-        user: Vec<User>,
-        keys: Option<&RsaData>,
-        _origin: Option<Instance>,
-    ) -> Result<(), ()>;
-}
-
-#[async_trait::async_trait]
-impl WebsocketsTrait for Websockets {
-    fn new_websocket() -> Self {
-        Arc::new(Mutex::new(WebsocketInner::default()))
-    }
-    async fn get_channels_of_user(
-        &self,
-        user: User,
-    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
-        self.lock().await.get_channels_of_user(user).await
-    }
-    async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>) {
-        self.lock().await.insert_channel(user, channel).await
-    }
-    async fn remove_channel_of_user(
-        &mut self,
-        user: User,
-        sender: &UnboundedSender<ChannelMessage>,
-    ) {
-        self.lock().await.remove_channel_of_user(user, sender).await
-    }
-    async fn send(
-        &self,
-        msg: &Event,
-        user: Vec<User>,
-        keys: Option<&RsaData>,
-        _origin: Option<Instance>,
-    ) -> Result<(), ()> {
-        self.lock().await.send(msg, user, keys, _origin).await
-    }
-}*/
 
 #[derive(Debug, Clone)]
 pub struct WebsocketInner {

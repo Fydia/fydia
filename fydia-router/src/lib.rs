@@ -60,7 +60,7 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         }
     };
     info!("try to get ip adress of the server");
-    let domain = /*if config.instance.domain.is_empty() {
+    let domain = if config.instance.domain.is_empty() {
         if let Ok(req) = reqwest::Client::new()
             .get("http://ifconfig.io")
             .header("User-Agent", "curl/7.55.1")
@@ -77,8 +77,7 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         }
     } else {
         config.instance.domain.clone()
-    };*/
-    "127.0.0.1".to_string();
+    };
 
     success!(format!("Ip is : {}", domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
@@ -88,19 +87,6 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         panic!("Public key error");
     };
     let websocket_manager = WebsocketManager::spawn().await;
-
-    /*spawn(async move {
-        for _ in 0..5000 {
-            thread
-                .0
-                .send(WbManagerMessage::Add(
-                    User::default(),
-                    unbounded_channel().0,
-                ))
-                .unwrap();
-        }
-        println!("Finished Added");
-    });*/
 
     axum::Router::new()
         .route("/", axum::routing::get(client))
