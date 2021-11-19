@@ -54,10 +54,8 @@ impl FydiaResponse {
                     *header = content_type;
                 }
             }
-        } else {
-            if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
-                res.1.insert(CONTENT_TYPE, e);
-            }
+        } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
+            res.1.insert(CONTENT_TYPE, e);
         }
         match self.status {
             FydiaStatus::Error => {
@@ -74,12 +72,12 @@ impl FydiaResponse {
             }
         }
         match serde_json::to_string(self) {
-            Ok(response) => res.2 = response.into(),
+            Ok(response) => res.2 = response,
             Err(e) => {
                 if res.0 != StatusCode::BAD_REQUEST {
                     res.0 = StatusCode::BAD_REQUEST;
                 }
-                res.2 = format!(r#"{{"status":"Error", "content":{}}}"#, e).into();
+                res.2 = format!(r#"{{"status":"Error", "content":{}}}"#, e);
             }
         }
     }

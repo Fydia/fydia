@@ -18,24 +18,20 @@ impl UserFormat {
         }
 
         let (username, domain) = from.split_at(n);
-        let domain = domain.trim_start_matches("@");
+        let domain = domain.trim_start_matches('@');
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
-                    Some(port) => {
-                        return Some(Self {
-                            name: username.to_string(),
-                            domain: domain.to_string(),
-                            port: Some(port),
-                        });
-                    }
-                    None => {
-                        return Some(Self {
-                            name: username.to_string(),
-                            domain: domain.to_string(),
-                            port: None,
-                        });
-                    }
+                    Some(port) => Some(Self {
+                        name: username.to_string(),
+                        domain: domain.to_string(),
+                        port: Some(port),
+                    }),
+                    None => Some(Self {
+                        name: username.to_string(),
+                        domain: domain.to_string(),
+                        port: None,
+                    }),
                 },
                 None => {
                     println!("No domain");
@@ -73,20 +69,16 @@ impl ServerFormat {
         match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
             Ok(url) => match url.domain() {
                 Some(domain) => match url.port() {
-                    Some(port) => {
-                        return Some(Self {
-                            name: username.to_string(),
-                            domain: domain.to_string(),
-                            port: Some(port),
-                        });
-                    }
-                    None => {
-                        return Some(Self {
-                            name: username.to_string(),
-                            domain: domain.to_string(),
-                            port: None,
-                        });
-                    }
+                    Some(port) => Some(Self {
+                        name: username.to_string(),
+                        domain: domain.to_string(),
+                        port: Some(port),
+                    }),
+                    None => Some(Self {
+                        name: username.to_string(),
+                        domain: domain.to_string(),
+                        port: None,
+                    }),
                 },
                 None => {
                     println!("No domain");
