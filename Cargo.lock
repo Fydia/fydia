@@ -112,33 +112,6 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "axum"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f08f95a202e827209db1491047aa57c18c8adb4c5efcfcfd4a2da4838ee3a72"
-dependencies = [
- "async-trait",
- "bitflags",
- "bytes",
- "futures-util",
- "http",
- "http-body",
- "hyper",
- "pin-project-lite",
- "regex",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5e874ee652f2ec443faed3073b80f0ac7a2042a3605fc0704d28bbbf22d623c"
@@ -172,25 +145,10 @@ dependencies = [
 
 [[package]]
 name = "axum-debug"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08b7c2138c8c7b0021324df698036e003ad2ab05f622dbc95de55eed661629c6"
+checksum = "4e56e1bbf3fa991f3d1a2229685c32279686c192390ba4820bc6899e6ce621fa"
 dependencies = [
- "axum 0.2.8",
- "axum-debug-macros",
- "bytes",
- "http",
- "http-body",
- "tower-service",
-]
-
-[[package]]
-name = "axum-debug-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71956f60ac01c313acfbccdc5a1aa8c54ba1543e80df1abc2266c1c2d6200fa"
-dependencies = [
- "axum 0.2.8",
  "proc-macro2",
  "quote",
  "syn",
@@ -660,7 +618,7 @@ dependencies = [
 name = "fydia"
 version = "0.1.0"
 dependencies = [
- "axum 0.3.2",
+ "axum",
  "axum-debug",
  "fydia-config",
  "fydia-router",
@@ -704,7 +662,7 @@ name = "fydia-router"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "axum 0.3.2",
+ "axum",
  "axum-debug",
  "base64",
  "chrono",
