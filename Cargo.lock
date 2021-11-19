@@ -840,9 +840,9 @@ dependencies = [
 
 [[package]]
 name = "gotham_derive"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "759a0e44326c652a7535f1ded7a9df63238e2dd601def67f6ca940d04af3a547"
+checksum = "61e79280f61fb5410e8ad53df1a10329104082a4324e5e5bab5d5cfd2ff30166"
 dependencies = [
  "quote",
  "syn",
