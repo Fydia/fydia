@@ -33,5 +33,5 @@ infer = "0.5.0"
 mime_guess = "2.0.3"
 tracing = "0.1"
 tower-http = {version = "0.1.2", features=["trace"]}
-tower = "0.4.10"
+tower = "0.4.11"
 rand = "0.8.4"
