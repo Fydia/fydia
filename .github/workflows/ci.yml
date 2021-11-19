@@ -35,6 +35,10 @@ jobs:
         with:
           command: test
           args: --tests
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
+        with:
+          file: "/home/runner/work/Fydia/Fydia/target/release/fydia"
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
