@@ -11,8 +11,8 @@ pub mod routes;
 
 #[macro_use]
 extern crate logger;
-
-use crate::handlers::api::websocket::Websockets;
+use crate::handlers::api::websocket::test_message;
+use crate::handlers::api::websocket::WebsocketManager;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
@@ -87,9 +87,24 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     } else {
         panic!("Public key error");
     };
+    let websocket_manager = WebsocketManager::spawn().await;
+
+    /*spawn(async move {
+        for _ in 0..5000 {
+            thread
+                .0
+                .send(WbManagerMessage::Add(
+                    User::default(),
+                    unbounded_channel().0,
+                ))
+                .unwrap();
+        }
+        println!("Finished Added");
+    });*/
 
     axum::Router::new()
         .route("/", axum::routing::get(client))
+        .route("/test", axum::routing::get(test_message))
         .nest(
             "/api",
             axum::Router::new()
@@ -105,16 +120,12 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
             domain,
             config.server.port as u16,
         ))))
-        .layer(AddExtensionLayer::new(Arc::new(Websockets::new())))
         .layer(AddExtensionLayer::new(RsaData(
             privatekey.clone(),
             public_key,
         )))
-        .layer(AddExtensionLayer::new(Websockets::new()))
-        .layer(
-            ServiceBuilder::new()
-                .layer(TraceLayer::new_for_http().on_request(Log)),
-        )
+        .layer(AddExtensionLayer::new(websocket_manager))
+        .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http().on_request(Log)))
 }
 
 #[derive(Clone)]

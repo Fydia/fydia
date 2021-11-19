@@ -1,51 +1,151 @@
-use flume::{Receiver, Sender};
-use fydia_dispatcher::message::send::encrypt_message;
-use fydia_struct::event::Event;
-use fydia_struct::instance::{Instance, RsaData};
-use fydia_struct::user::User;
-
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::fmt::Debug;
+use axum::extract::Extension;
+use axum::response::IntoResponse;
+use fydia_struct::channel::ChannelId;
+use fydia_struct::event::EventContent;
+use fydia_struct::messages::{Message, MessageType, SqlDate};
+use fydia_struct::server::ServerId;
+use fydia_struct::{
+    event::Event,
+    instance::{Instance, RsaData},
+    user::User,
+};
 use std::sync::Arc;
-use tokio::sync::{Mutex, MutexGuard};
+use std::time::Instant;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::sync::{oneshot, Mutex};
 
 pub mod messages;
 
-#[derive(Debug, Clone)]
-pub struct Websockets {
-    channels: Arc<Mutex<WbList>>,
+pub type Websockets = Arc<Mutex<WebsocketInner>>;
+
+/*#[async_trait::async_trait]
+pub trait WebsocketsTrait {
+    fn new_websocket() -> Self;
+    async fn get_channels_of_user(
+        &self,
+        user: User,
+    ) -> Option<Vec<UnboundedSender<ChannelMessage>>>;
+    async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>);
+    async fn remove_channel_of_user(
+        &mut self,
+        user: User,
+        sender: &UnboundedSender<ChannelMessage>,
+    );
+    async fn send(
+        &self,
+        msg: &Event,
+        user: Vec<User>,
+        keys: Option<&RsaData>,
+        _origin: Option<Instance>,
+    ) -> Result<(), ()>;
 }
 
-impl Default for Websockets {
-    fn default() -> Self {
-        Self::new()
+#[async_trait::async_trait]
+impl WebsocketsTrait for Websockets {
+    fn new_websocket() -> Self {
+        Arc::new(Mutex::new(WebsocketInner::default()))
     }
+    async fn get_channels_of_user(
+        &self,
+        user: User,
+    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
+        self.lock().await.get_channels_of_user(user).await
+    }
+    async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>) {
+        self.lock().await.insert_channel(user, channel).await
+    }
+    async fn remove_channel_of_user(
+        &mut self,
+        user: User,
+        sender: &UnboundedSender<ChannelMessage>,
+    ) {
+        self.lock().await.remove_channel_of_user(user, sender).await
+    }
+    async fn send(
+        &self,
+        msg: &Event,
+        user: Vec<User>,
+        keys: Option<&RsaData>,
+        _origin: Option<Instance>,
+    ) -> Result<(), ()> {
+        self.lock().await.send(msg, user, keys, _origin).await
+    }
+}*/
+
+#[derive(Debug, Clone)]
+pub struct WebsocketInner {
+    wb_channel: Vec<WbStruct>,
 }
 
-impl Websockets {
-    pub fn new() -> Self {
+type WbStruct = (User, Vec<UnboundedSender<ChannelMessage>>);
+
+impl Default for WebsocketInner {
+    fn default() -> Self {
         Self {
-            channels: Arc::new(Mutex::new(WbList::new())),
+            wb_channel: Vec::new(),
         }
     }
+}
 
-    pub async fn get_channels_clone(&self) -> WbList {
-        self.channels.lock().await.clone()
-    }
-
-    pub async fn get_channels(&self) -> MutexGuard<'_, WbList> {
-        self.channels.lock().await
+impl WebsocketInner {
+    pub fn new() -> Self {
+        Default::default()
     }
 
-    pub async fn insert(&self, wbuser: &WbUser) {
-        let mut res = self.channels.lock().await;
-        res.insert(wbuser);
+    pub async fn get_channels_of_user(
+        &self,
+        user: User,
+    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
+        let mut user = user;
+        user.password = None;
+        for i in self.wb_channel.iter() {
+            if i.0 == user {
+                return Some(i.1.clone());
+            }
+        }
+
+        None
     }
-    pub async fn remove_wbuser(&self, wbuser: &WbUser) -> Result<(), ()> {
-        self.channels.lock().await.remove_wbuser(wbuser)
+
+    pub async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>) {
+        let mut user = user;
+
+        user.password = None;
+
+        self.wb_channel.iter_mut().for_each(|e| {
+            if e.0 == user {
+                e.1.push(channel.clone());
+                return;
+            }
+        });
+
+        self.wb_channel.push((user, vec![channel]));
     }
-    pub async fn remove(&self, id: u32) -> Result<(), ()> {
-        self.channels.lock().await.remove(id)
+
+    pub async fn remove_channel_of_user(
+        &mut self,
+        user: User,
+        sender: &UnboundedSender<ChannelMessage>,
+    ) {
+        let mut user = user;
+        user.password = None;
+
+        let mut index = None;
+        for i in self.wb_channel.iter_mut() {
+            if i.0 == user {
+                for i in i.1.iter_mut().enumerate() {
+                    if i.1.same_channel(sender) {
+                        index = Some(i.0);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if let Some(i) = index {
+            self.wb_channel.remove(i);
+        };
     }
 
     pub async fn send(
@@ -54,75 +154,15 @@ impl Websockets {
         user: Vec<User>,
         keys: Option<&RsaData>,
         _origin: Option<Instance>,
-    ) {
-        self.get_channels().await.0.par_iter().for_each(|i| {
-            if user.contains(&i.user) {
-                if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
-                    if let Err(e) = i
-                        .channel
-                        .0
-                        .send(ChannelMessage::Message(Box::new(msg.clone())))
-                    {
-                        error!(format!("Cannot send message : {}", e.to_string()));
-                    }
-                } else if let Some(rsa) = keys {
-                    if let Ok(public_key) = i.user.instance.get_public_key() {
-                        let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
-                        //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
-                    }
-                }
-            }
-        });
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct WbList(pub Vec<WbUser>);
-
-impl WbList {
-    pub fn new() -> Self {
-        Self { 0: Vec::new() }
-    }
-    pub fn insert(&mut self, wbuser: &WbUser) {
-        self.0.push(wbuser.clone());
-    }
-    pub fn get_user_by_id(&self, id: i32) -> Option<WbUser> {
-        for i in &self.0 {
-            if i.user.id == id {
-                return Some(i.clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn get_user_by_token(&self, token: String) -> Option<WbUser> {
-        for i in &self.0 {
-            if i.user.token == Some(token.clone()) {
-                return Some(i.clone());
-            }
-        }
-
-        None
-    }
-
-    pub async fn send(
-        &mut self,
-        msg: &Event,
-        user: Vec<User>,
-        keys: Option<&RsaData>,
-        _origin: Option<Instance>,
     ) -> Result<(), ()> {
-        self.0.par_iter().for_each(|i| {
+        /*self.0.par_iter().for_each(|i| {
             if user.contains(&i.user) {
                 if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
-                    if let Err(e) = i
-                        .channel
-                        .0
-                        .send(ChannelMessage::Message(Box::new(msg.clone())))
-                    {
-                        error!(format!("Cannot send message : {}", e.to_string()));
-                    }
+                    i.channel.read().unwrap().par_iter().for_each(|i| {
+                        if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
+                            error!(format!("Cannot send message : {}", e.to_string()));
+                        }
+                    });
                 } else if let Some(rsa) = keys {
                     if let Ok(public_key) = i.user.instance.get_public_key() {
                         let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
@@ -130,74 +170,9 @@ impl WbList {
                     }
                 }
             }
-        });
+        });*/
 
         Ok(())
-    }
-
-    pub fn remove(&mut self, id: u32) -> Result<(), ()> {
-        let a = &self.0;
-        for (n, i) in a.iter().enumerate() {
-            if i.id == id {
-                self.0.remove(n);
-                return Ok(());
-            }
-        }
-
-        Err(())
-    }
-
-    pub fn remove_wbuser(&mut self, wbuser: &WbUser) -> Result<(), ()> {
-        let a = &self.0;
-        for (n, i) in a.iter().enumerate() {
-            if i == wbuser {
-                self.0.remove(n);
-                return Ok(());
-            }
-        }
-
-        Err(())
-    }
-}
-
-impl Default for WbList {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct WbUser {
-    pub id: u32,
-    pub channel: (Sender<ChannelMessage>, Receiver<ChannelMessage>),
-    pub user: User,
-}
-
-impl Default for WbUser {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            channel: flume::unbounded(),
-            user: Default::default(),
-        }
-    }
-}
-
-impl PartialEq for WbUser {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.user == other.user
-    }
-}
-
-impl WbUser {
-    pub fn new(
-        id: u32,
-        channel: (Sender<ChannelMessage>, Receiver<ChannelMessage>),
-        user: User,
-    ) -> Self {
-        let mut user = user.clone();
-        user.password = None;
-        Self { id, channel, user }
     }
 }
 
@@ -206,4 +181,135 @@ pub enum ChannelMessage {
     WebsocketMessage(axum::extract::ws::Message),
     Message(Box<Event>),
     Kill,
+}
+
+#[derive(Debug)]
+pub enum WbManagerMessage {
+    Add(User, UnboundedSender<ChannelMessage>),
+    Get(tokio::sync::oneshot::Sender<Vec<WbStruct>>),
+    GetOfUser(
+        User,
+        tokio::sync::oneshot::Sender<Option<Vec<UnboundedSender<ChannelMessage>>>>,
+    ),
+    Remove(User, UnboundedSender<ChannelMessage>),
+}
+#[derive(Debug)]
+pub struct WebsocketManager;
+
+impl WebsocketManager {
+    pub async fn spawn() -> WebsocketManagerChannel {
+        let (sender, mut receiver) = unbounded_channel::<WbManagerMessage>();
+        tokio::spawn(async move {
+            let mut websockets = WebsocketInner::new();
+
+            while let Some(message) = receiver.recv().await {
+                match message {
+                    WbManagerMessage::Add(user, channel) => {
+                        websockets.insert_channel(user, channel).await;
+                        println!("Add")
+                    }
+                    WbManagerMessage::Remove(user, sender) => {
+                        websockets.remove_channel_of_user(user, &sender).await
+                    }
+                    WbManagerMessage::Get(oneshot) => {
+                        if oneshot.send(websockets.wb_channel.clone()).is_err() {
+                            error!("Can't send");
+                        };
+                    }
+                    WbManagerMessage::GetOfUser(user, channel) => {
+                        if channel
+                            .send(websockets.get_channels_of_user(user).await)
+                            .is_err()
+                        {
+                            error!("Can't send");
+                        };
+                    }
+                }
+            }
+        });
+
+        WebsocketManagerChannel(sender)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct WebsocketManagerChannel(pub UnboundedSender<WbManagerMessage>);
+
+impl WebsocketManagerChannel {
+    async fn get(&self) -> Result<Vec<WbStruct>, oneshot::error::RecvError> {
+        let (sender, receiver) = oneshot::channel::<Vec<WbStruct>>();
+        if let Err(e) = self.0.send(WbManagerMessage::Get(sender)) {
+            error!(e.to_string());
+        };
+
+        receiver.await
+    }
+    pub fn insert_channel(&self, user: User, channel: UnboundedSender<ChannelMessage>) {
+        if let Err(e) = self.0.send(WbManagerMessage::Add(user, channel)) {
+            error!(e.to_string());
+        }
+    }
+    pub fn remove_channel_of_user(&self, user: User, sender: &UnboundedSender<ChannelMessage>) {
+        if let Err(e) = self.0.send(WbManagerMessage::Remove(user, sender.clone())) {
+            error!(e.to_string());
+        }
+    }
+    pub async fn get_channels_of_user(
+        &self,
+        user: User,
+    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
+        let (sender, receiver) = oneshot::channel::<Option<Vec<UnboundedSender<ChannelMessage>>>>();
+        if let Err(e) = self.0.send(WbManagerMessage::GetOfUser(user, sender)) {
+            error!(e.to_string());
+        }
+
+        if let Ok(some) = receiver.await {
+            some
+        } else {
+            None
+        }
+    }
+
+    pub async fn send(
+        &self,
+        msg: &Event,
+        user: Vec<User>,
+        keys: Option<&RsaData>,
+        _origin: Option<Instance>,
+    ) -> Result<(), ()> {
+        Ok(())
+    }
+}
+
+pub async fn test_message(
+    Extension(websocket_manager_channel): Extension<WebsocketManagerChannel>,
+) -> impl IntoResponse {
+    let instant = Instant::now();
+    let getted_websocket = websocket_manager_channel
+        .get_channels_of_user(User::default())
+        .await;
+    getted_websocket.iter().for_each(|e| {
+        e.iter().for_each(|e| {
+            if let Err(e) = e.send(ChannelMessage::Message(Box::new(Event::new(
+                ServerId::new(String::new()),
+                EventContent::Message {
+                    content: Message::new(
+                        String::new(),
+                        MessageType::TEXT,
+                        false,
+                        SqlDate::now(),
+                        User::default(),
+                        ChannelId::default(),
+                    ),
+                },
+            )))) {
+                println!("{}", e.to_string())
+            };
+        })
+    });
+    format!(
+        "{}µs => {:?}",
+        instant.elapsed().as_micros(),
+        getted_websocket
+    )
 }

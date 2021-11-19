@@ -22,7 +22,7 @@ pub async fn create_server(
 ) -> impl IntoResponse {
     let headers = request.headers();
     let mut res = new_response();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
+    let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
         return res;

@@ -15,7 +15,7 @@ pub async fn get_server_of_user(
 ) -> impl IntoResponse {
     let headers = request.headers();
     let mut res = new_response();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
+    let token = if let Some(token) = Token::from_headervalue(headers) {
         token
     } else {
         FydiaResponse::new_error("Bad Token").update_response(&mut res);

@@ -1,4 +1,4 @@
-use crate::handlers::api::websocket::Websockets;
+use crate::handlers::api::websocket::WebsocketManagerChannel;
 use crate::new_response;
 use axum::body::{Body, Bytes};
 use axum::extract::{Extension, Path};
@@ -33,7 +33,7 @@ pub async fn post_messages(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
     Extension(rsa): Extension<RsaData>,
-    Extension(wbsocket): Extension<Websockets>,
+    Extension(wbsocket): Extension<WebsocketManagerChannel>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();
@@ -72,7 +72,6 @@ pub async fn post_messages(
                                         return res;
                                     }
                                 };
-                                let mut websocket = wbsocket.get_channels().await.clone();
                                 let key = rsa.clone();
                                 if let Ok(members) = server.get_user(&database).await {
                                     if let EventContent::Message { ref content } = msg.content {
@@ -84,7 +83,7 @@ pub async fn post_messages(
                                             .update_response(&mut res);
                                         } else {
                                             tokio::spawn(async move {
-                                                if websocket
+                                                if wbsocket
                                                     .send(
                                                         &msg.clone(),
                                                         members.members.clone(),

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::handlers::api::websocket::WebsocketManagerChannel;
 use axum::body::Body;
 use axum::extract::{BodyStream, Extension};
 use axum::http::Request;
@@ -18,14 +19,12 @@ use fydia_struct::user::User;
 
 use crate::new_response;
 
-use super::api::websocket::Websockets;
-
 pub async fn event_handler(
     response: Request<Body>,
     mut body: BodyStream,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
-    Extension(mut wbsockets): Extension<Arc<Websockets>>,
+    Extension(wbsockets): Extension<WebsocketManagerChannel>,
 ) -> impl IntoResponse {
     let headers = response.headers();
     let rsa = &rsa;
@@ -34,7 +33,7 @@ pub async fn event_handler(
         let body = body_bytes.to_vec();
         if let Some(msg) = receive_message(headers, body, rsa).await {
             if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
-                crate::handlers::event::event_handler(event, &database, &mut wbsockets).await;
+                crate::handlers::event::event_handler(event, &database, &wbsockets).await;
             } else {
                 FydiaResponse::new_error("Bad Body").update_response(&mut res);
             }
