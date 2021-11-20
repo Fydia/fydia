@@ -106,10 +106,10 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
             domain,
             config.server.port as u16,
         ))))
-        .layer(AddExtensionLayer::new(RsaData(
+        .layer(AddExtensionLayer::new(Arc::new(RsaData(
             privatekey.clone(),
             public_key,
-        )))
+        ))))
         .layer(AddExtensionLayer::new(websocket_manager))
         .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http().on_request(Log)))
 }
