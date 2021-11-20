@@ -1,13 +1,14 @@
 #![allow(irrefutable_let_patterns)]
 
+use super::user::SqlUser;
 use fydia_struct::{
     channel::ChannelId,
     messages::{Message, MessageType, SqlDate},
     user::User,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
-
-use super::user::SqlUser;
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
+};
 
 #[async_trait::async_trait]
 pub trait SqlMessage {
