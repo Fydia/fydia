@@ -9,6 +9,7 @@ use fydia_struct::{
     instance::{Instance, RsaData},
     user::User,
 };
+use parking_lot::Mutex;
 use std::time::Instant;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender as Sender};
 use tokio::sync::oneshot;
@@ -16,9 +17,9 @@ use tokio::sync::oneshot::Sender as OSSender;
 
 pub mod messages;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WebsocketInner {
-    wb_channel: Vec<WbStruct>,
+    wb_channel: Mutex<Vec<WbStruct>>,
 }
 
 type WbStruct = (User, Vec<Sender<ChannelMessage>>);
@@ -26,7 +27,7 @@ type WbStruct = (User, Vec<Sender<ChannelMessage>>);
 impl Default for WebsocketInner {
     fn default() -> Self {
         Self {
-            wb_channel: Vec::new(),
+            wb_channel: Mutex::new(Vec::new()),
         }
     }
 }
@@ -39,7 +40,7 @@ impl WebsocketInner {
     pub async fn get_channels_of_user(&self, user: User) -> Option<Vec<Sender<ChannelMessage>>> {
         let mut user = user;
         user.password = None;
-        for i in self.wb_channel.iter() {
+        for i in self.wb_channel.lock().iter() {
             if i.0 == user {
                 return Some(i.1.clone());
             }
@@ -53,36 +54,31 @@ impl WebsocketInner {
 
         user.password = None;
 
-        self.wb_channel.iter_mut().for_each(|e| {
+        self.wb_channel.lock().iter_mut().for_each(|e| {
             if e.0 == user {
                 e.1.push(channel.clone());
                 return;
             }
         });
 
-        self.wb_channel.push((user, vec![channel]));
+        self.wb_channel.lock().push((user, vec![channel]));
     }
 
     pub async fn remove_channel_of_user(&mut self, user: User, sender: &Sender<ChannelMessage>) {
         let mut user = user;
         user.password = None;
 
-        let mut index = None;
-        for i in self.wb_channel.iter_mut() {
+        for i in self.wb_channel.lock().iter() {
             if i.0 == user {
                 for i in i.1.iter().enumerate() {
                     if i.1.same_channel(sender) {
-                        index = Some(i.0);
-                        break;
+                        self.wb_channel.lock().remove(i.0);
+                        return;
                     }
                 }
                 break;
             }
         }
-
-        if let Some(i) = index {
-            self.wb_channel.remove(i);
-        };
     }
 }
 
@@ -119,7 +115,7 @@ impl WebsocketManager {
                         websockets.remove_channel_of_user(user, &sender).await
                     }
                     WbManagerMessage::Get(oneshot) => {
-                        if oneshot.send(websockets.wb_channel.clone()).is_err() {
+                        if oneshot.send(websockets.wb_channel.lock().clone()).is_err() {
                             error!("Can't send");
                         };
                     }
