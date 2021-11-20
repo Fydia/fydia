@@ -1,6 +1,6 @@
 use crate::new_response;
 use axum::body::Body;
-use axum::extract::{BodyStream, Extension, Path};
+use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::server::SqlServerId;
@@ -13,7 +13,6 @@ use http::Request;
 
 pub async fn get_message(
     request: Request<Body>,
-    _body: BodyStream,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {

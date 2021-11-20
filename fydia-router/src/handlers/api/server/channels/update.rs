@@ -13,10 +13,9 @@ use serde_json::Value;
 use crate::new_response;
 
 pub async fn update_name(
-    _request: Request<Body>,
     mut body: BodyStream,
     Extension(database): Extension<DbConnection>,
-    Path((_serverid, channelid)): Path<(String, String)>,
+    Path((_, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();
 

@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{BodyStream, Extension, Path},
+    extract::{Extension, Path},
     response::IntoResponse,
 };
 use fydia_sql::{impls::message::SqlMessage, sqlpool::DbConnection};
@@ -12,7 +12,6 @@ use crate::new_response;
 
 pub async fn get_message_dm(
     request: Request<Body>,
-    _body: BodyStream,
     Path(dm_id): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {

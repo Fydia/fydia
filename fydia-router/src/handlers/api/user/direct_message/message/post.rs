@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{BodyStream, Extension, Path},
+    extract::{Extension, Path},
     http::Request,
     response::IntoResponse,
 };
@@ -11,7 +11,6 @@ use crate::new_response;
 
 pub async fn post_message_dm(
     response: Request<Body>,
-    _body: BodyStream,
     Path(dm_id): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {

@@ -1,6 +1,4 @@
-use axum::body::Body;
 use axum::extract::{self, Extension, Path};
-use axum::http::Request;
 use axum::response::IntoResponse;
 use futures::StreamExt;
 use fydia_sql::impls::server::SqlServer;
@@ -10,21 +8,21 @@ use fydia_struct::channel::{Channel, ChannelType};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
+use http::HeaderMap;
 use serde_json::Value;
 
 use crate::new_response;
 
 pub async fn create_channel(
-    request: Request<Body>,
     mut body: extract::BodyStream,
     Path(serverid): Path<String>,
     Extension(db): Extension<DbConnection>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let mut res = new_response();
     let database = &*db;
-    let headers = request.headers();
 
-    let token = Token::from_headervalue(headers);
+    let token = Token::from_headervalue(&headers);
 
     if let Some(token) = token {
         if let Some(user) = User::get_user_by_token(&token, database).await {

@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use crate::handlers::api::websocket::WebsocketManagerChannel;
-use axum::body::Body;
 use axum::extract::{BodyStream, Extension};
-use axum::http::Request;
 use axum::response::IntoResponse;
 use futures::StreamExt;
 use fydia_dispatcher::keys::get::get_public_key;
@@ -16,22 +14,22 @@ use fydia_struct::messages::{Message, MessageType, SqlDate};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::User;
+use http::HeaderMap;
 
 use crate::new_response;
 
 pub async fn event_handler(
-    response: Request<Body>,
+    headers: HeaderMap,
     mut body: BodyStream,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
     Extension(wbsockets): Extension<WebsocketManagerChannel>,
 ) -> impl IntoResponse {
-    let headers = response.headers();
     let rsa = &rsa;
     let mut res = new_response();
     while let Some(Ok(body_bytes)) = body.next().await {
         let body = body_bytes.to_vec();
-        if let Some(msg) = receive_message(headers, body, rsa).await {
+        if let Some(msg) = receive_message(&headers, body, rsa).await {
             if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
                 crate::handlers::event::event_handler(event, &database, &wbsockets).await;
             } else {

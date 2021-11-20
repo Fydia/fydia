@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{BodyStream, Extension, Path};
+use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
 use axum::{body::Body, http::Request};
 use fydia_sql::impls::{channel::SqlDirectMessages, token::SqlToken, user::UserIdSql};
@@ -17,7 +17,6 @@ use crate::new_response;
 
 pub async fn create_direct_message(
     request: Request<Body>,
-    _body: BodyStream,
     Path(target_user): Path<String>,
     Extension(database): Extension<Arc<DbConnection>>,
 ) -> impl IntoResponse {

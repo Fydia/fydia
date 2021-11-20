@@ -1,6 +1,5 @@
 use axum::extract::{BodyStream, Extension};
-use axum::http::Request;
-use axum::{body::Body, response::IntoResponse};
+use axum::response::IntoResponse;
 use futures::StreamExt;
 use fydia_sql::sqlpool::DbConnection;
 use serde_json::value;
@@ -11,7 +10,6 @@ use fydia_struct::{response::FydiaResponse, user::User};
 use crate::new_response;
 
 pub async fn user_login(
-    _request: Request<Body>,
     mut body: BodyStream,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
