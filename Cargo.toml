@@ -1,4 +1,3 @@
-
 [workspace]
 members = [
     "fydia",
@@ -14,6 +13,5 @@ members = [
 [profile.release]
 codegen-units = 1
 panic = 'abort'
-lto = "fat"
+lto = true
 opt-level = 3
-debug = true
