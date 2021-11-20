@@ -137,10 +137,18 @@
   url = window.location;
   function spam_ws() {
     for (let index = 0; index < 50; index++) {
+      let sock;
+      if (document.location.protocol == "http:") {
+        sock = new WebSocket(
+          `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+        );
+      } else {
+        sock = new WebSocket(
+          `wss://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+        );
+      }
 
-      let sock = new WebSocket(
-        `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
-      );
+
       sock.onopen = () => {
         console.log("Spam once")
       }
@@ -158,9 +166,16 @@
   }
 
   function connect() {
-    let sock = new WebSocket(
-      `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
-    );
+    let sock;
+    if (document.location.protocol == "http:") {
+      sock = new WebSocket(
+        `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+      );
+    } else {
+      sock = new WebSocket(
+        `wss://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+      );
+    }
     sock.onopen = () => {
       console.log("Connected")
       document.getElementsByTagName("body")[0].style.backgroundColor = "green"
