@@ -33,6 +33,10 @@ impl User {
             email: email.into(),
         }
     }
+
+    pub fn drop_password(&mut self) {
+        self.password = None;
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
