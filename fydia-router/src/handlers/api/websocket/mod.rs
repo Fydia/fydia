@@ -10,8 +10,9 @@ use fydia_struct::{
     user::User,
 };
 use std::time::Instant;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender as Sender};
 use tokio::sync::oneshot;
+use tokio::sync::oneshot::Sender as OSSender;
 
 pub mod messages;
 
@@ -20,7 +21,7 @@ pub struct WebsocketInner {
     wb_channel: Vec<WbStruct>,
 }
 
-type WbStruct = (User, Vec<UnboundedSender<ChannelMessage>>);
+type WbStruct = (User, Vec<Sender<ChannelMessage>>);
 
 impl Default for WebsocketInner {
     fn default() -> Self {
@@ -35,10 +36,7 @@ impl WebsocketInner {
         Default::default()
     }
 
-    pub async fn get_channels_of_user(
-        &self,
-        user: User,
-    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
+    pub async fn get_channels_of_user(&self, user: User) -> Option<Vec<Sender<ChannelMessage>>> {
         let mut user = user;
         user.password = None;
         for i in self.wb_channel.iter() {
@@ -50,7 +48,7 @@ impl WebsocketInner {
         None
     }
 
-    pub async fn insert_channel(&mut self, user: User, channel: UnboundedSender<ChannelMessage>) {
+    pub async fn insert_channel(&mut self, user: User, channel: Sender<ChannelMessage>) {
         let mut user = user;
 
         user.password = None;
@@ -65,18 +63,14 @@ impl WebsocketInner {
         self.wb_channel.push((user, vec![channel]));
     }
 
-    pub async fn remove_channel_of_user(
-        &mut self,
-        user: User,
-        sender: &UnboundedSender<ChannelMessage>,
-    ) {
+    pub async fn remove_channel_of_user(&mut self, user: User, sender: &Sender<ChannelMessage>) {
         let mut user = user;
         user.password = None;
 
         let mut index = None;
         for i in self.wb_channel.iter_mut() {
             if i.0 == user {
-                for i in i.1.iter_mut().enumerate() {
+                for i in i.1.iter().enumerate() {
                     if i.1.same_channel(sender) {
                         index = Some(i.0);
                         break;
@@ -90,51 +84,21 @@ impl WebsocketInner {
             self.wb_channel.remove(i);
         };
     }
-
-    pub async fn send(
-        &self,
-        msg: &Event,
-        user: Vec<User>,
-        keys: Option<&RsaData>,
-        _origin: Option<Instance>,
-    ) -> Result<(), ()> {
-        /*self.0.par_iter().for_each(|i| {
-            if user.contains(&i.user) {
-                if i.user.instance.domain == "localhost" || i.user.instance.domain.is_empty() {
-                    i.channel.read().unwrap().par_iter().for_each(|i| {
-                        if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                            error!(format!("Cannot send message : {}", e.to_string()));
-                        }
-                    });
-                } else if let Some(rsa) = keys {
-                    if let Ok(public_key) = i.user.instance.get_public_key() {
-                        let _encrypt_message = encrypt_message(rsa, public_key, msg.clone());
-                        //send_message(rsa, origin,  i.user.instance.get_public_key().unwrap(), message, instances);
-                    }
-                }
-            }
-        });*/
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone)]
 pub enum ChannelMessage {
     WebsocketMessage(axum::extract::ws::Message),
-    Message(Box<Event>),
+    Message(Event),
     Kill,
 }
 
 #[derive(Debug)]
 pub enum WbManagerMessage {
-    Add(User, UnboundedSender<ChannelMessage>),
-    Get(tokio::sync::oneshot::Sender<Vec<WbStruct>>),
-    GetOfUser(
-        User,
-        tokio::sync::oneshot::Sender<Option<Vec<UnboundedSender<ChannelMessage>>>>,
-    ),
-    Remove(User, UnboundedSender<ChannelMessage>),
+    Add(User, Sender<ChannelMessage>),
+    Get(OSSender<Vec<WbStruct>>),
+    GetOfUser(User, OSSender<Option<Vec<Sender<ChannelMessage>>>>),
+    Remove(User, Sender<ChannelMessage>),
 }
 #[derive(Debug)]
 pub struct WebsocketManager;
@@ -176,10 +140,10 @@ impl WebsocketManager {
 }
 
 #[derive(Clone, Debug)]
-pub struct WebsocketManagerChannel(pub UnboundedSender<WbManagerMessage>);
+pub struct WebsocketManagerChannel(pub Sender<WbManagerMessage>);
 
 impl WebsocketManagerChannel {
-    async fn get(&self) -> Result<Vec<WbStruct>, oneshot::error::RecvError> {
+    async fn _get(&self) -> Result<Vec<WbStruct>, tokio::sync::oneshot::error::RecvError> {
         let (sender, receiver) = oneshot::channel::<Vec<WbStruct>>();
         if let Err(e) = self.0.send(WbManagerMessage::Get(sender)) {
             error!(e.to_string());
@@ -187,21 +151,18 @@ impl WebsocketManagerChannel {
 
         receiver.await
     }
-    pub fn insert_channel(&self, user: User, channel: UnboundedSender<ChannelMessage>) {
+    pub fn insert_channel(&self, user: User, channel: Sender<ChannelMessage>) {
         if let Err(e) = self.0.send(WbManagerMessage::Add(user, channel)) {
             error!(e.to_string());
         }
     }
-    pub fn remove_channel_of_user(&self, user: User, sender: &UnboundedSender<ChannelMessage>) {
+    pub fn remove_channel_of_user(&self, user: User, sender: &Sender<ChannelMessage>) {
         if let Err(e) = self.0.send(WbManagerMessage::Remove(user, sender.clone())) {
             error!(e.to_string());
         }
     }
-    pub async fn get_channels_of_user(
-        &self,
-        user: User,
-    ) -> Option<Vec<UnboundedSender<ChannelMessage>>> {
-        let (sender, receiver) = oneshot::channel::<Option<Vec<UnboundedSender<ChannelMessage>>>>();
+    pub async fn get_channels_of_user(&self, user: User) -> Option<Vec<Sender<ChannelMessage>>> {
+        let (sender, receiver) = oneshot::channel::<Option<Vec<Sender<ChannelMessage>>>>();
         if let Err(e) = self.0.send(WbManagerMessage::GetOfUser(user, sender)) {
             error!(e.to_string());
         }
@@ -212,14 +173,25 @@ impl WebsocketManagerChannel {
             None
         }
     }
-
     pub async fn send(
         &self,
-        msg: &Event,
+        msg: Event,
         user: Vec<User>,
-        keys: Option<&RsaData>,
+        _keys: Option<&RsaData>,
         _origin: Option<Instance>,
     ) -> Result<(), ()> {
+        for mut i in user {
+            i.drop_password();
+            if let Some(wbstructs) = self.get_channels_of_user(i).await {
+                for wbstruct in wbstructs {
+                    let msg = ChannelMessage::Message(msg.clone());
+                    if let Err(e) = wbstruct.send(msg) {
+                        error!(e.to_string());
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -233,7 +205,7 @@ pub async fn test_message(
         .await;
     getted_websocket.iter().for_each(|e| {
         e.iter().for_each(|e| {
-            if let Err(e) = e.send(ChannelMessage::Message(Box::new(Event::new(
+            if let Err(e) = e.send(ChannelMessage::Message(Event::new(
                 ServerId::new(String::new()),
                 EventContent::Message {
                     content: Message::new(
@@ -245,7 +217,7 @@ pub async fn test_message(
                         ChannelId::default(),
                     ),
                 },
-            )))) {
+            ))) {
                 println!("{}", e.to_string())
             };
         })

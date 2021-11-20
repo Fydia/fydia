@@ -85,7 +85,7 @@ pub async fn post_messages(
                                             tokio::spawn(async move {
                                                 if wbsocket
                                                     .send(
-                                                        &msg.clone(),
+                                                        msg.clone(),
                                                         members.members.clone(),
                                                         Some(&key),
                                                         None,

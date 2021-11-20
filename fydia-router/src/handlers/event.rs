@@ -12,7 +12,7 @@ pub async fn event_handler(
     if let Ok(server) = event.server.get_server(database).await {
         if let Ok(members) = server.get_user(database).await {
             if wbsockets
-                .send(&event.clone(), members.members, None, None)
+                .send(event.clone(), members.members, None, None)
                 .await
                 .is_err()
             {

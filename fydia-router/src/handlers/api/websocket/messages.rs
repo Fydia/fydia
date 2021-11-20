@@ -11,7 +11,7 @@ use fydia_struct::querystring::QsToken;
 use fydia_struct::user::{Token, User};
 use http::StatusCode;
 use serde::Serialize;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use super::WebsocketManagerChannel;
 
@@ -25,7 +25,7 @@ pub async fn ws_handler(
     let _token = Token(token.token.unwrap_or_default());
     //let user = token.get_user(&database).await;
     let user = User::default();
-    let server = tokio::sync::mpsc::unbounded_channel::<ChannelMessage>();
+    let server = unbounded_channel::<ChannelMessage>();
     wbsocket.insert_channel(user.clone(), server.0.clone());
     ws.on_upgrade(|e| _connected(e, wbsocket, user, server))
         .into_response()
