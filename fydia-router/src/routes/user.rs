@@ -11,13 +11,12 @@ use axum::Router;
 /// All routes related to the users
 pub fn user_routes() -> Router {
     axum::Router::new()
-        .route("/create", axum::routing::get(create_user))
-        .route("/update", axum::routing::get(default))
-        .route("/delete", axum::routing::get(default))
+        .route("/create", axum::routing::post(create_user))
+        .route("/update", axum::routing::put(default))
+        .route("/delete", axum::routing::delete(default))
         .route("logout", axum::routing::get(default))
-        .route("/", axum::routing::get(default))
         .route("/websocket", axum::routing::get(ws_handler))
-        .route("/login", axum::routing::get(user_login))
+        .route("/login", axum::routing::post(user_login))
         .nest("/direct_message", direct_message())
 }
 
