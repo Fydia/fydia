@@ -38,7 +38,11 @@ pub fn new_response() -> (StatusCode, HeaderMap<HeaderValue>, String) {
 }
 
 pub async fn get_axum_router(config: Config) -> axum::Router {
-    info!(format!("Fydia - {}", env!("CARGO_PKG_VERSION")));
+    info!(format!(
+        "Fydia - {}({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    ));
     info!("Waiting database");
     let database = Arc::new(get_connection(&config.database).await) as DbConnection;
     success!("Database connected");
