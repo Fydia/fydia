@@ -48,7 +48,6 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
     tokio::spawn(async move {
         let sender = thread_sender;
         while let Some(Ok(e)) = stream.next().await {
-            println!("{:?}", e.to_text());
             match e {
                 Message::Text(str) => {
                     if let Err(e) = sender
@@ -97,11 +96,12 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
 
     tokio::spawn(async move {
         while let Ok(channelmessage) = receiver.recv().await {
-            println!("{:?}", channelmessage);
             match channelmessage {
                 ChannelMessage::WebsocketMessage(e) => match sink.send(e).await {
                     Ok(_) => {}
-                    Err(e) => println! {"{}", e},
+                    Err(e) => {
+                        error!(e.to_string());
+                    }
                 },
                 ChannelMessage::Message(e) => match sink
                     .send(axum::extract::ws::Message::Text(format!(

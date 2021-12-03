@@ -24,9 +24,15 @@ pub type WbChannel = (Sender<ChannelMessage>, Receiver<ChannelMessage>);
 struct WbStruct(User, WbChannel, u32);
 impl WbStruct {
     pub fn new(user: User, channel: WbChannel) -> Self {
-        let mut user = user;
-        user.drop_password();
-        Self(user, channel, 0)
+        Self(
+            User {
+                id: user.id,
+                name: user.name,
+                ..Default::default()
+            },
+            channel,
+            0,
+        )
     }
 
     pub fn get_channel(&mut self) -> WbChannel {
@@ -34,11 +40,17 @@ impl WbStruct {
         self.1.clone()
     }
 
-    pub fn is_same_user(&self, user: &User) -> bool {
-        let mut user = user.clone();
-        user.drop_password();
+    pub fn get_without_increment(&self) -> WbChannel {
+        self.1.clone()
+    }
 
-        self.0 == user
+    pub fn is_same_user(&self, user: &User) -> bool {
+        self.0
+            == User {
+                id: user.id,
+                name: user.name.clone(),
+                ..Default::default()
+            }
     }
 
     pub fn decrement_ref(&mut self) -> bool {
@@ -76,6 +88,18 @@ impl WebsocketInner {
             self.insert_channel(user, channels.clone()).await;
             channels
         }
+    }
+    pub async fn get_without_increment(&mut self, user: User) -> Option<WbChannel> {
+        self.get_channels_of_user_without_increment(&user).await
+    }
+    pub async fn get_channels_of_user_without_increment(&self, user: &User) -> Option<WbChannel> {
+        for i in self.wb_channel.lock().iter_mut() {
+            if i.is_same_user(user) {
+                return Some(i.get_without_increment());
+            }
+        }
+
+        None
     }
     pub async fn get_channels_of_user(&self, user: &User) -> Option<WbChannel> {
         for i in self.wb_channel.lock().iter_mut() {
@@ -117,6 +141,7 @@ pub enum ChannelMessage {
 
 #[derive(Debug)]
 pub enum WbManagerMessage {
+    GetWithoutIncrement(User, OSSender<Option<WbChannel>>),
     GetActualOf(User, OSSender<WbChannel>),
     RemoveIfLast(User),
 }
@@ -130,7 +155,6 @@ impl WebsocketManager {
             let mut websockets = WebsocketInner::new();
 
             while let Ok(message) = receiver.recv().await {
-                println!("{:?}", websockets);
                 match message {
                     WbManagerMessage::GetActualOf(user, callback) => {
                         if callback
@@ -142,6 +166,18 @@ impl WebsocketManager {
                     }
                     WbManagerMessage::RemoveIfLast(user) => {
                         websockets.decrement_and_remove_user(user).await;
+                    }
+                    WbManagerMessage::GetWithoutIncrement(user, callback) => {
+                        if callback
+                            .send(
+                                websockets
+                                    .get_channels_of_user_without_increment(&user)
+                                    .await,
+                            )
+                            .is_err()
+                        {
+                            error!("Can't send");
+                        };
                     }
                 }
             }
@@ -171,6 +207,25 @@ impl WebsocketManagerChannel {
         }
     }
 
+    async fn get_channels_of_user_without_increment(
+        &self,
+        user: User,
+    ) -> Result<Option<WbChannel>, String> {
+        let (sender, receiver) = oneshot::channel::<Option<WbChannel>>();
+        if let Err(e) = self
+            .0
+            .send(WbManagerMessage::GetWithoutIncrement(user, sender))
+            .await
+        {
+            error!(e.to_string());
+        }
+
+        match receiver.await {
+            Ok(e) => Ok(e),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
     pub async fn close_connexion(&self, user: User) {
         if let Err(e) = self.0.send(WbManagerMessage::RemoveIfLast(user)).await {
             error!(e.to_string());
@@ -186,10 +241,14 @@ impl WebsocketManagerChannel {
     ) -> Result<(), ()> {
         for mut i in user {
             i.drop_password();
-            if let Ok(wbstruct) = self.get_channels_of_user(i).await {
-                let msg = ChannelMessage::Message(Box::new(msg.clone()));
-                if let Err(e) = wbstruct.0.send(msg).await {
-                    error!(e.to_string());
+            if let Ok(wbstruct) = self.get_channels_of_user_without_increment(i).await {
+                if let Some(wbstruct) = wbstruct {
+                    let msg = ChannelMessage::Message(Box::new(msg.clone()));
+                    if let Err(e) = wbstruct.0.send(msg).await {
+                        error!(e.to_string());
+                    }
+                } else {
+                    return Ok(());
                 }
             } else {
                 return Err(());
