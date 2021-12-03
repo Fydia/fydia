@@ -8,6 +8,8 @@
 pub mod handlers;
 /// All router routes
 pub mod routes;
+/// All tests of Router
+pub mod tests;
 
 #[macro_use]
 extern crate logger;
