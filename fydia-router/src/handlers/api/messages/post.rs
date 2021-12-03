@@ -1,6 +1,6 @@
 use crate::handlers::api::websocket::WebsocketManagerChannel;
 use crate::new_response;
-use axum::body::{Body, Bytes};
+use axum::body::Bytes;
 use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
 use chrono::DateTime;
@@ -18,7 +18,7 @@ use fydia_struct::server::ServerId;
 use fydia_struct::user::{Token, User};
 use fydia_utils::generate_string;
 use http::header::CONTENT_TYPE;
-use http::{HeaderMap, Request, StatusCode};
+use http::{HeaderMap, StatusCode};
 use mime::Mime;
 use serde_json::Value;
 use std::convert::Infallible;
@@ -30,20 +30,18 @@ use std::time::SystemTime;
 const BOUNDARY: &str = "boundary=";
 
 pub async fn post_messages(
-    request: Request<Body>,
+    headers: HeaderMap,
     body: Bytes,
     Extension(database): Extension<DbConnection>,
-    Extension(rsa): Extension<RsaData>,
+    Extension(rsa): Extension<Arc<RsaData>>,
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();
-
-    let headers = request.headers();
     let serverid = ServerId::new(serverid.clone());
 
     let channelid = channelid.clone();
-    let token = if let Some(token) = Token::from_headervalue(headers) {
+    let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
         FydiaResponse::new_error("Bad Token").update_response(&mut res);
@@ -60,7 +58,7 @@ pub async fn post_messages(
                                 let msg = match messages_dispatcher(
                                     content_type,
                                     body.to_vec(),
-                                    headers,
+                                    &headers,
                                     &user,
                                     &ChannelId::new(channelid),
                                     &serverid,
