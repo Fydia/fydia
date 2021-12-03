@@ -33,4 +33,6 @@ tracing = "0.1.29"
 tower-http = {version = "0.2.0", features=["trace"]}
 tower = "0.4.11"
 rand = "0.8.4"
-parking_lot = "0.11.2"
+parking_lot =  {version = "0.11.2", features = ["deadlock_detection"]}
+hyper = "0.14.15"
+async-channel = "1.6.1"

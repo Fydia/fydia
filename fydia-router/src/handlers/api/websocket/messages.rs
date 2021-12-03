@@ -1,33 +1,32 @@
 #![allow(clippy::unwrap_used)]
 
+use std::sync::Arc;
+
 use crate::handlers::api::websocket::ChannelMessage;
 use crate::new_response;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Extension, Query};
 use axum::response::IntoResponse;
 use futures::prelude::*;
+use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
 use fydia_struct::user::{Token, User};
 use http::StatusCode;
 use serde::Serialize;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use super::WebsocketManagerChannel;
 
 pub async fn ws_handler(
-    Extension(_): Extension<DbConnection>,
-    Extension(wbsocket): Extension<WebsocketManagerChannel>,
+    Extension(database): Extension<DbConnection>,
+    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Query(token): Query<QsToken>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let _res = new_response();
-    let _token = Token(token.token.unwrap_or_default());
-    //let user = token.get_user(&database).await;
-    let user = User::default();
-    let server = unbounded_channel::<ChannelMessage>();
-    wbsocket.insert_channel(user.clone(), server.0.clone());
-    ws.on_upgrade(|e| _connected(e, wbsocket, user, server))
+    let token = Token(token.token.unwrap_or_default());
+    let user = token.get_user(&database).await;
+    ws.on_upgrade(move |e| connected(e, wbsocket, user))
         .into_response()
 }
 
@@ -35,18 +34,17 @@ pub fn empty_response() -> impl IntoResponse {
     (StatusCode::BAD_REQUEST, "")
 }
 
-async fn _connected(
-    socket: WebSocket,
-    wbmanager: WebsocketManagerChannel,
-    user: User,
-    channel: (
-        UnboundedSender<ChannelMessage>,
-        UnboundedReceiver<ChannelMessage>,
-    ),
-) {
+async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, user: Option<User>) {
+    let user = if let Some(user) = user { user } else { return };
+    let channel = if let Ok(channels) = wbmanager.get_channels_of_user(user.clone()).await {
+        channels
+    } else {
+        return;
+    };
     let (mut sink, mut stream) = socket.split();
-    let (sender, mut receiver) = channel;
-    let thread_sender = sender.clone();
+    let (sender, receiver) = channel;
+    let thread_sender = sender;
+
     tokio::spawn(async move {
         let sender = thread_sender;
         while let Some(Ok(e)) = stream.next().await {
@@ -56,6 +54,7 @@ async fn _connected(
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Text(str)))
+                        .await
                     {
                         error!(e.to_string());
                     };
@@ -64,6 +63,7 @@ async fn _connected(
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Binary(bin)))
+                        .await
                     {
                         error!(e.to_string());
                     };
@@ -72,6 +72,7 @@ async fn _connected(
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Ping(ping)))
+                        .await
                     {
                         error!(e.to_string());
                     };
@@ -80,21 +81,22 @@ async fn _connected(
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Pong(pong)))
+                        .await
                     {
                         error!(e.to_string());
                     };
                 }
                 Message::Close(_) => {
-                    if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
+                    if let Err(e) = sender.clone().send(ChannelMessage::Kill).await {
                         error!(e.to_string());
                     };
                 }
             };
         }
     });
-    let thread_sender = sender;
+
     tokio::spawn(async move {
-        while let Some(channelmessage) = receiver.recv().await {
+        while let Ok(channelmessage) = receiver.recv().await {
             println!("{:?}", channelmessage);
             match channelmessage {
                 ChannelMessage::WebsocketMessage(e) => match sink.send(e).await {
@@ -113,9 +115,7 @@ async fn _connected(
                         println!("{}", e.to_string());
                     }
                 },
-                ChannelMessage::Kill => wbmanager
-                    .clone()
-                    .remove_channel_of_user(user.clone(), &thread_sender.clone()),
+                ChannelMessage::Kill => wbmanager.clone().close_connexion(user.clone()).await,
             }
         }
     });
