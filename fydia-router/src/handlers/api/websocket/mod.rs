@@ -31,7 +31,7 @@ impl WbStruct {
                 ..Default::default()
             },
             channel,
-            0,
+            1,
         )
     }
 
@@ -180,6 +180,7 @@ impl WebsocketManager {
                         };
                     }
                 }
+                println!("{:?}", websockets);
             }
         });
 
