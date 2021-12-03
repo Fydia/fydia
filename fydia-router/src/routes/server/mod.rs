@@ -29,12 +29,7 @@ pub fn server_routes() -> Router {
             "/:serverid",
             axum::Router::new()
                 .route("/", axum::routing::get(get_server))
-                .nest(
-                    "/channel",
-                    axum::Router::new()
-                        .route("/create", axum::routing::get(create_channel))
-                        .nest("/:channelid", channelid()),
-                )
+                .nest("/channel", channelid())
                 .nest("/roles", roles_routes()),
         )
 }
@@ -61,10 +56,9 @@ pub fn channelid() -> Router {
                 .route("/name", axum::routing::get(update_name))
                 .route("/description", axum::routing::get(update_description))
                 .route("/join", axum::routing::get(join_channel))
-                .nest(
+                .route(
                     "/messages",
-                    axum::Router::new()
-                        .route("/", axum::routing::get(get_message).post(post_messages)),
+                    axum::routing::get(get_message).post(post_messages),
                 ),
         )
 }
