@@ -27,11 +27,13 @@ use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::instance::{Instance, RsaData};
-use http::{HeaderMap, HeaderValue, StatusCode};
+use http::{HeaderMap, HeaderValue, Response, StatusCode};
 use std::process::exit;
 use std::sync::Arc;
+use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::trace::{OnRequest, TraceLayer};
+use tower_http::trace::{OnRequest, OnResponse, TraceLayer};
+use tracing::Span;
 
 pub fn new_response() -> (StatusCode, HeaderMap<HeaderValue>, String) {
     (StatusCode::OK, HeaderMap::new(), String::new())
@@ -63,27 +65,7 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
             exit(0);
         }
     };
-    info!("try to get ip adress of the server");
-    let domain = if config.instance.domain.is_empty() {
-        if let Ok(req) = reqwest::Client::new()
-            .get("http://ifconfig.io")
-            .header("User-Agent", "curl/7.55.1")
-            .send()
-            .await
-        {
-            if let Ok(text) = req.text().await {
-                text
-            } else {
-                panic!("Domain is not valid")
-            }
-        } else {
-            panic!("Domain is not valid")
-        }
-    } else {
-        config.instance.domain.clone()
-    };
-
-    success!(format!("Ip is : {}", domain));
+    success!(format!("Ip is : {}", config.instance.domain));
     info!(format!("Listen on: http://{}", config.format_ip()));
     let public_key = if let Some(public_key) = private_to_public(privatekey.clone()) {
         public_key
@@ -107,15 +89,18 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         .layer(AddExtensionLayer::new(database as DbConnection))
         .layer(AddExtensionLayer::new(Arc::new(Instance::new(
             fydia_struct::instance::Protocol::HTTP,
-            domain,
+            config.instance.domain,
             config.server.port as u16,
         ))))
         .layer(AddExtensionLayer::new(Arc::new(RsaData(
             privatekey.clone(),
             public_key,
         ))))
-        .layer(AddExtensionLayer::new(websocket_manager))
-        .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http().on_request(Log)))
+        .layer(AddExtensionLayer::new(Arc::new(websocket_manager)))
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http().on_request(Log).on_response(Log)),
+        )
 }
 
 #[derive(Clone)]
@@ -124,6 +109,16 @@ struct Log;
 impl OnRequest<Body> for Log {
     fn on_request(&mut self, request: &http::Request<Body>, _: &tracing::Span) {
         logger::info!(format!("{} {}", request.method(), request.uri()));
+    }
+}
+
+impl<B> OnResponse<B> for Log {
+    fn on_response(self, response: &Response<B>, latency: Duration, _: &Span) {
+        logger::info!(format!(
+            "({}ms) => {}",
+            latency.as_micros(),
+            response.status(),
+        ));
     }
 }
 

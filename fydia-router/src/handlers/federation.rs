@@ -23,7 +23,7 @@ pub async fn event_handler(
     mut body: BodyStream,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
-    Extension(wbsockets): Extension<WebsocketManagerChannel>,
+    Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
 ) -> impl IntoResponse {
     let rsa = &rsa;
     let mut res = new_response();

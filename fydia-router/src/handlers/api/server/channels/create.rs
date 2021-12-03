@@ -16,21 +16,20 @@ use crate::new_response;
 pub async fn create_channel(
     mut body: extract::BodyStream,
     Path(serverid): Path<String>,
-    Extension(db): Extension<DbConnection>,
+    Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let mut res = new_response();
-    let database = &*db;
 
     let token = Token::from_headervalue(&headers);
 
     if let Some(token) = token {
-        if let Some(user) = User::get_user_by_token(&token, database).await {
+        if let Some(user) = User::get_user_by_token(&token, &database).await {
             if user.server.is_join(ServerId::new(serverid.clone())) {
                 while let Some(Ok(vec)) = body.next().await {
                     if let Ok(body) = String::from_utf8(vec.to_vec()) {
                         if let Ok(mut server) =
-                            Server::get_server_by_id(ServerId::new(serverid.to_string()), database)
+                            Server::get_server_by_id(ServerId::new(serverid.to_string()), &database)
                                 .await
                         {
                             let mut channel = Channel::new();
@@ -51,7 +50,7 @@ pub async fn create_channel(
                                                     ChannelType::from_string(ctype.to_string());
 
                                                 if let Err(error) = server
-                                                    .insert_channel(channel.clone(), database)
+                                                    .insert_channel(channel.clone(), &database)
                                                     .await
                                                 {
                                                     FydiaResponse::new_error(

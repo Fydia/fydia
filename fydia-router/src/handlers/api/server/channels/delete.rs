@@ -1,6 +1,4 @@
-use axum::body::Body;
 use axum::extract::{Extension, Path};
-use axum::http::Request;
 use axum::response::IntoResponse;
 use fydia_sql::impls::channel::SqlChannel;
 
@@ -11,8 +9,7 @@ use fydia_struct::response::FydiaResponse;
 use crate::new_response;
 
 pub async fn delete_channel(
-    _request: Request<Body>,
-    Path((_serverid, channelid)): Path<(String, String)>,
+    Path((_, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
     let mut res = new_response();

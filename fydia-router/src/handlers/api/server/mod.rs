@@ -1,6 +1,4 @@
-use axum::body::Body;
 use axum::extract::{Extension, Path};
-use axum::http::Request;
 use axum::response::IntoResponse;
 use fydia_sql::impls::server::{SqlServer, SqlServerId};
 use fydia_sql::impls::user::SqlUser;
@@ -8,6 +6,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
+use http::HeaderMap;
 
 pub mod channels;
 pub mod create;
@@ -16,17 +15,16 @@ pub mod join;
 pub mod roles;
 
 pub async fn get_server(
-    request: Request<Body>,
+    headers: HeaderMap,
     Path(serverid): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let headers = request.headers();
     let mut res = new_response();
     let mut servers: GetServer = GetServer { server: Vec::new() };
     if let Ok(getted_server) =
         Server::get_server_by_id(ServerId::new(serverid.clone()), &database).await
     {
-        let token = if let Some(token) = Token::from_headervalue(headers) {
+        let token = if let Some(token) = Token::from_headervalue(&headers) {
             token
         } else {
             return res;

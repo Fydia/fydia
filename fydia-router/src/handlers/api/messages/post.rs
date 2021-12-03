@@ -24,6 +24,7 @@ use serde_json::Value;
 use std::convert::Infallible;
 use std::io::{Read, Write};
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 const BOUNDARY: &str = "boundary=";
@@ -33,7 +34,7 @@ pub async fn post_messages(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
     Extension(rsa): Extension<RsaData>,
-    Extension(wbsocket): Extension<WebsocketManagerChannel>,
+    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();

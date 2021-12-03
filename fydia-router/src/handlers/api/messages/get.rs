@@ -1,5 +1,4 @@
 use crate::new_response;
-use axum::body::Body;
 use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
 use fydia_sql::impls::channel::SqlChannel;
@@ -9,18 +8,17 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::Token;
-use http::Request;
+use http::HeaderMap;
 
 pub async fn get_message(
-    request: Request<Body>,
+    headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();
-    let headers = request.headers();
     let serverid = serverid.clone();
     let channelid = channelid.clone();
-    let token = if let Some(token) = Token::from_headervalue(headers) {
+    let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
         return res;

@@ -3,12 +3,8 @@ pub mod delete;
 pub mod update;
 pub mod vocal;
 
-use axum::http::Request;
+use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
-use axum::{
-    body::Body,
-    extract::{Extension, Path},
-};
 use fydia_sql::{impls::channel::SqlChannel, sqlpool::DbConnection};
 
 use fydia_struct::{
@@ -19,7 +15,6 @@ use fydia_struct::{
 use crate::new_response;
 
 pub async fn info_channel(
-    _request: Request<Body>,
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
