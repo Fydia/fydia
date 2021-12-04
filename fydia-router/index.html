@@ -160,8 +160,6 @@
 
   }
   function onLoad() {
-    //alert("Welcome this is a experimental version of Fydia");
-    //addMessage("Rheydskey@rheydskey.studio", "eeeee")
     connect();
   }
 
@@ -215,6 +213,7 @@
 }
   */
   function onReveiceMessage(msg) {
+    console.log(msg);
     let json = JSON.parse(msg);
     if (json["content"] != null) {
       addMessage(json["content"]["content"]["author"]["name"], json["content"]["content"]["content"]);

@@ -103,18 +103,16 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                         error!(e.to_string());
                     }
                 },
-                ChannelMessage::Message(e) => match sink
-                    .send(axum::extract::ws::Message::Text(format!(
-                        "{:?}",
-                        serde_json::to_string(&e)
-                    )))
-                    .await
-                {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("{}", e.to_string());
+                ChannelMessage::Message(e) => {
+                    if let Ok(msg) = serde_json::to_string(&e) {
+                        match sink.send(axum::extract::ws::Message::Text(msg)).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("{}", e.to_string());
+                            }
+                        }
                     }
-                },
+                }
                 ChannelMessage::Kill => wbmanager.clone().close_connexion(user.clone()).await,
             }
         }
