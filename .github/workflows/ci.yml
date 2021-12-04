@@ -38,12 +38,12 @@ jobs:
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
-          file: "/home/runner/work/Fydia/Fydia/target/release/fydia"
+          file: "/home/runner/work/Fydia/fydia/target/release/fydia"
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: 'Linux-release'
-          path: "/home/runner/work/Fydia/Fydia/target/release/fydia"
+          path: "/home/runner/work/Fydia/fydia/target/release/fydia"
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
