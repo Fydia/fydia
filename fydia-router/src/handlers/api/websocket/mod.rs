@@ -200,12 +200,15 @@ pub struct WebsocketManager;
 impl WebsocketManager {
     pub async fn spawn() -> WebsocketManagerChannel {
         let (ossender, receiver) = oneshot::channel::<Sender<WbManagerMessage>>();
+        let error_exit = || {
+            error!("Error on WBManager Init");
+            exit(1);
+        };
         tokio::spawn(async move {
             let mut websockets = WebsocketInner::new();
             let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<WbManagerMessage>();
             if ossender.send(sender.clone()).is_err() {
-                error!("Error on WBManager Init");
-                exit(1);
+                error_exit();
             }
 
             while let Some(message) = receiver.recv().await {
@@ -239,14 +242,12 @@ impl WebsocketManager {
                         };
                     }
                 }
-                println!("{:?}", websockets);
             }
         });
         if let Ok(sender) = receiver.await {
             WebsocketManagerChannel(sender)
         } else {
-            error!("Can't init WbManager");
-            exit(1);
+            error_exit()
         }
     }
 }
