@@ -36,14 +36,14 @@ pub fn empty_response() -> impl IntoResponse {
 
 async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, user: Option<User>) {
     let user = if let Some(user) = user { user } else { return };
-    let channel = if let Ok(channels) = wbmanager.get_channels_of_user(user.clone()).await {
+    let channel = if let Some(channels) = wbmanager.get_new_channel(user.clone()).await {
         channels
     } else {
         return;
     };
     let (mut sink, mut stream) = socket.split();
-    let (sender, receiver) = channel;
-    let thread_sender = sender;
+    let (sender, mut receiver) = channel;
+    let thread_sender = sender.clone();
 
     tokio::spawn(async move {
         let sender = thread_sender;
@@ -53,7 +53,6 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Text(str)))
-                        .await
                     {
                         error!(e.to_string());
                     };
@@ -62,7 +61,6 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Binary(bin)))
-                        .await
                     {
                         error!(e.to_string());
                     };
@@ -71,7 +69,6 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Ping(ping)))
-                        .await
                     {
                         error!(e.to_string());
                     };
@@ -80,22 +77,21 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                     if let Err(e) = sender
                         .clone()
                         .send(ChannelMessage::WebsocketMessage(Message::Pong(pong)))
-                        .await
                     {
                         error!(e.to_string());
                     };
                 }
                 Message::Close(_) => {
-                    if let Err(e) = sender.clone().send(ChannelMessage::Kill).await {
+                    if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
                         error!(e.to_string());
                     };
                 }
             };
         }
     });
-
+    let sender = sender;
     tokio::spawn(async move {
-        while let Ok(channelmessage) = receiver.recv().await {
+        while let Some(channelmessage) = receiver.recv().await {
             match channelmessage {
                 ChannelMessage::WebsocketMessage(e) => match sink.send(e).await {
                     Ok(_) => {}
@@ -113,7 +109,17 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                         }
                     }
                 }
-                ChannelMessage::Kill => wbmanager.clone().close_connexion(user.clone()).await,
+                ChannelMessage::Kill => {
+                    if wbmanager
+                        .clone()
+                        .remove(user.clone(), &sender)
+                        .await
+                        .is_err()
+                    {
+                        error!("Can't remove");
+                    };
+                    break;
+                }
             }
         }
     });
