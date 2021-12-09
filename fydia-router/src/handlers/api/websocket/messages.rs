@@ -48,45 +48,15 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
     tokio::spawn(async move {
         let sender = thread_sender;
         while let Some(Ok(e)) = stream.next().await {
-            match e {
-                Message::Text(str) => {
-                    if let Err(e) = sender
-                        .clone()
-                        .send(ChannelMessage::WebsocketMessage(Message::Text(str)))
-                    {
-                        error!(e.to_string());
-                    };
-                }
-                Message::Binary(bin) => {
-                    if let Err(e) = sender
-                        .clone()
-                        .send(ChannelMessage::WebsocketMessage(Message::Binary(bin)))
-                    {
-                        error!(e.to_string());
-                    };
-                }
-                Message::Ping(ping) => {
-                    if let Err(e) = sender
-                        .clone()
-                        .send(ChannelMessage::WebsocketMessage(Message::Ping(ping)))
-                    {
-                        error!(e.to_string());
-                    };
-                }
-                Message::Pong(pong) => {
-                    if let Err(e) = sender
-                        .clone()
-                        .send(ChannelMessage::WebsocketMessage(Message::Pong(pong)))
-                    {
-                        error!(e.to_string());
-                    };
-                }
-                Message::Close(_) => {
-                    if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
-                        error!(e.to_string());
-                    };
-                }
-            };
+            if std::mem::discriminant(&e) == std::mem::discriminant(&Message::Close(None)) {
+                if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
+                    error!(e.to_string());
+                };
+            } else {
+                if let Err(e) = sender.clone().send(ChannelMessage::WebsocketMessage(e)) {
+                    error!(e.to_string());
+                };
+            }
         }
     });
     let sender = sender;
