@@ -52,11 +52,9 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                 if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
                     error!(e.to_string());
                 };
-            } else {
-                if let Err(e) = sender.clone().send(ChannelMessage::WebsocketMessage(e)) {
-                    error!(e.to_string());
-                };
-            }
+            } else if let Err(e) = sender.clone().send(ChannelMessage::WebsocketMessage(e)) {
+                error!(e.to_string());
+            };
         }
     });
     let sender = sender;
