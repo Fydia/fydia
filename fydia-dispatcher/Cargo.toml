@@ -10,7 +10,7 @@ tokio = { version = "1.14", default-features = false, features = [
     "rt",
     "macros",
 ] }
-serde_json = "1.0.72"
+serde_json = "1.0.73"
 serde = "1.0.131"
 reqwest = "0.11.5"
 fydia-struct = { path = "../fydia-struct" }
