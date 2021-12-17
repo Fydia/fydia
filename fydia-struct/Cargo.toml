@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 fydia-crypto =  {path = "../fydia-crypto"}
 fydia-utils = { path="../fydia-utils" }
-serde = { version="1.0.131", features=["derive"] }
+serde = { version="1.0.132", features=["derive"] }
 serde_json = { version="1.0.73" }
 chrono = "0.4.19"
 url = "2.2.2"
