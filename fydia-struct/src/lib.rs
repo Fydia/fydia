@@ -6,6 +6,7 @@ pub mod emoji;
 pub mod event;
 pub mod format;
 pub mod instance;
+pub mod manager;
 pub mod messages;
 pub mod pathextractor;
 pub mod permission;

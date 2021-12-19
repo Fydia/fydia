@@ -1,16 +1,21 @@
-use super::message::SqlMessage;
+use super::{
+    message::SqlMessage,
+    server::{SqlServer, SqlServerId},
+};
 use crate::impls::user::UserIdSql;
 use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageValue, ParentId},
     messages::Message,
     server::Channels,
-    user::UserId,
+    user::{User, UserId},
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
     async fn get_channel_by_id(id: ChannelId, executor: &DatabaseConnection) -> Option<Channel>;
+    async fn get_user_of_channel(&self, executor: &DatabaseConnection)
+        -> Result<Vec<User>, String>;
     async fn get_channels_by_server_id(
         server_id: String,
         executor: &DatabaseConnection,
@@ -40,6 +45,40 @@ impl SqlChannel for Channel {
             Ok(Some(model)) => model.to_channel(),
             _ => None,
         }
+    }
+
+    async fn get_user_of_channel(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<User>, String> {
+        // TODO: Check Permission
+        //match crate::entity::channels::Entity::find().filter(entity::channels::Column::ParentId.eq(serde_json::to_string(value)))
+        match &self.parent_id {
+            ParentId::DirectMessage(directmessage) => match &directmessage.users {
+                DirectMessageValue::Users(users) => {
+                    return Ok(users.clone());
+                }
+                DirectMessageValue::UsersId(usersid) => {
+                    let mut vec = Vec::new();
+                    for i in usersid {
+                        if let Some(user) = i.get_user(executor).await {
+                            vec.push(user);
+                        }
+                    }
+
+                    return Ok(vec);
+                }
+            },
+            ParentId::ServerId(serverid) => {
+                if let Ok(server) = serverid.get_server(executor).await {
+                    if let Ok(members) = server.get_user(executor).await {
+                        return Ok(members.members);
+                    }
+                }
+            }
+        };
+
+        Ok(Vec::new())
     }
 
     async fn get_channels_by_server_id(

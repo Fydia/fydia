@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::handlers::api::websocket::WebsocketManagerChannel;
+use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
 use axum::extract::{BodyStream, Extension};
 use axum::response::IntoResponse;
 use futures::StreamExt;

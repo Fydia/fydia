@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::handlers::api::websocket::ChannelMessage;
+use crate::handlers::api::manager::websockets::ChannelMessage;
 use crate::new_response;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Extension, Query};
@@ -15,7 +15,7 @@ use fydia_struct::user::{Token, User};
 use http::StatusCode;
 use serde::Serialize;
 
-use super::WebsocketManagerChannel;
+use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
 
 pub async fn ws_handler(
     Extension(database): Extension<DbConnection>,

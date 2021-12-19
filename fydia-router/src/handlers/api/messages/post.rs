@@ -1,4 +1,6 @@
-use crate::handlers::api::websocket::WebsocketManagerChannel;
+use crate::handlers::api::manager::websockets::manager::{
+    WbManagerChannelTrait, WebsocketManagerChannel,
+};
 use crate::new_response;
 use axum::body::Bytes;
 use axum::extract::{Extension, Path};

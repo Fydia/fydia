@@ -13,8 +13,7 @@ pub mod tests;
 
 #[macro_use]
 extern crate logger;
-use crate::handlers::api::websocket::test_message;
-use crate::handlers::api::websocket::WebsocketManager;
+use crate::handlers::api::manager::websockets::test_message;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
@@ -74,7 +73,8 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     } else {
         panic!("Public key error");
     };
-    let websocket_manager = WebsocketManager::spawn().await;
+    let websocket_manager =
+        crate::handlers::api::manager::websockets::manager::WbManager::spawn().await;
 
     axum::Router::new()
         .route("/", axum::routing::get(client))

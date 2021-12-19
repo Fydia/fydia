@@ -1,7 +1,9 @@
-use crate::handlers::api::websocket::WebsocketManagerChannel;
+use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
 use fydia_sql::impls::server::{SqlServer, SqlServerId};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::event::Event;
+
+use super::api::manager::websockets::manager::WbManagerChannelTrait;
 pub async fn event_handler(
     event: Event,
     database: &DbConnection,

@@ -1,21 +1,21 @@
+use axum::async_trait;
 use axum::extract::Extension;
 use axum::response::IntoResponse;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::EventContent;
+use fydia_struct::manager::ManagerReceiverTrait;
 use fydia_struct::messages::{Message, MessageType, SqlDate};
 use fydia_struct::server::ServerId;
-use fydia_struct::{
-    event::Event,
-    instance::{Instance, RsaData},
-    user::User,
-};
+use fydia_struct::{event::Event, user::User};
 use parking_lot::Mutex;
-use std::process::exit;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc::{UnboundedReceiver as Receiver, UnboundedSender as Sender};
-use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender as OSSender;
+
+use self::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
+
+pub mod manager;
 pub mod messages;
 
 pub type WbChannel = (WbSender, WbReceiver);
@@ -23,6 +23,7 @@ pub type WbReceiver = Receiver<ChannelMessage>;
 pub type WbSender = Sender<ChannelMessage>;
 #[derive(Debug, Clone)]
 pub struct WbStruct(User, Vec<WbSender>);
+
 impl WbStruct {
     pub fn new(user: User) -> Self {
         Self(
@@ -73,17 +74,53 @@ impl WbStruct {
     }
 }
 
+#[derive(Debug)]
+pub struct WebsocketInner {
+    wb_channel: Mutex<Vec<WbStruct>>,
+}
+
+#[async_trait]
+impl ManagerReceiverTrait for WebsocketInner {
+    type Message = WbManagerMessage;
+    async fn on_receiver(&mut self, message: Self::Message) {
+        match message {
+            WbManagerMessage::Get(user, callback) => {
+                if callback.send(self.get_user(&user).1).is_err() {
+                    error!("Can't send");
+                };
+            }
+            WbManagerMessage::Insert(user, callback) => {
+                let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<ChannelMessage>();
+
+                self.insert_channel(&user, sender.clone());
+
+                if callback.send((sender, receiver)).is_err() {
+                    error!("Error on insert");
+                };
+            }
+            WbManagerMessage::Remove(user, wbsender, callback) => {
+                if callback
+                    .send(self.remove_sender(&user, &wbsender).await)
+                    .is_err()
+                {
+                    error!("Can't Remove");
+                }
+            }
+            WbManagerMessage::GetWithIndex(user, index, callback) => {
+                if callback.send(self.get_channel(&user, index)).is_err() {
+                    error!("Can't send");
+                };
+            }
+        }
+    }
+}
+
 impl Default for WebsocketInner {
     fn default() -> Self {
         Self {
             wb_channel: Mutex::new(Vec::new()),
         }
     }
-}
-
-#[derive(Debug)]
-pub struct WebsocketInner {
-    wb_channel: Mutex<Vec<WbStruct>>,
 }
 
 impl WebsocketInner {
@@ -136,12 +173,8 @@ impl WebsocketInner {
         None
     }
 
-    pub fn get_senders(&mut self, user: &User) -> Vec<WbSender> {
-        self.get_user(user).1
-    }
-
     pub fn get_channel(&mut self, user: &User, index: usize) -> Option<WbSender> {
-        if let Some(sender) = self.get_senders(user).get(index) {
+        if let Some(sender) = self.get_user(user).1.get(index) {
             return Some(sender.clone());
         }
 
@@ -193,135 +226,6 @@ pub enum WbManagerMessage {
     GetWithIndex(User, usize, OSSender<Option<WbSender>>),
     Insert(User, OSSender<WbChannel>),
     Remove(User, WbSender, OSSender<Result<(), ()>>),
-}
-#[derive(Debug)]
-pub struct WebsocketManager;
-
-impl WebsocketManager {
-    pub async fn spawn() -> WebsocketManagerChannel {
-        let (ossender, receiver) = oneshot::channel::<Sender<WbManagerMessage>>();
-        let error_exit = || {
-            error!("Error on WBManager Init");
-            exit(1);
-        };
-        tokio::spawn(async move {
-            let mut websockets = WebsocketInner::new();
-            let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<WbManagerMessage>();
-            if ossender.send(sender.clone()).is_err() {
-                error_exit();
-            }
-
-            while let Some(message) = receiver.recv().await {
-                match message {
-                    WbManagerMessage::Get(user, callback) => {
-                        if callback.send(websockets.get_senders(&user)).is_err() {
-                            error!("Can't send");
-                        };
-                    }
-                    WbManagerMessage::Insert(user, callback) => {
-                        let (sender, receiver) =
-                            tokio::sync::mpsc::unbounded_channel::<ChannelMessage>();
-
-                        websockets.insert_channel(&user, sender.clone());
-
-                        if callback.send((sender, receiver)).is_err() {
-                            error!("Error on insert");
-                        };
-                    }
-                    WbManagerMessage::Remove(user, wbsender, callback) => {
-                        if callback
-                            .send(websockets.remove_sender(&user, &wbsender).await)
-                            .is_err()
-                        {
-                            error!("Can't Remove");
-                        }
-                    }
-                    WbManagerMessage::GetWithIndex(user, index, callback) => {
-                        if callback.send(websockets.get_channel(&user, index)).is_err() {
-                            error!("Can't send");
-                        };
-                    }
-                }
-            }
-        });
-        if let Ok(sender) = receiver.await {
-            WebsocketManagerChannel(sender)
-        } else {
-            error_exit()
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct WebsocketManagerChannel(pub Sender<WbManagerMessage>);
-
-impl WebsocketManagerChannel {
-    async fn get_channels_of_user(&self, user: User) -> Result<Vec<WbSender>, String> {
-        let (sender, receiver) = oneshot::channel::<Vec<WbSender>>();
-        if let Err(e) = self.0.send(WbManagerMessage::Get(user, sender)) {
-            error!(e.to_string());
-        }
-
-        match receiver.await {
-            Ok(e) => Ok(e),
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
-    async fn get_new_channel(&self, user: User) -> Option<WbChannel> {
-        let (sender, receiver) = oneshot::channel::<WbChannel>();
-        if let Err(e) = self.0.send(WbManagerMessage::Insert(user, sender)) {
-            error!(e.to_string());
-        }
-
-        match receiver.await {
-            Ok(e) => return Some(e),
-            Err(e) => {
-                error!(e.to_string());
-            }
-        };
-
-        None
-    }
-
-    pub async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()> {
-        let (sender, receiver) = oneshot::channel::<Result<(), ()>>();
-        if let Err(e) = self
-            .0
-            .send(WbManagerMessage::Remove(user, wbsender.clone(), sender))
-        {
-            error!(e.to_string());
-        }
-
-        if let Ok(res) = receiver.await {
-            return res;
-        }
-
-        Err(())
-    }
-
-    pub async fn send(
-        &self,
-        msg: Event,
-        user: Vec<User>,
-        _keys: Option<&RsaData>,
-        _origin: Option<Instance>,
-    ) -> Result<(), ()> {
-        for mut i in user {
-            i.drop_password();
-            if let Ok(wbstruct) = self.get_channels_of_user(i).await {
-                for i in wbstruct {
-                    if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                        error!(e.to_string());
-                    };
-                }
-            } else {
-                return Err(());
-            }
-        }
-
-        Ok(())
-    }
 }
 
 pub async fn test_message(
