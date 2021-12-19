@@ -52,7 +52,8 @@ pub struct ServerId {
 }
 
 impl ServerId {
-    pub fn new(id: String) -> Self {
+    pub fn new<T: Into<String>>(id: T) -> Self {
+        let id = id.into();
         let short_id = if !id.is_empty() {
             id.split_at(10).0.to_string()
         } else {
