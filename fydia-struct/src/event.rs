@@ -1,5 +1,6 @@
-use crate::messages::Message;
+use crate::channel::{Channel, ChannelId};
 use crate::server::ServerId;
+use crate::{messages::Message, user::UserId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,7 +18,9 @@ impl Event {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventContent {
-    Message { content: Message },
+    Message {
+        content: Message,
+    },
     MessageDelete(String),
     MessageUpdate(String),
     UserChangeName(String),
@@ -28,6 +31,12 @@ pub enum EventContent {
     ChannelCreate(String),
     ChannelUpdate(String),
     ChannelDelete(String),
-    StartTyping(String),
-    StopTyping(String),
+    StartTyping {
+        userid: UserId,
+        channelid: ChannelId,
+    },
+    StopTyping {
+        userid: UserId,
+        channelid: ChannelId,
+    },
 }

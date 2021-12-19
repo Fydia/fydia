@@ -4,7 +4,7 @@ use crate::handlers::api::user::direct_message::get::get_direct_messages;
 use crate::handlers::api::user::direct_message::message::get::get_message_dm;
 use crate::handlers::api::user::direct_message::message::post::post_message_dm;
 use crate::handlers::api::user::login::user_login;
-use crate::handlers::api::websocket::messages::ws_handler;
+use crate::handlers::api::manager::websockets::messages::ws_handler;
 use crate::handlers::default;
 use axum::Router;
 

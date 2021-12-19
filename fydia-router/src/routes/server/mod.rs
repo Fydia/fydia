@@ -8,6 +8,7 @@ use crate::handlers::{
                 create::create_channel,
                 delete::delete_channel,
                 info_channel,
+                typing::{start_typing, stop_typing},
                 update::{update_description, update_name},
                 vocal::join_channel,
             },
@@ -56,6 +57,12 @@ pub fn channelid() -> Router {
                 .route("/name", axum::routing::get(update_name))
                 .route("/description", axum::routing::get(update_description))
                 .route("/join", axum::routing::get(join_channel))
+                .nest(
+                    "/typing",
+                    Router::new()
+                        .route("/start", axum::routing::post(start_typing))
+                        .route("/stop", axum::routing::post(stop_typing)),
+                )
                 .nest(
                     "/messages",
                     Router::new()
