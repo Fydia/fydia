@@ -33,9 +33,16 @@ impl User {
             email: email.into(),
         }
     }
-
+    pub fn drop_token(&mut self) {
+        self.token = None;
+    }
     pub fn drop_password(&mut self) {
         self.password = None;
+    }
+
+    pub fn drop_sensitive_information(&mut self) {
+        self.drop_token();
+        self.drop_password();
     }
 }
 
