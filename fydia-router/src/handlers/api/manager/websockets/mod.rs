@@ -189,7 +189,9 @@ impl WebsocketInner {
     }
 
     pub fn remove(&mut self, index: usize) {
-        self.wb_channel.lock().remove(index);
+        let mut wbchannel = self.wb_channel.lock();
+        wbchannel.swap_remove(index);
+        wbchannel.shrink_to_fit();
     }
 
     pub async fn remove_sender(&mut self, user: &User, wbsender: &WbSender) -> Result<(), ()> {
@@ -201,11 +203,13 @@ impl WebsocketInner {
         {
             let mut wblist = self.wb_channel.lock();
             let wbuser = &mut wblist[index_user].1;
-            wbuser.remove(index_channel);
+            wbuser.swap_remove(index_channel);
 
             if wbuser.is_empty() {
-                wblist.remove(index_user);
+                wblist.swap_remove(index_user);
             }
+
+            wblist.shrink_to_fit();
 
             return Ok(());
         }
