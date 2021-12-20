@@ -5,6 +5,7 @@ use crate::handlers::api::user::direct_message::get::get_direct_messages;
 use crate::handlers::api::user::direct_message::message::get::get_message_dm;
 use crate::handlers::api::user::direct_message::message::post::post_message_dm;
 use crate::handlers::api::user::login::user_login;
+use crate::handlers::api::user::token::verify;
 use crate::handlers::default;
 use axum::Router;
 
@@ -17,6 +18,7 @@ pub fn user_routes() -> Router {
         .route("logout", axum::routing::get(default))
         .route("/websocket", axum::routing::get(ws_handler))
         .route("/login", axum::routing::post(user_login))
+        .route("/token/verify", axum::routing::get(verify))
         .nest("/direct_message", direct_message())
 }
 
