@@ -22,4 +22,4 @@ logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 async-trait = "0.1.52"
 serde = "1.0.131"
 serde_json = "1.0.72"
-tokio = "1.14.0"
+tokio = "1.15.0"
