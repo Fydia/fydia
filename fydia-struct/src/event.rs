@@ -1,4 +1,4 @@
-use crate::channel::{Channel, ChannelId};
+use crate::channel::ChannelId;
 use crate::server::ServerId;
 use crate::{messages::Message, user::UserId};
 use serde::{Deserialize, Serialize};
