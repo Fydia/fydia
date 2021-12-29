@@ -49,21 +49,6 @@ impl WbStruct {
         wbsender
     }
 
-    pub fn remove(&mut self, wbsender: WbSender) -> Result<(), String> {
-        if let Some((n, sender)) = self.1.iter().enumerate().next() {
-            println!("{}", n);
-            if sender.same_channel(&wbsender) {
-                self.1.remove(n);
-                return Ok(());
-            } else {
-                return Err(String::from("Can't Remove"));
-            }
-        }
-        Err(String::from(
-            "fydia-router/src/handlers/api/websocket/mod.rs:60 => Undefined error",
-        ))
-    }
-
     pub fn is_same_user(&self, user: &User) -> bool {
         self.0
             == User {
