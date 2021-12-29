@@ -244,14 +244,14 @@ pub async fn test_message(
             if let Err(e) = i.send(ChannelMessage::Message(Box::new(Event::new(
                 ServerId::new(String::new()),
                 EventContent::Message {
-                    content: Message::new(
+                    content: Box::from(Message::new(
                         String::new(),
                         MessageType::TEXT,
                         false,
                         SqlDate::now(),
                         User::default(),
                         ChannelId::default(),
-                    ),
+                    )),
                 },
             )))) {
                 println!("{}", e.to_string())

@@ -19,7 +19,7 @@ impl Event {
 #[serde(tag = "type")]
 pub enum EventContent {
     Message {
-        content: Message,
+        content: Box<Message>,
     },
     MessageDelete(String),
     MessageUpdate(String),

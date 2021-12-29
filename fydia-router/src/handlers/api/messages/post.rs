@@ -203,14 +203,14 @@ pub async fn multipart_to_event(
         let event = Event::new(
             server_id.clone(),
             EventContent::Message {
-                content: Message::new(
+                content: Box::from(Message::new(
                     name.clone(),
                     MessageType::FILE,
                     false,
                     SqlDate::new(DateTime::from(SystemTime::now())),
                     user.clone(),
                     channelid.clone(),
-                ),
+                )),
             },
         );
         Ok(event)
@@ -249,14 +249,14 @@ pub fn json_message(
         let event = Event::new(
             server_id.clone(),
             EventContent::Message {
-                content: Message::new(
+                content: Box::from(Message::new(
                     content,
                     messagetype,
                     false,
                     SqlDate::new(DateTime::from(SystemTime::now())),
                     user.clone(),
                     channelid.clone(),
-                ),
+                )),
             },
         );
 

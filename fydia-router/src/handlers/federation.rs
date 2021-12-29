@@ -47,14 +47,14 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
     let event = Event::new(
         ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD".to_string()),
         EventContent::Message {
-            content: Message::new(
+            content: Box::from(Message::new(
                 String::from("This is a new message"),
                 MessageType::TEXT,
                 false,
                 SqlDate::now(),
                 User::default(),
                 ChannelId::new("CkFg9d9IVf7Shht".to_string()),
-            ),
+            )),
         },
     );
 
