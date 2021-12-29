@@ -13,6 +13,7 @@ pub mod tests;
 
 #[macro_use]
 extern crate logger;
+use crate::handlers::api::manager::typing::TypingManagerChannelTrait;
 use crate::handlers::api::manager::websockets::test_message;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
@@ -73,9 +74,17 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     } else {
         panic!("Public key error");
     };
-    let websocket_manager =
-        crate::handlers::api::manager::websockets::manager::WbManager::spawn().await;
 
+    let websocket_manager =
+        Arc::new(crate::handlers::api::manager::websockets::manager::WbManager::spawn().await);
+    let typing_manager =
+        Arc::new(crate::handlers::api::manager::typing::TypingManager::spawn().await);
+    typing_manager
+        .set_websocketmanager(websocket_manager.clone())
+        .unwrap();
+    typing_manager
+        .set_selfmanager(typing_manager.clone())
+        .unwrap();
     axum::Router::new()
         .route("/", axum::routing::get(client))
         .route("/test", axum::routing::get(test_message))
@@ -98,7 +107,8 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
             privatekey.clone(),
             public_key,
         ))))
-        .layer(AddExtensionLayer::new(Arc::new(websocket_manager)))
+        .layer(AddExtensionLayer::new(websocket_manager))
+        .layer(AddExtensionLayer::new(typing_manager))
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http().on_request(Log).on_response(Log)),

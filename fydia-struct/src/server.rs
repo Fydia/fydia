@@ -44,7 +44,7 @@ impl Default for Server {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct ServerId {
     pub id: String,
     #[serde(skip)]

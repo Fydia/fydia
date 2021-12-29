@@ -76,7 +76,7 @@ impl ParentId {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ChannelId {
     pub id: String,
 }

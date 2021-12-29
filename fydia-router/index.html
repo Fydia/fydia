@@ -16,6 +16,8 @@
           <button class="form-submit" onclick="PostMessage()" type="button">
             Envoyer
           </button>
+          <button class="form-submit-typing" onclick="StartTyping()" type="button">Start Typing</button>
+          <button class="form-submit-typing" onclick="StopTyping()" type="button">Stop Typing</button>
         </form>
       </div>
       <div>
@@ -26,6 +28,8 @@
 </body>
 <script>
   url = window.location;
+  token = "BsBPys7gus95TiLBCQTE8DqTlDqp"
+
   function spam_ws() {
     for (let index = 0; index < 50; index++) {
       let sock;
@@ -152,6 +156,20 @@
     http.send('{"type":"TEXT", "content":"' + message + '"}');
 
     document.getElementById("form-text").value = "";
+  }
+
+  function StartTyping() {
+    let http = new XMLHttpRequest();
+    http.open("POST", `http://${document.location.host}/api/server/Eg7TthyaoB/channel/bP5ptzOKdUrzjhn/typing/start`);
+    http.setRequestHeader("token", token);
+    http.send();
+  }
+
+  function StopTyping() {
+    let http = new XMLHttpRequest();
+    http.open("POST", `http://${document.location.host}/api/server/Eg7TthyaoB/channel/bP5ptzOKdUrzjhn/typing/stop`);
+    http.setRequestHeader("token", token);
+    http.send();
   }
 </script>
 <style>

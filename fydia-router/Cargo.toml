@@ -3,8 +3,6 @@ name = "fydia-router"
 version = "0.0.1"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 fydia-config = { path="../fydia-config" }
 fydia-struct = { path="../fydia-struct" }
@@ -17,7 +15,7 @@ futures = "0.3.19"
 futures-util = "0.3.18"
 time = "0.3.5"
 chrono = "0.4.19"
-axum = {version = "0.4.2",  features = ["ws", "headers"]}
+axum = {version = "0.4.3",  features = ["ws", "headers"]}
 http = "0.2.5"
 logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 base64 = "0.13"
@@ -33,6 +31,6 @@ tracing = "0.1.29"
 tower-http = {version = "0.2.0", features=["trace"]}
 tower = "0.4.11"
 rand = "0.8.4"
-parking_lot =  {version = "0.11.2", features = ["deadlock_detection"]}
+parking_lot =  {version = "0.11.2"}
 hyper = "0.14.16"
-async-channel = "1.6.1"
+flume = "0.10.9"
