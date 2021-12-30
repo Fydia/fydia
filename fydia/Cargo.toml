@@ -8,6 +8,6 @@ edition = "2018"
 [dependencies]
 axum = "0.4.2"
 tokio = { version="1.15.0", default-features=false, features=["rt", "macros"] }
-reqwest = "0.11.7"
+reqwest = "0.11.8"
 fydia-router = { path="../fydia-router" }
 fydia-config = { path="../fydia-config" }
