@@ -82,7 +82,6 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     if let Err(error) = typing_manager.set_websocketmanager(websocket_manager.clone()) {
         error!(error);
         exit(1);
-
     };
     if let Err(error) = typing_manager.set_selfmanager(typing_manager.clone()) {
         error!(error);

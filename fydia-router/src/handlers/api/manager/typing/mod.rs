@@ -66,53 +66,47 @@ impl ManagerReceiverTrait for TypingStruct {
                             wb.clone(),
                             typing.clone(),
                         )
-                        .await;
+                        .await
                 }
             }
-            TypingMessage::StopTyping(user, channelid, serverid, channel_of_user) => {
-                self.inner.stop_typing(&user, &channelid).await;
-                if let Some(wb) = &self.wbsocketmanager {
-                    if wb
-                        .send(
-                            Event::new(
+            TypingMessage::StopTyping(user, channelid, serverid, users_of_channel) => {
+                if self.inner.stop_typing(&user, &channelid).await.is_ok() {
+                    if let Some(wb) = &self.wbsocketmanager {
+                        if self
+                            .inner
+                            .send_stop_typing(
                                 serverid,
-                                EventContent::StopTyping {
-                                    userid: user,
-                                    channelid,
-                                },
-                            ),
-                            channel_of_user,
-                            None,
-                            None,
-                        )
-                        .await
-                        .is_err()
-                    {
-                        error!("Error");
+                                user,
+                                channelid,
+                                users_of_channel,
+                                wb.clone(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            error!("Error");
+                        };
                     }
                 }
             }
 
             TypingMessage::RemoveTask(user, channelid, serverid, users_of_channel) => {
-                self.inner.remove_task(&user, &channelid);
-                if let Some(wb) = &self.wbsocketmanager {
-                    if wb
-                        .send(
-                            Event::new(
+                if self.inner.remove_task(&user, &channelid) {
+                    if let Some(wb) = &self.wbsocketmanager {
+                        if self
+                            .inner
+                            .send_stop_typing(
                                 serverid,
-                                EventContent::StopTyping {
-                                    userid: user,
-                                    channelid,
-                                },
-                            ),
-                            users_of_channel,
-                            None,
-                            None,
-                        )
-                        .await
-                        .is_err()
-                    {
-                        error!("Error");
+                                user,
+                                channelid,
+                                users_of_channel,
+                                wb.clone(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            error!("Error");
+                        }
                     }
                 }
             }
@@ -124,31 +118,31 @@ impl ManagerReceiverTrait for TypingStruct {
 pub struct TypingInner(Mutex<HashMap<ChannelId, Vec<UserTyping>>>);
 
 impl TypingInner {
-    pub async fn insert(
-        &mut self,
-        user: UserId,
-        channelid: ChannelId,
-        serverid: ServerId,
-        channel_user: Vec<User>,
-        websocket: Arc<WebsocketManagerChannel>,
-        selfmanager: Arc<TypingManagerChannel>,
-    ) {
-        self.stop_typing(&user, &channelid).await;
-        warn!("Will insert a new user");
-        self.insert_user_task(
-            user,
-            channelid,
-            serverid,
-            channel_user,
-            websocket,
-            selfmanager,
-        )
-        .await;
+    pub fn channel_exists(&self, channelid: &ChannelId) -> bool {
+        self.0.lock().get(channelid).is_some()
     }
 
-    async fn insert_user_task(
+    pub fn user_exists_in_channel(&self, channelid: &ChannelId, userid: &UserId) -> bool {
+        if let Some(channel) = self.0.lock().get(channelid) {
+            for i in channel {
+                if &i.0 == userid {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn insert_channel(&self, channelid: ChannelId) {
+        if !self.channel_exists(&channelid) {
+            self.0.lock().insert(channelid, vec![]);
+        }
+    }
+
+    pub async fn insert(
         &mut self,
-        user: UserId,
+        userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
         channel_user: Vec<User>,
@@ -158,31 +152,66 @@ impl TypingInner {
         let mut task = Task::new(
             selfmanager,
             channel_user.clone(),
-            user.clone(),
+            userid.clone(),
             channelid.clone(),
             serverid.clone(),
         );
         task.spawn().await;
-        self.0
-            .lock()
-            .insert(channelid.clone(), vec![UserTyping::new(user.clone(), task)]);
-
-        if websocket
-            .send(
-                Event::new(
+        self.insert_channel(channelid.clone());
+        if (!self.user_exists_in_channel(&channelid, &userid)
+            || self.stop_typing(&userid, &channelid).await.is_err())
+            && self
+                .send_start_typing(
                     serverid,
-                    EventContent::StartTyping {
-                        userid: user,
-                        channelid,
-                    },
-                ),
+                    userid.clone(),
+                    channelid.clone(),
+                    channel_user,
+                    websocket,
+                )
+                .await
+                .is_err()
+        {
+            error!("Can't Send Message");
+        }
+        if let Some(value) = self.0.lock().get_mut(&channelid) {
+            value.push(UserTyping::new(userid, task));
+        }
+    }
+
+    pub async fn send_start_typing(
+        &self,
+        serverid: ServerId,
+        userid: UserId,
+        channelid: ChannelId,
+        channel_user: Vec<User>,
+        websocket: Arc<WebsocketManagerChannel>,
+    ) -> Result<(), ()> {
+        websocket
+            .send(
+                Event::new(serverid, EventContent::StartTyping { userid, channelid }),
                 channel_user,
                 None,
                 None,
             )
-            .await.is_err() {
-            error!("Can't insert task");
-        };
+            .await
+    }
+
+    pub async fn send_stop_typing(
+        &self,
+        serverid: ServerId,
+        userid: UserId,
+        channelid: ChannelId,
+        channel_user: Vec<User>,
+        websocket: Arc<WebsocketManagerChannel>,
+    ) -> Result<(), ()> {
+        websocket
+            .send(
+                Event::new(serverid, EventContent::StopTyping { userid, channelid }),
+                channel_user,
+                None,
+                None,
+            )
+            .await
     }
 
     pub async fn remove_channel(&mut self, channelid: &ChannelId) {
@@ -197,7 +226,7 @@ impl TypingInner {
         let mut locked = self.0.lock();
         if let Some(uservec) = locked.get_mut(channelid) {
             for (n, usertyping) in uservec.iter().enumerate() {
-                if &usertyping.0.lock().0 == user {
+                if &usertyping.0 == user {
                     return Some(n);
                 }
             }
@@ -206,17 +235,22 @@ impl TypingInner {
         None
     }
 
-    pub async fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) {
+    pub async fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
         if let Some(n) = self.get_index_of_user_of_channelid(user, channelid) {
             self.kill_task(channelid, n);
             self.remove_task_with_index(channelid, n);
+            return Ok(());
         }
+        Err(())
     }
 
-    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) {
+    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> bool {
         if let Some(index) = self.get_index_of_user_of_channelid(user, channelid) {
             self.remove_task_with_index(channelid, index);
+            return true;
         }
+
+        false
     }
 
     pub fn remove_task_with_index(&mut self, channelid: &ChannelId, index: usize) {
@@ -227,7 +261,7 @@ impl TypingInner {
 
     pub fn kill_task(&mut self, channelid: &ChannelId, index: usize) {
         if let Some(value) = self.0.lock().get_mut(channelid) {
-            value[index].0.lock().1.kill();
+            value[index].1.lock().kill();
         }
     }
 }
@@ -239,11 +273,11 @@ impl Default for TypingInner {
 }
 
 #[derive(Debug)]
-pub struct UserTyping(Mutex<(UserId, Task)>);
+pub struct UserTyping(UserId, Mutex<Task>);
 
 impl UserTyping {
     pub fn new(userid: UserId, task: Task) -> Self {
-        Self(Mutex::new((userid, task)))
+        Self(userid, Mutex::new(task))
     }
 }
 
@@ -302,8 +336,6 @@ impl Task {
         .await;
         if let Ok(value) = thread_receiver.recv() {
             self.0 = Some(Arc::new(value));
-        } else {
-            panic!("AHAHAHHAHAHA");
         }
     }
 
@@ -313,10 +345,7 @@ impl Task {
             if sender.send(true).is_err() {
                 error!("Error");
             }
-            warn!("Task killed");
             self.0 = None;
-        } else {
-            warn!("No task");
         }
     }
 }
