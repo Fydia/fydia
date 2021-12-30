@@ -79,12 +79,15 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         Arc::new(crate::handlers::api::manager::websockets::manager::WbManager::spawn().await);
     let typing_manager =
         Arc::new(crate::handlers::api::manager::typing::TypingManager::spawn().await);
-    typing_manager
-        .set_websocketmanager(websocket_manager.clone())
-        .unwrap();
-    typing_manager
-        .set_selfmanager(typing_manager.clone())
-        .unwrap();
+    if let Err(error) = typing_manager.set_websocketmanager(websocket_manager.clone()) {
+        error!(error);
+        exit(1);
+
+    };
+    if let Err(error) = typing_manager.set_selfmanager(typing_manager.clone()) {
+        error!(error);
+        exit(1)
+    }
     axum::Router::new()
         .route("/", axum::routing::get(client))
         .route("/test", axum::routing::get(test_message))

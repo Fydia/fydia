@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 use crate::handlers::api::manager::websockets::manager::{
@@ -27,21 +26,11 @@ pub enum TypingMessage {
     RemoveTask(UserId, ChannelId, ServerId, Vec<User>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TypingStruct {
     wbsocketmanager: Option<Arc<WebsocketManagerChannel>>,
     selfmanager: Option<Arc<TypingManagerChannel>>,
     inner: TypingInner,
-}
-
-impl Default for TypingStruct {
-    fn default() -> Self {
-        Self {
-            wbsocketmanager: None,
-            selfmanager: None,
-            inner: TypingInner::default(),
-        }
-    }
 }
 
 impl TypingStruct {
@@ -178,7 +167,7 @@ impl TypingInner {
             .lock()
             .insert(channelid.clone(), vec![UserTyping::new(user.clone(), task)]);
 
-        websocket
+        if websocket
             .send(
                 Event::new(
                     serverid,
@@ -191,8 +180,9 @@ impl TypingInner {
                 None,
                 None,
             )
-            .await
-            .unwrap();
+            .await.is_err() {
+            error!("Can't insert task");
+        };
     }
 
     pub async fn remove_channel(&mut self, channelid: &ChannelId) {
@@ -294,10 +284,8 @@ impl Task {
             }
             let value = task.1;
             spawn(async move {
-                warn!("Wait 10s");
                 loop {
-                    if let Ok(_) = receiver.recv_timeout(Duration::from_micros(10)) {
-                        warn!("Killed");
+                    if receiver.recv_timeout(Duration::from_micros(10)).is_ok() {
                         return;
                     }
                     if instant.elapsed().as_secs() == 10 {
@@ -312,10 +300,8 @@ impl Task {
             });
         })
         .await;
-        warn!("Task spawn");
         if let Ok(value) = thread_receiver.recv() {
             self.0 = Some(Arc::new(value));
-            return;
         } else {
             panic!("AHAHAHHAHAHA");
         }

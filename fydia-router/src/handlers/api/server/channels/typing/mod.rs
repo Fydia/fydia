@@ -13,10 +13,7 @@ use fydia_struct::server::ServerId;
 use fydia_struct::user::{Token, UserId};
 use http::{HeaderMap, StatusCode};
 
-use crate::handlers::api::manager::{
-    typing::{TypingManagerChannel, TypingManagerChannelTrait},
-    websockets::manager::WebsocketManagerChannel,
-};
+use crate::handlers::api::manager::typing::{TypingManagerChannel, TypingManagerChannelTrait};
 
 pub async fn start_typing(
     Extension(database): Extension<DbConnection>,
@@ -29,12 +26,14 @@ pub async fn start_typing(
             if let Ok(server) = ServerId::new(&serverid).get_server(&database).await {
                 if let Some(channel) = ChannelId::new(&channelid).get_channel(&database).await {
                     if let Ok(users) = channel.get_user_of_channel(&database).await {
-                        typingmanager.start_typing(
+                        if let Err(error) = typingmanager.start_typing(
                             UserId::new(user.id),
                             ChannelId::new(channel.id),
                             ServerId::new(server.id),
                             users,
-                        );
+                        ) {
+                            error!(error);
+                        }
                     }
                 }
             }
