@@ -9,7 +9,7 @@ edition = "2018"
 fydia-config = { path="../fydia-config" }
 fydia-struct = { path="../fydia-struct" }
 fydia-utils = { path="../fydia-utils" }
-sqlx = { version="0.5.9", default-features=false, features=[
+sqlx = { version="0.5.10", default-features=false, features=[
     "runtime-tokio-rustls",
     "all-databases",
     "chrono",
