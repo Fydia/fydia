@@ -70,7 +70,7 @@ impl ManagerReceiverTrait for TypingStruct {
                 }
             }
             TypingMessage::StopTyping(user, channelid, serverid, users_of_channel) => {
-                if self.inner.stop_typing(&user, &channelid).await.is_ok() {
+                if self.inner.stop_typing(&user, &channelid).is_ok() {
                     if let Some(wb) = &self.wbsocketmanager {
                         if self
                             .inner
@@ -159,7 +159,7 @@ impl TypingInner {
         task.spawn().await;
         self.insert_channel(channelid.clone());
         if (!self.user_exists_in_channel(&channelid, &userid)
-            || self.stop_typing(&userid, &channelid).await.is_err())
+            || self.stop_typing(&userid, &channelid).is_err())
             && self
                 .send_start_typing(
                     serverid,
@@ -214,7 +214,7 @@ impl TypingInner {
             .await
     }
 
-    pub async fn remove_channel(&mut self, channelid: &ChannelId) {
+    pub fn remove_channel(&mut self, channelid: &ChannelId) {
         self.0.lock().remove(channelid);
     }
 
@@ -235,7 +235,7 @@ impl TypingInner {
         None
     }
 
-    pub async fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
+    pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
         if let Some(n) = self.get_index_of_user_of_channelid(user, channelid) {
             self.kill_task(channelid, n);
             self.remove_task_with_index(channelid, n);
