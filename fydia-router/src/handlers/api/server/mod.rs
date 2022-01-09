@@ -32,9 +32,8 @@ pub async fn get_server(
 
         let server = User::get_user_by_token(&token, &database).await;
 
-        if let Some(e) = server {
-            let a = e.server;
-            for i in a.0 {
+        if let Some(user) = server {
+            for i in user.servers.0 {
                 if let Ok(server) = i.get_server(&database).await {
                     servers.server.push(server);
                 }

@@ -29,7 +29,7 @@ pub async fn join(
         if let Ok(mut server) =
             Server::get_server_by_id(ServerId::new(server_id.clone()), &database).await
         {
-            if user.server.is_join(ServerId::new(server_id)) {
+            if user.servers.is_join(ServerId::new(server_id)) {
                 FydiaResponse::new_error("Already join").update_response(&mut res);
             } else if let Err(error) = server.join(&mut user, &database).await {
                 FydiaResponse::new_error("Cannot join").update_response(&mut res);

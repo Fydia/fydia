@@ -17,7 +17,7 @@ pub struct User {
     #[serde(skip)]
     pub description: Option<String>,
     #[serde(skip)]
-    pub server: Servers,
+    pub servers: Servers,
 }
 
 impl User {
@@ -29,7 +29,7 @@ impl User {
             token: None,
             description: None,
             password: Some(hash(password.into())),
-            server: Servers::new(),
+            servers: Servers::new(),
             email: email.into(),
         }
     }
@@ -44,6 +44,11 @@ impl User {
         self.drop_token();
         self.drop_password();
     }
+
+    pub fn to_userinfo(&self) -> UserInfo {
+        UserInfo::new(self.id, &self.name, &self.email, &self.description.clone().unwrap_or_default(), self.servers.clone())
+    }
+    
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -63,15 +68,31 @@ impl UserId {
     }
 }
 
+const HEADERNAME: &'static str = "token";
+
 pub struct Token(pub String);
 
 impl Token {
     pub fn from_headervalue(headers: &HeaderMap) -> Option<Token> {
-        if let Some(token) = headers.get("token") {
+        if let Some(token) = headers.get(HEADERNAME) {
             if let Ok(e) = token.to_str() {
                 return Some(Token(e.to_string()));
             }
         };
         None
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UserInfo {
+    id: i32,
+    name: String,
+    email: String,
+    description: String,
+    servers: Servers,
+}
+
+impl UserInfo {
+    pub fn new<T: Into<String>>(id: i32, name: T, email: T, description: T, servers: Servers) -> Self {
+        Self {id, name: name.into(), email: email.into(), description: description.into(), servers}
     }
 }

@@ -25,7 +25,7 @@ pub async fn create_channel(
 
     if let Some(token) = token {
         if let Some(user) = User::get_user_by_token(&token, &database).await {
-            if user.server.is_join(ServerId::new(serverid.clone())) {
+            if user.servers.is_join(ServerId::new(serverid.clone())) {
                 while let Some(Ok(vec)) = body.next().await {
                     if let Ok(body) = String::from_utf8(vec.to_vec()) {
                         if let Ok(mut server) =

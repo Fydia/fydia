@@ -21,12 +21,13 @@ pub async fn get_message(
     let token = if let Some(token) = Token::from_headervalue(&headers) {
         token
     } else {
+        FydiaResponse::new_error("No token").update_response(&mut res);
         return res;
     };
 
     if let Some(user) = token.get_user(&database).await {
-        if user.server.is_join(ServerId::new(serverid.clone())) {
-            if let Some(serverid) = user.server.get(serverid) {
+        if user.servers.is_join(ServerId::new(serverid.clone())) {
+            if let Some(serverid) = user.servers.get(serverid) {
                 if let Ok(server) = serverid.get_server(&database).await {
                     if let Some(e) = server.channel.get_channel(channelid) {
                         if let Ok(message) = &e.get_messages(&database).await {

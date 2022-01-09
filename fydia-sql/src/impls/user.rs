@@ -1,9 +1,11 @@
 use crate::entity::user::ActiveModel as UserActiveModel;
 use crate::entity::user::Entity as UserEntity;
+use crate::sqlpool::DbConnection;
 use async_trait::async_trait;
 use fydia_struct::server::Servers;
 use fydia_struct::user::Token;
 use fydia_struct::user::UserId;
+use fydia_struct::user::UserInfo;
 use fydia_struct::{server::ServerId, user::User};
 use fydia_utils::generate_string;
 use fydia_utils::hash;
@@ -185,8 +187,8 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         match UserEntity::find_by_id(self.id).one(executor).await {
             Ok(Some(model)) => {
-                self.server.0.push(server_short_id);
-                let json = match serde_json::to_string(&self.server.0) {
+                self.servers.0.push(server_short_id);
+                let json = match serde_json::to_string(&self.servers.0) {
                     Ok(json) => json,
                     Err(error) => error.to_string(),
                 };
@@ -270,3 +272,21 @@ impl UserIdSql for UserId {
         User::get_user_by_id(self.id, executor).await
     }
 }
+
+
+#[async_trait]
+pub trait UserInfoSql {
+    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo>;
+}
+#[async_trait]
+impl UserInfoSql for UserId {
+    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo> {
+        if let Some(user) = self.get_user(&executor).await {
+            return Some(user.to_userinfo())
+        }
+
+        None
+    }
+}
+
+

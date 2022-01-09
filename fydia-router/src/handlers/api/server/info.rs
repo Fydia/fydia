@@ -22,7 +22,7 @@ pub async fn get_server_of_user(
     };
 
     if let Some(user) = User::get_user_by_token(&token, &database).await {
-        FydiaResponse::new_ok_json(&user.server).update_response(&mut res);
+        FydiaResponse::new_ok_json(&user.servers).update_response(&mut res);
     } else {
         FydiaResponse::new_error("Token error").update_response(&mut res);
     }
