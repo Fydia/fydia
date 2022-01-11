@@ -18,5 +18,6 @@ pub async fn get_info_of_self(headers: HeaderMap, Extension(executor): Extension
     } else {
         FydiaResponse::new_error("No Token").update_response(&mut res);
     }
-    return res;
+    
+    res
 }
