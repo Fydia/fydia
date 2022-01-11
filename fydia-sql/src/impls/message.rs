@@ -136,7 +136,7 @@ impl SqlMessage for Message {
             edited: Set(self.edited as i8),
             timestamp: Set(self.timestamp.0.naive_utc()),
             channel_id: Set(self.channel_id.id.clone()),
-            author_id: Set(self.author_id.id),
+            author_id: Set(self.author_id.id.id),
         };
 
         match crate::entity::messages::Entity::insert(active_model)

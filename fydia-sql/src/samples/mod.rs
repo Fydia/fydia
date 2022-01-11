@@ -1,6 +1,6 @@
-use fydia_struct::{user::User, instance::Instance};
+use fydia_struct::{instance::Instance, server::Server, user::User};
 
-use crate::{sqlpool::DbConnection, impls::user::SqlUser};
+use crate::{impls::user::SqlUser, sqlpool::DbConnection};
 
 pub async fn insert_samples(db: &DbConnection) {
     warn!("Insert Sample Values");
@@ -10,8 +10,5 @@ pub async fn insert_samples(db: &DbConnection) {
         println!("{}", error);
     }
 
-
-
-
-
+    Server::default();
 }

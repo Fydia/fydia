@@ -6,7 +6,6 @@ use fydia_sql::impls::{channel::SqlDirectMessages, token::SqlToken};
 
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ParentId;
-use fydia_struct::user::UserId;
 use fydia_struct::{channel::DirectMessage, response::FydiaResponse, user::Token};
 
 use crate::new_response;
@@ -19,7 +18,7 @@ pub async fn get_direct_messages(
     let headers = request.headers();
     if let Some(token) = Token::from_headervalue(headers) {
         if let Some(e) = token.get_user(&database).await {
-            match DirectMessage::get_by_userid(&database, UserId::new(e.id)).await {
+            match DirectMessage::get_by_userid(&database, e.id).await {
                 Ok(mut channels) => {
                     for i in channels.iter_mut() {
                         if let ParentId::DirectMessage(direct_message) = &mut i.parent_id {

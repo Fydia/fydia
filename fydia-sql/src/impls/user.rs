@@ -49,7 +49,8 @@ pub trait SqlUser {
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection)
+        -> Result<(), String>;
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn get_user_message() -> Vec<String>;
 }
@@ -98,26 +99,23 @@ impl SqlUser for User {
     }
 
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(user) => {
-               if let Some(user) = user {
-                 if let Some(db_user) = user.to_user() {
-                    self.take_value_of(db_user);
-                 }
-               } 
+                if let Some(user) = user {
+                    if let Some(db_user) = user.to_user() {
+                        self.take_value_of(db_user);
+                    }
+                }
 
-               return Err("No User".to_string())
+                return Err("No User".to_string());
             }
-            Err(error) => {
-                return Err(error.to_string())
-            }
+            Err(error) => return Err(error.to_string()),
         }
-
     }
 
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String> {
         let token = generate_string(30);
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let mut active_model: UserActiveModel = model.into();
                 active_model.token = Set(token.clone());
@@ -146,7 +144,7 @@ impl SqlUser for User {
         name: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let mut active_model: UserActiveModel = model.into();
                 active_model.name = Set(name.clone());
@@ -175,7 +173,7 @@ impl SqlUser for User {
         clear_password: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let password = hash(clear_password);
                 let mut active_model: UserActiveModel = model.into();
@@ -205,7 +203,7 @@ impl SqlUser for User {
         server_short_id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 self.servers.0.push(server_short_id);
                 let json = match serde_json::to_string(&self.servers.0) {
@@ -230,7 +228,7 @@ impl SqlUser for User {
             _ => Err("Cannot get error message".to_string()),
         }
     }
-    
+
     async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let json = match serde_json::to_string(&Servers(Vec::new())) {
             Ok(json) => json,
@@ -248,7 +246,7 @@ impl SqlUser for User {
             match UserEntity::insert(active_model).exec(executor).await {
                 Ok(_) => {
                     return Ok(());
-                },
+                }
                 Err(e) => {
                     error!("Error");
                     return Err(e.to_string());
@@ -259,13 +257,16 @@ impl SqlUser for User {
         }
     }
 
-    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-    self.insert_user(executor).await?;
-    self.update_from_database(executor).await
-}
+    async fn insert_user_and_update(
+        &mut self,
+        executor: &DatabaseConnection,
+    ) -> Result<(), String> {
+        self.insert_user(executor).await?;
+        self.update_from_database(executor).await
+    }
 
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id).one(executor).await {
+        match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let active_model: UserActiveModel = model.into();
                 match UserEntity::delete(active_model).exec(executor).await {
@@ -300,7 +301,6 @@ impl UserIdSql for UserId {
     }
 }
 
-
 #[async_trait]
 pub trait UserInfoSql {
     async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo>;
@@ -309,11 +309,9 @@ pub trait UserInfoSql {
 impl UserInfoSql for UserId {
     async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo> {
         if let Some(user) = self.get_user(&executor).await {
-            return Some(user.to_userinfo())
+            return Some(user.to_userinfo());
         }
 
         None
     }
 }
-
-

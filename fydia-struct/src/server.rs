@@ -1,7 +1,7 @@
-use crate::channel::Channel;
 use crate::emoji::Emoji;
 use crate::roles::Role;
 use crate::user::User;
+use crate::{channel::Channel, user::UserId};
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +10,7 @@ pub struct Server {
     pub id: String,
     pub shortid: String,
     pub name: String,
-    pub owner: i32,
+    pub owner: UserId,
     pub icon: String,
     pub emoji: Vec<Emoji>,
     pub members: Members,
@@ -19,13 +19,24 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(name: String, owner: UserId) -> Self {
+        Self {
+            name,
+            owner,
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for Server {
+    fn default() -> Self {
         let gen = generate_string(30);
+
         Self {
             id: gen.clone(),
             shortid: gen.split_at(10).0.to_string(),
             name: String::new(),
-            owner: 0,
+            owner: UserId::new(-1),
             icon: String::new(),
             emoji: Vec::new(),
             members: Members {
@@ -35,12 +46,6 @@ impl Server {
             roles: Vec::new(),
             channel: Channels::new(),
         }
-    }
-}
-
-impl Default for Server {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

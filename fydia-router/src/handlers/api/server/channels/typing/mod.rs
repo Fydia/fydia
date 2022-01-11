@@ -10,7 +10,7 @@ use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::server::ServerId;
-use fydia_struct::user::{Token, UserId};
+use fydia_struct::user::Token;
 use http::{HeaderMap, StatusCode};
 
 use crate::handlers::api::manager::typing::{TypingManagerChannel, TypingManagerChannelTrait};
@@ -27,7 +27,7 @@ pub async fn start_typing(
                 if let Some(channel) = ChannelId::new(&channelid).get_channel(&database).await {
                     if let Ok(users) = channel.get_user_of_channel(&database).await {
                         if let Err(error) = typingmanager.start_typing(
-                            UserId::new(user.id),
+                            user.id,
                             ChannelId::new(channel.id),
                             ServerId::new(server.id),
                             users,
@@ -54,7 +54,7 @@ pub async fn stop_typing(
                 if let Some(channel) = ChannelId::new(&channelid).get_channel(&database).await {
                     if let Ok(users) = channel.get_user_of_channel(&database).await {
                         if let Err(error) = typingmanager.stop_typing(
-                            UserId::new(user.id),
+                            user.id,
                             ChannelId::new(channelid),
                             ServerId::new(serverid),
                             users,

@@ -1,11 +1,14 @@
 use axum::{extract::Extension, response::IntoResponse};
 use fydia_sql::{impls::token::SqlToken, sqlpool::DbConnection};
-use fydia_struct::{user::Token, response::FydiaResponse};
+use fydia_struct::{response::FydiaResponse, user::Token};
 use http::HeaderMap;
 
 use crate::new_response;
 
-pub async fn get_info_of_self(headers: HeaderMap, Extension(executor): Extension<DbConnection>) -> impl IntoResponse {
+pub async fn get_info_of_self(
+    headers: HeaderMap,
+    Extension(executor): Extension<DbConnection>,
+) -> impl IntoResponse {
     let mut res = new_response();
     if let Some(token) = Token::from_headervalue(&headers) {
         if let Some(user) = token.get_user(&executor).await {
@@ -18,6 +21,6 @@ pub async fn get_info_of_self(headers: HeaderMap, Extension(executor): Extension
     } else {
         FydiaResponse::new_error("No Token").update_response(&mut res);
     }
-    
+
     res
 }

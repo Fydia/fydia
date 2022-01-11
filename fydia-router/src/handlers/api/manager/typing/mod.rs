@@ -235,13 +235,13 @@ impl TypingInner {
         None
     }
 
-    pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
+    pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), String> {
         if let Some(n) = self.get_index_of_user_of_channelid(user, channelid) {
             self.kill_task(channelid, n);
             self.remove_task_with_index(channelid, n);
             return Ok(());
         }
-        Err(())
+        Err("No user for this index".to_string())
     }
 
     pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> bool {

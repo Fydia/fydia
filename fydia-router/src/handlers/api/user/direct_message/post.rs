@@ -32,7 +32,7 @@ pub async fn create_direct_message(
                 let target = UserId::new(id).get_user(&database).await;
                 println!("{:?}", target);
                 if let Some(target) = target {
-                    let dm = DirectMessage::new(vec![UserId::new(user.id), UserId::new(target.id)]);
+                    let dm = DirectMessage::new(vec![user.id, target.id]);
                     println!("{:?}", dm.insert(&database).await);
                 } else {
                     FydiaResponse::new_error("Bad user id").update_response(&mut res);

@@ -2,7 +2,7 @@ use fydia_struct::{
     channel::{Channel, ParentId},
     roles::Role,
     server::{Members, Server, ServerId},
-    user::User,
+    user::{User, UserId},
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -96,7 +96,7 @@ impl SqlServer for Server {
                     id: model.id,
                     shortid: model.shortid,
                     name: model.name,
-                    owner: model.owner,
+                    owner: UserId::new(model.owner),
                     icon: model.icon.unwrap_or_else(|| "Error".to_string()),
                     members,
                     channel,
@@ -124,7 +124,7 @@ impl SqlServer for Server {
             name: Set(self.name.clone()),
             members: Set(members_json),
             shortid: Set(self.shortid.clone()),
-            owner: Set(self.owner),
+            owner: Set(self.owner.id),
             icon: Set(Some(self.icon.clone())),
         };
         match crate::entity::server::Entity::insert(active_channel)

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Default)]
 pub struct User {
-    pub id: i32,
+    pub id: UserId,
     pub name: String,
     pub instance: Instance,
     #[serde(skip)]
@@ -23,7 +23,7 @@ pub struct User {
 impl User {
     pub fn new<T: Into<String>>(name: T, email: T, password: T, instance: Instance) -> User {
         User {
-            id: 0,
+            id: UserId::new(0),
             name: name.into(),
             instance,
             token: None,
@@ -46,7 +46,13 @@ impl User {
     }
 
     pub fn to_userinfo(&self) -> UserInfo {
-        UserInfo::new(self.id, &self.name, &self.email, &self.description.clone().unwrap_or_default(), self.servers.clone())
+        UserInfo::new(
+            self.id.id,
+            &self.name,
+            &self.email,
+            &self.description.clone().unwrap_or_default(),
+            self.servers.clone(),
+        )
     }
 
     pub fn take_value_of(&mut self, from: User) {
@@ -59,10 +65,9 @@ impl User {
         self.description = from.description;
         self.servers = from.servers;
     }
-    
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, PartialOrd)]
 pub struct UserId {
     pub id: i32,
 }
@@ -103,7 +108,19 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-    pub fn new<T: Into<String>>(id: i32, name: T, email: T, description: T, servers: Servers) -> Self {
-        Self {id, name: name.into(), email: email.into(), description: description.into(), servers}
+    pub fn new<T: Into<String>>(
+        id: i32,
+        name: T,
+        email: T,
+        description: T,
+        servers: Servers,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            email: email.into(),
+            description: description.into(),
+            servers,
+        }
     }
 }

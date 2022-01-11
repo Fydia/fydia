@@ -52,7 +52,7 @@ impl WbStruct {
     pub fn is_same_user(&self, user: &User) -> bool {
         self.0
             == User {
-                id: user.id,
+                id: user.id.clone(),
                 name: user.name.clone(),
                 ..Default::default()
             }
