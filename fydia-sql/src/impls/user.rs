@@ -31,6 +31,7 @@ pub trait SqlUser {
     async fn get_user_by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
     where
         Self: Sized;
+    async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String>;
     async fn update_name(
         &mut self,
@@ -48,6 +49,7 @@ pub trait SqlUser {
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn get_user_message() -> Vec<String>;
 }
@@ -93,6 +95,24 @@ impl SqlUser for User {
             Err(_) => None,
             _ => None,
         }
+    }
+
+    async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+        match UserEntity::find_by_id(self.id).one(executor).await {
+            Ok(user) => {
+               if let Some(user) = user {
+                 if let Some(db_user) = user.to_user() {
+                    self.take_value_of(db_user);
+                 }
+               } 
+
+               return Err("No User".to_string())
+            }
+            Err(error) => {
+                return Err(error.to_string())
+            }
+        }
+
     }
 
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String> {
@@ -210,7 +230,7 @@ impl SqlUser for User {
             _ => Err("Cannot get error message".to_string()),
         }
     }
-
+    
     async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let json = match serde_json::to_string(&Servers(Vec::new())) {
             Ok(json) => json,
@@ -226,7 +246,9 @@ impl SqlUser for User {
                 ..Default::default()
             };
             match UserEntity::insert(active_model).exec(executor).await {
-                Ok(_) => Ok(()),
+                Ok(_) => {
+                    return Ok(());
+                },
                 Err(e) => {
                     error!("Error");
                     return Err(e.to_string());
@@ -236,6 +258,11 @@ impl SqlUser for User {
             Err(String::from("Password is empty"))
         }
     }
+
+    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+    self.insert_user(executor).await?;
+    self.update_from_database(executor).await
+}
 
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
         match UserEntity::find_by_id(self.id).one(executor).await {

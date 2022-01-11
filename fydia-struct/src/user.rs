@@ -48,6 +48,17 @@ impl User {
     pub fn to_userinfo(&self) -> UserInfo {
         UserInfo::new(self.id, &self.name, &self.email, &self.description.clone().unwrap_or_default(), self.servers.clone())
     }
+
+    pub fn take_value_of(&mut self, from: User) {
+        self.id = from.id;
+        self.name = from.name;
+        self.instance = from.instance;
+        self.token = from.token;
+        self.email = from.email;
+        self.password = from.password;
+        self.description = from.description;
+        self.servers = from.servers;
+    }
     
 }
 
@@ -68,7 +79,7 @@ impl UserId {
     }
 }
 
-const HEADERNAME: &'static str = "token";
+const HEADERNAME: &str = "token";
 
 pub struct Token(pub String);
 
