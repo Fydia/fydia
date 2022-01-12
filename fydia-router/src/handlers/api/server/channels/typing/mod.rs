@@ -26,12 +26,9 @@ pub async fn start_typing(
             if let Ok(server) = ServerId::new(&serverid).get_server(&database).await {
                 if let Some(channel) = ChannelId::new(&channelid).get_channel(&database).await {
                     if let Ok(users) = channel.get_user_of_channel(&database).await {
-                        if let Err(error) = typingmanager.start_typing(
-                            user.id,
-                            ChannelId::new(channel.id),
-                            ServerId::new(server.id),
-                            users,
-                        ) {
+                        if let Err(error) =
+                            typingmanager.start_typing(user.id, channel.id, server.id, users)
+                        {
                             error!(error);
                         }
                     }

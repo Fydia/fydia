@@ -1,3 +1,4 @@
+use crate::channel::ChannelId;
 use crate::emoji::Emoji;
 use crate::roles::Role;
 use crate::user::User;
@@ -7,8 +8,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Server {
-    pub id: String,
-    pub shortid: String,
+    pub id: ServerId,
     pub name: String,
     pub owner: UserId,
     pub icon: String,
@@ -19,9 +19,9 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(name: String, owner: UserId) -> Self {
+    pub fn new<T: Into<String>>(name: T, owner: UserId) -> Self {
         Self {
-            name,
+            name: name.into(),
             owner,
             ..Default::default()
         }
@@ -30,11 +30,8 @@ impl Server {
 
 impl Default for Server {
     fn default() -> Self {
-        let gen = generate_string(30);
-
         Self {
-            id: gen.clone(),
-            shortid: gen.split_at(10).0.to_string(),
+            id: ServerId::new(generate_string(30)),
             name: String::new(),
             owner: UserId::new(-1),
             icon: String::new(),
