@@ -54,7 +54,7 @@ pub async fn post_messages(
         if user.servers.is_join(serverid.clone()) {
             if let Some(serverid) = user.servers.get(serverid.clone().short_id) {
                 if let Ok(server) = serverid.get_server(&database).await {
-                    if server.channel.is_exists(channelid.clone()) {
+                    if server.channel.is_exists(ChannelId::new(channelid.clone())) {
                         if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
                             if let Ok(content_type) = header_content_type.to_str() {
                                 let msg = match messages_dispatcher(

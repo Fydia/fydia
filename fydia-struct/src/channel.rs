@@ -89,7 +89,7 @@ impl ChannelId {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Channel {
-    pub id: String,
+    pub id: ChannelId,
     #[serde(flatten)]
     pub parent_id: ParentId,
     pub name: String,
@@ -98,20 +98,39 @@ pub struct Channel {
 }
 
 impl Channel {
-    pub fn new() -> Self {
-        let gen = generate_string(15);
+    pub fn new<T: Into<String>>(name: T, description: T, channel_type: ChannelType) -> Self {
         Self {
-            id: gen,
-            parent_id: ParentId::ServerId(ServerId::new(String::new())),
-            name: String::new(),
-            description: String::new(),
-            channel_type: ChannelType::Text,
+            name: name.into(),
+            description: description.into(),
+            channel_type,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_with_parentid<T: Into<String>>(
+        name: T,
+        description: T,
+        parent_id: ParentId,
+        channel_type: ChannelType,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            channel_type,
+            parent_id,
+            ..Default::default()
         }
     }
 }
 
 impl Default for Channel {
     fn default() -> Self {
-        Self::new()
+        Self {
+            id: ChannelId::new(generate_string(15)),
+            parent_id: ParentId::ServerId(ServerId::new(String::new())),
+            name: String::new(),
+            description: String::new(),
+            channel_type: ChannelType::Text,
+        }
     }
 }

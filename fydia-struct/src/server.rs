@@ -169,7 +169,7 @@ impl Channels {
         Self(Vec::new())
     }
 
-    pub fn is_exists(&self, channel_id: String) -> bool {
+    pub fn is_exists(&self, channel_id: ChannelId) -> bool {
         for i in &self.0 {
             if i.id == channel_id {
                 return true;
@@ -178,7 +178,7 @@ impl Channels {
         false
     }
 
-    pub fn get_channel(&self, channel_id: String) -> Option<Channel> {
+    pub fn get_channel(&self, channel_id: ChannelId) -> Option<Channel> {
         for i in &self.0 {
             if i.id == channel_id {
                 return Some(i.clone());

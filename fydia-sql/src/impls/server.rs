@@ -40,7 +40,7 @@ pub trait SqlServer {
 impl SqlServer for Server {
     async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String> {
         match crate::entity::server::Entity::find()
-            .filter(crate::entity::server::Column::Id.eq(self.id.as_str()))
+            .filter(crate::entity::server::Column::Id.eq(self.id.id.as_str()))
             .one(executor)
             .await
         {
@@ -93,8 +93,7 @@ impl SqlServer for Server {
                     };
 
                 Ok(Server {
-                    id: model.id,
-                    shortid: model.shortid,
+                    id: ServerId::new(model.id),
                     name: model.name,
                     owner: UserId::new(model.owner),
                     icon: model.icon.unwrap_or_else(|| "Error".to_string()),
@@ -120,10 +119,10 @@ impl SqlServer for Server {
             Err(e) => return Err(e.to_string()),
         };
         let active_channel = crate::entity::server::ActiveModel {
-            id: Set(self.id.clone()),
+            id: Set(self.id.id.clone()),
             name: Set(self.name.clone()),
             members: Set(members_json),
-            shortid: Set(self.shortid.clone()),
+            shortid: Set(self.id.id.clone()),
             owner: Set(self.owner.id),
             icon: Set(Some(self.icon.clone())),
         };
@@ -138,7 +137,7 @@ impl SqlServer for Server {
 
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = crate::entity::server::ActiveModel {
-            id: Set(self.id.clone()),
+            id: Set(self.id.id.clone()),
             ..Default::default()
         };
         match crate::entity::server::Entity::delete(active_channel)
@@ -156,7 +155,7 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         match crate::entity::server::Entity::find()
-            .filter(server::Column::Shortid.contains(self.shortid.as_str()))
+            .filter(server::Column::Shortid.contains(self.id.short_id.as_str()))
             .one(executor)
             .await
         {
@@ -188,7 +187,7 @@ impl SqlServer for Server {
 
     async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
         let server = match crate::entity::server::Entity::find()
-            .filter(crate::entity::server::Column::Shortid.eq(self.shortid.as_str()))
+            .filter(crate::entity::server::Column::Shortid.eq(self.id.short_id.as_str()))
             .one(executor)
             .await
         {
@@ -236,10 +235,7 @@ impl SqlServer for Server {
             }
         }
 
-        if let Err(error) = user
-            .insert_server(ServerId::new(self.id.clone()), executor)
-            .await
-        {
+        if let Err(error) = user.insert_server(self.id.clone(), executor).await {
             return Err(error);
         }
 
@@ -258,7 +254,7 @@ impl SqlServer for Server {
             ParentId::ServerId(e) => e,
         };
         let active_channel = crate::entity::channels::ActiveModel {
-            id: Set(channel.id.clone()),
+            id: Set(channel.id.id.clone()),
             parent_id: Set(parent_id.short_id),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),

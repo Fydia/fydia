@@ -4,7 +4,7 @@ use futures::StreamExt;
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::channel::{Channel, ChannelType};
+use fydia_struct::channel::{Channel, ChannelType, ParentId};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::{Token, User};
@@ -32,11 +32,6 @@ pub async fn create_channel(
                             Server::get_server_by_id(ServerId::new(serverid.to_string()), &database)
                                 .await
                         {
-                            let mut channel = Channel::new();
-                            channel.parent_id = fydia_struct::channel::ParentId::ServerId(
-                                ServerId::new(server.id.clone()),
-                            );
-
                             if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
                                 let name = value.get("name");
                                 let ctype = value.get("type");
@@ -45,10 +40,12 @@ pub async fn create_channel(
                                     (Some(name), Some(ctype)) => {
                                         match (name.as_str(), ctype.as_str()) {
                                             (Some(name), Some(ctype)) => {
-                                                channel.name = name.to_string();
-                                                channel.channel_type =
-                                                    ChannelType::from_string(ctype.to_string());
-
+                                                let channel = Channel::new_with_parentid(
+                                                    name,
+                                                    "",
+                                                    ParentId::ServerId(server.id.clone()),
+                                                    ChannelType::from_string(ctype.to_string()),
+                                                );
                                                 if let Err(error) = server
                                                     .insert_channel(channel.clone(), &database)
                                                     .await
@@ -59,7 +56,7 @@ pub async fn create_channel(
                                                     .update_response(&mut res);
                                                     error!(error);
                                                 } else {
-                                                    FydiaResponse::new_ok(channel.id)
+                                                    FydiaResponse::new_ok(channel.id.id)
                                                         .update_response(&mut res);
                                                 }
                                             }

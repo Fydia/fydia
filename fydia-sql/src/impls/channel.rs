@@ -116,7 +116,7 @@ impl SqlChannel for Channel {
             Err(e) => return Err(e.to_string()),
         };
         let active_channel = crate::entity::channels::ActiveModel {
-            id: Set(self.id.clone()),
+            id: Set(self.id.id.clone()),
             parent_id: Set(parent_id),
             name: Set(self.name.clone()),
             description: Set(Some(self.description.clone())),
@@ -135,7 +135,7 @@ impl SqlChannel for Channel {
         name: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.clone())
+        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
         {
@@ -170,7 +170,7 @@ impl SqlChannel for Channel {
         description: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.clone())
+        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
         {
@@ -201,7 +201,7 @@ impl SqlChannel for Channel {
     }
 
     async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.clone())
+        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
         {
@@ -227,7 +227,7 @@ impl SqlChannel for Channel {
     }
 
     async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
-        Message::get_messages_by_channel(self.id.clone(), executor).await
+        Message::get_messages_by_channel(self.id.id.clone(), executor).await
     }
 }
 
@@ -280,9 +280,12 @@ impl SqlDirectMessages for DirectMessage {
         Ok(r)
     }
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let mut channel = Channel::new();
-        channel.channel_type = ChannelType::DirectMessage;
-        channel.parent_id = ParentId::DirectMessage(self.clone());
+        let channel = Channel::new_with_parentid(
+            "",
+            "",
+            ParentId::DirectMessage(self.clone()),
+            ChannelType::DirectMessage,
+        );
         channel.insert(executor).await
     }
     async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
