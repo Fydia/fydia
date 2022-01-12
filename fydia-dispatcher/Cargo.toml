@@ -12,7 +12,7 @@ tokio = { version = "1.15", default-features = false, features = [
 ] }
 serde_json = "1.0.74"
 serde = "1.0.133"
-reqwest = "0.11.8"
+reqwest = "0.11.9"
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
