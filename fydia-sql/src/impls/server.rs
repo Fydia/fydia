@@ -223,8 +223,6 @@ impl SqlServer for Server {
             }
         };
 
-        println!("{}", json);
-
         let mut active_model: crate::entity::server::ActiveModel = server.into();
 
         active_model.members = Set(json);
