@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "Channels" (
     id TEXT(15) NOT NULL PRIMARY KEY,
-    "parent_id" TEXT(10) NOT NULL,
+    "parent_id" TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     "channel_type" TEXT(15) NOT NULL
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `Messages` (
     content TEXT,
     message_type TEXT(15) NOT NULL,
     edited INTEGER(1) NOT NULL,
-    `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     channel_id TEXT(15) NOT NULL,
     author_id INTEGER NOT NULL,
     CONSTRAINT `Messages_FK` FOREIGN KEY (channel_id) REFERENCES "Channels"(id),

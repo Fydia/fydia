@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `Channels` (
     `id` varchar(15) PRIMARY KEY NOT NULL,
-    `parent_id` varchar(10) NOT NULL,
+    `parent_id` TEXT NOT NULL,
     `name` text NOT NULL,
     `description` text DEFAULT NULL,
     `channel_type` varchar(100) DEFAULT NULL
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `Messages` (
     `content` text DEFAULT NULL,
     `message_type` varchar(32) NOT NULL,
     `edited` tinyint(1) NOT NULL,
-    `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    `timestamp` datetime NOT NULL,
     `channel_id` varchar(15) NOT NULL,
     `author_id` int(10) NOT NULL,
     PRIMARY KEY (`id`),
