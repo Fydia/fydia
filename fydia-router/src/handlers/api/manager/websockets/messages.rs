@@ -72,7 +72,7 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
                         match sink.send(axum::extract::ws::Message::Text(msg)).await {
                             Ok(_) => {}
                             Err(e) => {
-                                println!("{}", e.to_string());
+                                println!("{}", e);
                             }
                         }
                     }

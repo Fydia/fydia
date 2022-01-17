@@ -17,7 +17,7 @@ pub async fn insert_samples(db: &DbConnection) {
     let mut user = match User::get_user_by_email_and_password(
         "user@sample.com".to_string(),
         "user".to_string(),
-        &db,
+        db,
     )
     .await
     {

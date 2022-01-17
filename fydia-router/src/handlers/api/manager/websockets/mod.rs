@@ -239,7 +239,7 @@ pub async fn test_message(
                     )),
                 },
             )))) {
-                println!("{}", e.to_string())
+                println!("{}", e)
             };
         }
         format!(
