@@ -87,10 +87,12 @@ pub struct Servers(pub Vec<ServerId>);
 impl Servers {
     pub fn is_join(&self, server_id: ServerId) -> bool {
         for i in self.0.clone().iter_mut() {
-            println!(
-                "`{}`/`{}` => `{}`/`{}`",
-                i.short_id, i.id, server_id.short_id, server_id.id
-            );
+            if cfg!(debug_assertion) {
+                println!(
+                    "`{}`/`{}` => `{}`/`{}`",
+                    i.short_id, i.id, server_id.short_id, server_id.id
+                );
+            }
             if i.short_id.is_empty() {
                 i.short_id = i.id.split_at(10).0.to_string();
             }
