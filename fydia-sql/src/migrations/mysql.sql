@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS `User` (
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `Server` (
-    `id` varchar(30) NOT NULL,
-    `shortid` varchar(10) PRIMARY KEY NOT NULL,
+    `id` varchar(30) PRIMARY KEY NOT NULL,
     `name` text NOT NULL,
     `owner` int(10) NOT NULL,
     `icon` text DEFAULT NULL,
@@ -49,5 +48,5 @@ CREATE TABLE IF NOT EXISTS `Roles` (
     `permission` text DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `Roles_FK` (`serverid`),
-    CONSTRAINT `Roles_FK` FOREIGN KEY (`serverid`) REFERENCES `Server` (`shortid`)
+    CONSTRAINT `Roles_FK` FOREIGN KEY (`serverid`) REFERENCES `Server` (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;

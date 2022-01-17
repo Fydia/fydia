@@ -37,7 +37,7 @@ pub async fn create_server(
                             let mut server = Server::new(name_str.to_string(), user.id.clone());
                             match server.insert_server(&database).await {
                                 Ok(_) => match server.join(&mut user, &database).await {
-                                    Ok(_) => FydiaResponse::new_ok(server.id.short_id)
+                                    Ok(_) => FydiaResponse::new_ok(server.id.id)
                                         .update_response(&mut res),
                                     Err(e) => {
                                         FydiaResponse::new_error("Cannot join the server")

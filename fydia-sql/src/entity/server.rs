@@ -5,9 +5,8 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "Server")]
 pub struct Model {
-    pub id: String,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub shortid: String,
+    pub id: String,
     #[sea_orm(column_type = "Text")]
     pub name: String,
     pub owner: i32,

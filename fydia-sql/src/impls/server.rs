@@ -66,7 +66,7 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<Server, String> {
         match crate::entity::server::Entity::find()
-            .filter(server::Column::Shortid.eq(id.short_id.as_str()))
+            .filter(server::Column::Id.eq(id.id.as_str()))
             .one(executor)
             .await
         {
@@ -80,7 +80,7 @@ impl SqlServer for Server {
                 };
 
                 let roles =
-                    match Role::get_roles_by_server_id(model.shortid.clone(), executor).await {
+                    match Role::get_roles_by_server_id(model.id.clone(), executor).await {
                         Ok(e) => e,
                         Err(e) => return Err(e),
                     };
@@ -118,7 +118,6 @@ impl SqlServer for Server {
         };
         let active_channel = crate::entity::server::ActiveModel {
             id: Set(self.id.id.clone()),
-            shortid: Set(self.id.short_id.clone()),
             name: Set(self.name.clone()),
             members: Set(members_json),
             owner: Set(self.owner.id),
@@ -158,7 +157,7 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         match crate::entity::server::Entity::find()
-            .filter(server::Column::Shortid.contains(self.id.short_id.as_str()))
+            .filter(server::Column::Id.contains(self.id.id.as_str()))
             .one(executor)
             .await
         {
@@ -190,7 +189,7 @@ impl SqlServer for Server {
 
     async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
         let server = match crate::entity::server::Entity::find()
-            .filter(crate::entity::server::Column::Shortid.eq(self.id.short_id.as_str()))
+            .filter(crate::entity::server::Column::Id.eq(self.id.id.as_str()))
             .one(executor)
             .await
         {

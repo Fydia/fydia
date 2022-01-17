@@ -49,31 +49,15 @@ impl Default for Server {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct ServerId {
     pub id: String,
-    #[serde(skip)]
-    pub short_id: String,
 }
 
 impl ServerId {
     pub fn new<T: Into<String>>(id: T) -> Self {
-        let id = id.into();
-        let short_id = if !id.is_empty() {
-            id.split_at(10).0.to_string()
-        } else {
-            id.clone()
-        };
-
-        Self { id, short_id }
+        Self { id: id.into()}
     }
 
     pub fn eq(&mut self, id: String) -> bool {
-        if self.short_id.is_empty() {
-            let short_id = self.id.split_at(10).0.to_string();
-            if self.short_id == short_id || self.id == id {
-                return true;
-            }
-        }
-
-        if self.short_id == id || self.id == id {
+        if self.id == id {
             return true;
         }
 
@@ -89,14 +73,12 @@ impl Servers {
         for i in self.0.clone().iter_mut() {
             if cfg!(debug_assertion) {
                 println!(
-                    "`{}`/`{}` => `{}`/`{}`",
-                    i.short_id, i.id, server_id.short_id, server_id.id
+                    "`{}`/`{}`",
+                   i.id, server_id.id
                 );
             }
-            if i.short_id.is_empty() {
-                i.short_id = i.id.split_at(10).0.to_string();
-            }
-            if i.short_id == server_id.short_id || i.id == server_id.id {
+
+            if i.id == server_id.id {
                 return true;
             }
         }
@@ -105,11 +87,7 @@ impl Servers {
 
     pub fn get(&self, server_id: String) -> Option<ServerId> {
         for i in self.0.clone().iter_mut() {
-            if i.short_id.is_empty() {
-                i.short_id = i.id.split_at(10).0.to_string();
-            }
-
-            if i.short_id == server_id || i.id == server_id {
+            if i.id == server_id {
                 return Some(i.clone());
             }
         }

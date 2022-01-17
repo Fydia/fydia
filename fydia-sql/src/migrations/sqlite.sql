@@ -16,8 +16,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     server TEXT
 );
 CREATE TABLE IF NOT EXISTS "Server" (
-    id TEXT(30) NOT NULL,
-    shortid TEXT(10),
+    id TEXT(30) NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
     owner INTEGER NOT NULL,
     icon TEXT,
@@ -43,5 +42,5 @@ CREATE TABLE IF NOT EXISTS Roles (
     channel_access TEXT,
     permission TEXT,
     CONSTRAINT Roles_PK PRIMARY KEY (id),
-    CONSTRAINT Server_FK FOREIGN KEY (serverid) REFERENCES "Server"(shortid)
+    CONSTRAINT Server_FK FOREIGN KEY (serverid) REFERENCES "Server"(id)
 );

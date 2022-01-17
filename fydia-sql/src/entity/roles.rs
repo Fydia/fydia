@@ -21,7 +21,7 @@ pub enum Relation {
     #[sea_orm(
         belongs_to = "super::server::Entity",
         from = "Column::Serverid",
-        to = "super::server::Column::Shortid",
+        to = "super::server::Column::Id",
         on_update = "Restrict",
         on_delete = "Restrict"
     )]
