@@ -4,3 +4,4 @@
 test/
 /.docs
 .vscode/
+.gdb_history
