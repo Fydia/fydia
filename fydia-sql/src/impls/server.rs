@@ -128,7 +128,7 @@ impl SqlServer for Server {
             .await
         {
             Ok(_) => {
-                let mut user = self.owner.get_user(executor).await.ok_or("Owner is existing ?".to_string())?;
+                let mut user = self.owner.get_user(executor).await.ok_or_else(|| "Owner is existing ?".to_string())?;
                 self.join(&mut user, executor).await?;
 
                 Ok(())

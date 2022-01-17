@@ -52,7 +52,7 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     success!("Database connected");
     info!("Init database");
     if let Err(e) = create_tables(&database).await {
-        error!(format!("Error: {}", e.to_string()));
+        error!(format!("Error: {}", e));
         exit(0);
     }
     success!("Init successfully");
