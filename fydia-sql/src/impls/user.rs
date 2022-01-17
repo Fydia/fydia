@@ -43,6 +43,7 @@ pub trait SqlUser {
         clear_password: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
+    /// Prefere use [SqlServer::join()](`crate::impls::server::SqlServer::join()`)
     async fn insert_server(
         &mut self,
         server_short_id: ServerId,
@@ -205,8 +206,9 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
-                self.servers.0.push(server_short_id);
-                let json = match serde_json::to_string(&self.servers.0) {
+                let mut current_server = self.servers.clone().0;
+                current_server.push(server_short_id.clone());
+                let json = match serde_json::to_string(&current_server) {
                     Ok(json) => json,
                     Err(error) => error.to_string(),
                 };
@@ -214,7 +216,11 @@ impl SqlUser for User {
                 active_model.server = Set(Some(json));
 
                 match UserEntity::update(active_model).exec(executor).await {
-                    Ok(_) => Ok(()),
+                    Ok(_) => {
+                        self.servers.0.push(server_short_id.clone());
+
+                        Ok(())
+                    }
                     Err(e) => {
                         error!("Error");
                         return Err(e.to_string());

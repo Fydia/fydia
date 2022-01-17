@@ -6,7 +6,7 @@ use crate::impls::user::UserIdSql;
 use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageValue, ParentId},
     messages::Message,
-    server::Channels,
+    server::{Channels, ServerId},
     user::{User, UserId},
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
@@ -17,7 +17,7 @@ pub trait SqlChannel {
     async fn get_user_of_channel(&self, executor: &DatabaseConnection)
         -> Result<Vec<User>, String>;
     async fn get_channels_by_server_id(
-        server_id: String,
+        server_id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -52,7 +52,6 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Vec<User>, String> {
         // TODO: Check Permission
-        //match crate::entity::channels::Entity::find().filter(entity::channels::Column::ParentId.eq(serde_json::to_string(value)))
         match &self.parent_id {
             ParentId::DirectMessage(directmessage) => match &directmessage.users {
                 DirectMessageValue::Users(users) => {
@@ -82,16 +81,13 @@ impl SqlChannel for Channel {
     }
 
     async fn get_channels_by_server_id(
-        server_id: String,
+        server_id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
-        let mut server_id = server_id;
-        if server_id.len() > 10 {
-            server_id = server_id.split_at(10).0.to_string();
-        }
+        let parentid = ParentId::ServerId(server_id).to_string()?;
         let mut channels: Vec<Channel> = Vec::new();
         match crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.contains(&server_id))
+            .filter(crate::entity::channels::Column::ParentId.eq(parentid))
             .all(executor)
             .await
         {
@@ -111,10 +107,7 @@ impl SqlChannel for Channel {
         Ok(Channels(channels))
     }
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let parent_id = match self.parent_id.to_string() {
-            Ok(e) => e,
-            Err(e) => return Err(e.to_string()),
-        };
+        let parent_id = self.parent_id.to_string()?;
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(self.id.id.clone()),
             parent_id: Set(parent_id),
@@ -227,7 +220,7 @@ impl SqlChannel for Channel {
     }
 
     async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
-        Message::get_messages_by_channel(self.id.id.clone(), executor).await
+        Message::get_messages_by_channel(self.id.clone(), executor).await
     }
 }
 

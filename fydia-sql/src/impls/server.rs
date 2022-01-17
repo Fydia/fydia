@@ -8,7 +8,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use crate::entity::server;
 
-use super::{channel::SqlChannel, role::SqlRoles, user::SqlUser};
+use super::{channel::SqlChannel, role::SqlRoles, user::{SqlUser, UserIdSql}};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -17,7 +17,7 @@ pub trait SqlServer {
         id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Server, String>;
-    async fn insert_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name(
         &mut self,
@@ -66,7 +66,7 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<Server, String> {
         match crate::entity::server::Entity::find()
-            .filter(server::Column::Shortid.eq(id.short_id))
+            .filter(server::Column::Shortid.eq(id.short_id.as_str()))
             .one(executor)
             .await
         {
@@ -86,7 +86,7 @@ impl SqlServer for Server {
                     };
 
                 let channel =
-                    match Channel::get_channels_by_server_id(model.shortid.clone(), executor).await
+                    match Channel::get_channels_by_server_id(id, executor).await
                     {
                         Ok(e) => e,
                         Err(e) => return Err(e),
@@ -104,25 +104,23 @@ impl SqlServer for Server {
                 })
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => {
-                error!("Error");
                 return Err("Cannot get server".to_string());
             }
         }
     }
-    async fn insert_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let members_json = match serde_json::to_string(&Members::new()) {
             Ok(e) => e,
             Err(e) => return Err(e.to_string()),
         };
         let active_channel = crate::entity::server::ActiveModel {
             id: Set(self.id.id.clone()),
+            shortid: Set(self.id.short_id.clone()),
             name: Set(self.name.clone()),
             members: Set(members_json),
-            shortid: Set(self.id.id.clone()),
             owner: Set(self.owner.id),
             icon: Set(Some(self.icon.clone())),
         };
@@ -130,7 +128,12 @@ impl SqlServer for Server {
             .exec(executor)
             .await
         {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                let mut user = self.owner.get_user(executor).await.ok_or("Owner is existing ?".to_string())?;
+                self.join(&mut user, executor).await?;
+
+                Ok(())
+            },
             Err(e) => Err(e.to_string()),
         }
     }
@@ -210,7 +213,7 @@ impl SqlServer for Server {
             }
         };
 
-        members.members.push(user.clone());
+        members.push(user.clone());
 
         let json = match serde_json::to_string(&members) {
             Ok(json) => json,
@@ -219,6 +222,8 @@ impl SqlServer for Server {
                 return Err(e.to_string());
             }
         };
+
+        println!("{}", json);
 
         let mut active_model: crate::entity::server::ActiveModel = server.into();
 
@@ -251,11 +256,13 @@ impl SqlServer for Server {
     ) -> Result<(), String> {
         let parent_id = match channel.parent_id.clone() {
             ParentId::DirectMessage(_) => return Err(String::from("Bad type of Channel")),
-            ParentId::ServerId(e) => e,
+            ParentId::ServerId(_) => {
+                ParentId::ServerId(self.id.clone()).to_string()?
+            }
         };
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(channel.id.id.clone()),
-            parent_id: Set(parent_id.short_id),
+            parent_id: Set(parent_id),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),
             channel_type: Set(Some(channel.channel_type.to_string())),

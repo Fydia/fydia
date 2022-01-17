@@ -50,12 +50,17 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     info!("Waiting database");
     let database = Arc::new(get_connection(&config.database).await) as DbConnection;
     success!("Database connected");
-    info!("Info init database");
+    info!("Init database");
     if let Err(e) = create_tables(&database).await {
         error!(format!("Error: {}", e.to_string()));
         exit(0);
     }
     success!("Init successfully");
+    
+    if cfg!(debug_assertions) {
+        fydia_sql::samples::insert_samples(&database).await;
+    }
+
     info!("Try to generate RSA keys");
     let privatekey = match fydia_crypto::key::generate::generate_key() {
         Ok(key) => {

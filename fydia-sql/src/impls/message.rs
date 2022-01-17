@@ -17,7 +17,7 @@ pub trait SqlMessage {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
     async fn get_messages_by_channel(
-        channel_id: String,
+        channel_id: ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -71,12 +71,12 @@ impl SqlMessage for Message {
     }
 
     async fn get_messages_by_channel(
-        channel_id: String,
+        channel_id: ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
         let mut query = crate::entity::messages::Entity::find()
-            .filter(crate::entity::messages::Column::ChannelId.eq(channel_id))
+            .filter(crate::entity::messages::Column::ChannelId.eq(channel_id.id))
             .order_by(
                 crate::entity::messages::Column::Timestamp,
                 sea_orm::Order::Asc,

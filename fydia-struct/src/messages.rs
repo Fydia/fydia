@@ -58,8 +58,8 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new(
-        content: String,
+    pub fn new<T: Into<String>>(
+        content: T,
         message_type: MessageType,
         edited: bool,
         timestamp: SqlDate,
@@ -68,7 +68,7 @@ impl Message {
     ) -> Self {
         Self {
             id: generate_string(32),
-            content,
+            content: content.into(),
             message_type,
             edited,
             timestamp,

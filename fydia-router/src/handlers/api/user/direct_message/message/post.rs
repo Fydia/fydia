@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use fydia_sql::{impls::message::SqlMessage, sqlpool::DbConnection};
-use fydia_struct::messages::Message;
+use fydia_struct::{channel::ChannelId, messages::Message};
 
 use crate::new_response;
 
@@ -19,7 +19,7 @@ pub async fn post_message_dm(
 
     println!(
         "{:?}",
-        Message::get_messages_by_channel(dm_id.clone(), &database).await
+        Message::get_messages_by_channel(ChannelId::new(dm_id.clone()), &database).await
     );
     res
 }

@@ -71,8 +71,15 @@ pub enum ParentId {
 }
 
 impl ParentId {
-    pub fn to_string(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string(self)
+    pub fn to_string(&self) -> Result<String, String> {
+        match serde_json::to_string(self) {
+            Ok(string) => {
+                Ok(string)
+            }
+            Err(error) => {
+                Err(error.to_string())
+            }
+        }
     }
 }
 
@@ -83,7 +90,9 @@ pub struct ChannelId {
 
 impl ChannelId {
     pub fn new<T: Into<String>>(id: T) -> Self {
-        Self { id: id.into() }
+        Self {
+            id: id.into().split_at(15).0.to_string(),
+        }
     }
 }
 
