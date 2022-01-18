@@ -48,7 +48,7 @@ pub async fn insert_samples(db: &DbConnection) {
         server
     };
 
-    if !user.servers.is_join(ServerId::new("server_default_id")) {
+    if !user.servers.is_join(&ServerId::new("server_default_id")) {
         if let Err(error) = server.join(&mut user, db).await {
             error!(error);
         }

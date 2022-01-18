@@ -8,7 +8,11 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use crate::entity::server;
 
-use super::{channel::SqlChannel, role::SqlRoles, user::{SqlUser, UserIdSql}};
+use super::{
+    channel::SqlChannel,
+    role::SqlRoles,
+    user::{SqlUser, UserIdSql},
+};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -24,6 +28,7 @@ pub trait SqlServer {
         name: String,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
+    async fn update(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn join(
         &mut self,
         mut user: &mut User,
@@ -79,18 +84,15 @@ impl SqlServer for Server {
                     }
                 };
 
-                let roles =
-                    match Role::get_roles_by_server_id(model.id.clone(), executor).await {
-                        Ok(e) => e,
-                        Err(e) => return Err(e),
-                    };
+                let roles = match Role::get_roles_by_server_id(model.id.clone(), executor).await {
+                    Ok(e) => e,
+                    Err(e) => return Err(e),
+                };
 
-                let channel =
-                    match Channel::get_channels_by_server_id(id, executor).await
-                    {
-                        Ok(e) => e,
-                        Err(e) => return Err(e),
-                    };
+                let channel = match Channel::get_channels_by_server_id(id, executor).await {
+                    Ok(e) => e,
+                    Err(e) => return Err(e),
+                };
 
                 Ok(Server {
                     id: ServerId::new(model.id),
@@ -128,11 +130,15 @@ impl SqlServer for Server {
             .await
         {
             Ok(_) => {
-                let mut user = self.owner.get_user(executor).await.ok_or_else(|| "Owner is existing ?".to_string())?;
+                let mut user = self
+                    .owner
+                    .get_user(executor)
+                    .await
+                    .ok_or_else(|| "Owner is existing ?".to_string())?;
                 self.join(&mut user, executor).await?;
 
                 Ok(())
-            },
+            }
             Err(e) => Err(e.to_string()),
         }
     }
@@ -187,6 +193,23 @@ impl SqlServer for Server {
         Ok(())
     }
 
+    async fn update(&self, executor: &DatabaseConnection) -> Result<(), String> {
+        let am = crate::entity::server::ActiveModel {
+            id: Set(self.id.id.clone()),
+            name: Set(self.name.clone()),
+            owner: Set(self.owner.id),
+            icon: Set(Some(self.icon.clone())),
+            members: Set(self.members.to_string()?),
+        };
+        match crate::entity::server::Entity::update(am)
+            .exec(executor)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
     async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
         let server = match crate::entity::server::Entity::find()
             .filter(crate::entity::server::Column::Id.eq(self.id.id.as_str()))
@@ -214,13 +237,7 @@ impl SqlServer for Server {
 
         members.push(user.clone());
 
-        let json = match serde_json::to_string(&members) {
-            Ok(json) => json,
-            Err(e) => {
-                error!("Error");
-                return Err(e.to_string());
-            }
-        };
+        let json = members.to_string()?;
 
         let mut active_model: crate::entity::server::ActiveModel = server.into();
 
@@ -253,9 +270,7 @@ impl SqlServer for Server {
     ) -> Result<(), String> {
         let parent_id = match channel.parent_id.clone() {
             ParentId::DirectMessage(_) => return Err(String::from("Bad type of Channel")),
-            ParentId::ServerId(_) => {
-                ParentId::ServerId(self.id.clone()).to_string()?
-            }
+            ParentId::ServerId(_) => ParentId::ServerId(self.id.clone()).to_string()?,
         };
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(channel.id.id.clone()),

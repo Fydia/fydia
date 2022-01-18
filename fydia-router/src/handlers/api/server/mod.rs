@@ -12,6 +12,7 @@ pub mod channels;
 pub mod create;
 pub mod info;
 pub mod join;
+pub mod picture;
 pub mod roles;
 
 pub async fn get_server(

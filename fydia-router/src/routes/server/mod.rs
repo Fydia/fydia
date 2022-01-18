@@ -16,6 +16,7 @@ use crate::handlers::{
             get_server,
             info::get_server_of_user,
             join::join,
+            picture::{get_picture_of_server, post_picture_of_server},
         },
     },
     default,
@@ -33,6 +34,10 @@ pub fn server_routes() -> Router {
             "/:serverid",
             axum::Router::new()
                 .route("/", axum::routing::get(get_server))
+                .route(
+                    "/picture",
+                    axum::routing::get(get_picture_of_server).post(post_picture_of_server),
+                )
                 .nest("/channel", channelid())
                 .nest("/roles", roles_routes()),
         )

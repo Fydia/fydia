@@ -30,7 +30,7 @@ pub async fn ws_handler(
         .into_response()
 }
 
-pub fn empty_response() -> impl IntoResponse {
+pub fn empty_response<'a>() -> (StatusCode, &'a str) {
     (StatusCode::BAD_REQUEST, "")
 }
 
