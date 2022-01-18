@@ -27,7 +27,7 @@ pub async fn get_message(
     };
 
     if let Some(user) = token.get_user(&database).await {
-        if user.servers.is_join(ServerId::new(serverid.clone())) {
+        if user.servers.is_join(&ServerId::new(serverid.clone())) {
             if let Some(serverid) = user.servers.get(serverid) {
                 if let Ok(server) = serverid.get_server(&database).await {
                     if let Some(e) = server.channel.get_channel(ChannelId::new(channelid)) {

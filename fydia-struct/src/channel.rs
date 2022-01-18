@@ -73,12 +73,8 @@ pub enum ParentId {
 impl ParentId {
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(self) {
-            Ok(string) => {
-                Ok(string)
-            }
-            Err(error) => {
-                Err(error.to_string())
-            }
+            Ok(string) => Ok(string),
+            Err(error) => Err(error.to_string()),
         }
     }
 }

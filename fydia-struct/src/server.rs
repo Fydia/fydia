@@ -53,7 +53,7 @@ pub struct ServerId {
 
 impl ServerId {
     pub fn new<T: Into<String>>(id: T) -> Self {
-        Self { id: id.into()}
+        Self { id: id.into() }
     }
 
     pub fn eq(&mut self, id: String) -> bool {
@@ -69,13 +69,10 @@ impl ServerId {
 pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
-    pub fn is_join(&self, server_id: ServerId) -> bool {
+    pub fn is_join(&self, server_id: &ServerId) -> bool {
         for i in self.0.clone().iter_mut() {
             if cfg!(debug_assertion) {
-                println!(
-                    "`{}`/`{}`",
-                   i.id, server_id.id
-                );
+                println!("`{}`/`{}`", i.id, server_id.id);
             }
 
             if i.id == server_id.id {
@@ -132,6 +129,13 @@ impl Members {
         }
 
         Err("Not Found".to_string())
+    }
+
+    pub fn to_string(&self) -> Result<String, String> {
+        match serde_json::to_string(&self) {
+            Ok(json) => Ok(json),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 

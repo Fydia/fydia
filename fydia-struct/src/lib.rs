@@ -4,6 +4,7 @@
 pub mod channel;
 pub mod emoji;
 pub mod event;
+pub mod file;
 pub mod format;
 pub mod instance;
 pub mod manager;

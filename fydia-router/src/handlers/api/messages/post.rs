@@ -51,7 +51,7 @@ pub async fn post_messages(
     };
 
     if let Some(user) = token.get_user(&database).await {
-        if user.servers.is_join(serverid.clone()) {
+        if user.servers.is_join(&serverid) {
             if let Some(serverid) = user.servers.get(serverid.clone().id) {
                 if let Ok(server) = serverid.get_server(&database).await {
                     if server.channel.is_exists(ChannelId::new(channelid.clone())) {
