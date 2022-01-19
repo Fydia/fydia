@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
-use axum::extract::{BodyStream, Extension};
+use axum::body::Bytes;
+use axum::extract::Extension;
 use axum::response::IntoResponse;
-use futures::StreamExt;
 use fydia_dispatcher::keys::get::get_public_key;
 use fydia_dispatcher::message::receive::receive_message;
 use fydia_sql::sqlpool::DbConnection;
@@ -20,24 +20,23 @@ use crate::new_response;
 
 pub async fn event_handler(
     headers: HeaderMap,
-    mut body: BodyStream,
+    body: Bytes,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
     Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
 ) -> impl IntoResponse {
     let rsa = &rsa;
     let mut res = new_response();
-    while let Some(Ok(body_bytes)) = body.next().await {
-        let body = body_bytes.to_vec();
-        if let Some(msg) = receive_message(&headers, body, rsa).await {
-            if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
-                crate::handlers::event::event_handler(event, &database, &wbsockets).await;
-            } else {
-                FydiaResponse::new_error("Bad Body").update_response(&mut res);
-            }
+    let body = body.to_vec();
+
+    if let Some(msg) = receive_message(&headers, body, rsa).await {
+        if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
+            crate::handlers::event::event_handler(event, &database, &wbsockets).await;
         } else {
-            FydiaResponse::new_error("Decryption Error").update_response(&mut res);
+            FydiaResponse::new_error("Bad Body").update_response(&mut res);
         }
+    } else {
+        FydiaResponse::new_error("Decryption Error").update_response(&mut res);
     }
 
     res
