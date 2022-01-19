@@ -12,7 +12,9 @@ use fydia_sql::{
     sqlpool::DbConnection,
 };
 use fydia_struct::{file::File, server::ServerId, user::Token};
-use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, StatusCode};
+use http::{HeaderMap, HeaderValue, StatusCode};
+
+use crate::handlers::basic::BasicValues;
 
 pub async fn get_picture_of_server(
     Path(server_id): Path<String>,
@@ -24,28 +26,26 @@ pub async fn get_picture_of_server(
         HeaderMap::new(),
         include_bytes!("test.png").to_vec(),
     );
-    res.1
-        .insert(CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
-    if let Some(token) = Token::from_headervalue(&headers) {
-        if let Some(user) = token.get_user(&database).await {
-            let serverid = ServerId::new(server_id);
-            if user.servers.is_join(&serverid) {
-                if let Ok(server) = serverid.get_server(&database).await {
-                    if let Ok(value) = File::get(server.icon).get_value() {
-                        if let Some(mimetype) = infer::get(&value) {
-                            let mime_str = mimetype.to_string();
-                            res.0 = StatusCode::OK;
-                            res.1.insert(
-                                HeaderName::from_static("Content-Type"),
-                                HeaderValue::from_bytes(mime_str.as_bytes()).unwrap(),
-                            );
-                            res.2 = value;
 
-                            return res;
-                        }
-                    }
+    match BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database).await
+    {
+        Ok((_, server)) => {
+            if let Ok(value) = File::get(server.icon).get_value() {
+                if let Some(mimetype) = infer::get(&value) {
+                    let mime_str = mimetype.to_string();
+                    res.0 = StatusCode::OK;
+                    res.1.insert(
+                        HeaderName::from_static("Content-Type"),
+                        HeaderValue::from_bytes(mime_str.as_bytes()).unwrap(),
+                    );
+                    res.2 = value;
+
+                    return res;
                 }
             }
+        }
+        Err(error) => {
+            res.2 = error.as_bytes().to_vec();
         }
     }
 
