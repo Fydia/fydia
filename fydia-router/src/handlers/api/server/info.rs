@@ -1,11 +1,10 @@
 use axum::extract::Extension;
 use axum::response::IntoResponse;
-use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResponse;
-use fydia_struct::user::{Token, User};
 use http::HeaderMap;
 
+use crate::handlers::basic::BasicValues;
 use crate::new_response;
 
 pub async fn get_server_of_user(
@@ -13,18 +12,13 @@ pub async fn get_server_of_user(
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
     let mut res = new_response();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
-        token
-    } else {
-        FydiaResponse::new_error("Bad Token").update_response(&mut res);
-
-        return res;
-    };
-
-    if let Some(user) = User::get_user_by_token(&token, &database).await {
-        FydiaResponse::new_ok_json(&user.servers).update_response(&mut res);
-    } else {
-        FydiaResponse::new_error("Token error").update_response(&mut res);
+    match BasicValues::get_user(&headers, &database).await {
+        Ok(user) => {
+            FydiaResponse::new_ok_json(&user.servers).update_response(&mut res);
+        }
+        Err(error) => {
+            FydiaResponse::new_error(error).update_response(&mut res);
+        }
     }
 
     res

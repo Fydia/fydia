@@ -1,6 +1,7 @@
 use axum::response::IntoResponse;
 
 pub mod api;
+pub mod basic;
 pub mod event;
 pub mod federation;
 

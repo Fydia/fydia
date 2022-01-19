@@ -1,6 +1,7 @@
 use crate::handlers::api::manager::websockets::manager::{
     WbManagerChannelTrait, WebsocketManagerChannel,
 };
+use crate::handlers::basic::BasicValues;
 use crate::new_response;
 use axum::body::Bytes;
 use axum::extract::{Extension, Path};
@@ -8,8 +9,7 @@ use axum::response::IntoResponse;
 use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
-use fydia_sql::impls::server::{SqlServer, SqlServerId};
-use fydia_sql::impls::token::SqlToken;
+use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
@@ -17,7 +17,7 @@ use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Message, MessageType, SqlDate};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
-use fydia_struct::user::{Token, User};
+use fydia_struct::user::User;
 use fydia_utils::generate_string;
 use http::header::CONTENT_TYPE;
 use http::{HeaderMap, StatusCode};
@@ -40,95 +40,70 @@ pub async fn post_messages(
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let mut res = new_response();
-    let serverid = ServerId::new(serverid.clone());
-
-    let channelid = channelid.clone();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
-        token
-    } else {
-        FydiaResponse::new_error("Bad Token").update_response(&mut res);
-        return res;
-    };
-
-    if let Some(user) = token.get_user(&database).await {
-        if user.servers.is_join(&serverid) {
-            if let Some(serverid) = user.servers.get(serverid.clone().id) {
-                if let Ok(server) = serverid.get_server(&database).await {
-                    if server.channel.is_exists(ChannelId::new(channelid.clone())) {
-                        if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
-                            if let Ok(content_type) = header_content_type.to_str() {
-                                let msg = match messages_dispatcher(
-                                    content_type,
-                                    body.to_vec(),
-                                    &headers,
-                                    &user,
-                                    &ChannelId::new(channelid),
-                                    &serverid,
-                                )
-                                .await
-                                {
-                                    Ok(event) => event,
-                                    Err(err) => {
-                                        err.update_response(&mut res);
-                                        return res;
-                                    }
-                                };
-                                let key = rsa.clone();
-                                if let Ok(members) = server.get_user(&database).await {
-                                    if let EventContent::Message { ref content } = msg.content {
-                                        if content.insert_message(&database).await.is_err() {
-                                            FydiaResponse::new_error_custom_status(
-                                                "Cannot send message",
-                                                StatusCode::INTERNAL_SERVER_ERROR,
-                                            )
-                                            .update_response(&mut res);
-                                        } else {
-                                            tokio::spawn(async move {
-                                                if wbsocket
-                                                    .send(
-                                                        msg.clone(),
-                                                        members.members.clone(),
-                                                        Some(&key),
-                                                        None,
-                                                    )
-                                                    .await
-                                                    .is_err()
-                                                {
-                                                    error!("Error");
-                                                };
-                                            });
-                                        }
-                                    }
-                                    FydiaResponse::new_ok("Message send").update_response(&mut res);
-                                } else {
-                                    FydiaResponse::new_error_custom_status(
-                                        "Cannot get users of the server",
-                                        StatusCode::INTERNAL_SERVER_ERROR,
-                                    )
-                                    .update_response(&mut res);
-                                }
-                            } else {
-                                FydiaResponse::new_error("Bad Content-Type")
-                                    .update_response(&mut res);
-                            }
-                        } else {
-                            FydiaResponse::new_error("Where is the Content-Type")
-                                .update_response(&mut res);
-                        }
-                    } else {
-                        FydiaResponse::new_error("Unvalid channel").update_response(&mut res);
-                    }
-                } else {
-                    FydiaResponse::new_error("unknow server").update_response(&mut res);
+    let (user, server, channel) =
+        match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+            &headers, serverid, channelid, &database,
+        )
+        .await
+        {
+            Ok(v) => v,
+            Err(error) => {
+                FydiaResponse::new_error(error).update_response(&mut res);
+                return res;
+            }
+        };
+    if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
+        if let Ok(content_type) = header_content_type.to_str() {
+            let msg = match messages_dispatcher(
+                content_type,
+                body.to_vec(),
+                &headers,
+                &user,
+                &channel.id,
+                &server.id,
+            )
+            .await
+            {
+                Ok(event) => event,
+                Err(err) => {
+                    err.update_response(&mut res);
+                    return res;
                 }
+            };
+            let key = rsa.clone();
+            if let Ok(members) = server.get_user(&database).await {
+                if let EventContent::Message { ref content } = msg.content {
+                    if content.insert_message(&database).await.is_err() {
+                        FydiaResponse::new_error_custom_status(
+                            "Cannot send message",
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                        )
+                        .update_response(&mut res);
+                    } else {
+                        tokio::spawn(async move {
+                            if wbsocket
+                                .send(msg.clone(), members.members.clone(), Some(&key), None)
+                                .await
+                                .is_err()
+                            {
+                                error!("Error");
+                            };
+                        });
+                    }
+                }
+                FydiaResponse::new_ok("Message send").update_response(&mut res);
             } else {
-                FydiaResponse::new_error("unknow server").update_response(&mut res);
+                FydiaResponse::new_error_custom_status(
+                    "Cannot get users of the server",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                )
+                .update_response(&mut res);
             }
         } else {
-            FydiaResponse::new_error("unknow server").update_response(&mut res);
+            FydiaResponse::new_error("Bad Content-Type").update_response(&mut res);
         }
     } else {
-        FydiaResponse::new_error("Token error").update_response(&mut res);
+        FydiaResponse::new_error("Where is the Content-Type").update_response(&mut res);
     }
 
     res
