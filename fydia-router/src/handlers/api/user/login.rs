@@ -1,23 +1,18 @@
 use axum::body::Bytes;
 use axum::extract::Extension;
 use axum::response::IntoResponse;
-use fydia_sql::sqlpool::DbConnection;
-use serde_json::value;
-
 use fydia_sql::impls::user::SqlUser;
+use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::{response::FydiaResponse, user::User};
-
-use crate::new_response;
+use serde_json::value;
 
 pub async fn user_login(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
     let body = body.to_vec();
     if body.is_empty() {
-        FydiaResponse::new_error("Bad Body").update_response(&mut res);
-        return res;
+        return FydiaResponse::new_error("Bad Body");
     }
     if let Ok(stringed_body) = String::from_utf8(body) {
         if let Ok(json) = serde_json::from_str::<value::Value>(stringed_body.as_str()) {
@@ -34,28 +29,20 @@ pub async fn user_login(
                         match user {
                             Some(mut user) => {
                                 if let Ok(token) = user.update_token(&database).await {
-                                    FydiaResponse::new_ok(token).update_response(&mut res);
+                                    return FydiaResponse::new_ok(token);
                                 } else {
-                                    FydiaResponse::new_error("Token error")
-                                        .update_response(&mut res);
+                                    return FydiaResponse::new_error("Token error");
                                 }
                             }
-                            None => {
-                                FydiaResponse::new_error("User not exists")
-                                    .update_response(&mut res);
-                            }
+                            None => return FydiaResponse::new_error("User not exists"),
                         }
                     }
-                    _ => {
-                        FydiaResponse::new_error("Json error").update_response(&mut res);
-                    }
+                    _ => return FydiaResponse::new_error("Json error"),
                 },
-                _ => {
-                    FydiaResponse::new_error("Json error").update_response(&mut res);
-                }
+                _ => return FydiaResponse::new_error("Json error"),
             }
         }
     }
 
-    res
+    FydiaResponse::new_error("Body error")
 }

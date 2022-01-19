@@ -3,25 +3,30 @@ use axum::response::IntoResponse;
 use fydia_sql::impls::channel::SqlChannel;
 
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::channel::{Channel, ChannelId};
 use fydia_struct::response::FydiaResponse;
+use http::HeaderMap;
 
-use crate::new_response;
+use crate::handlers::basic::BasicValues;
 
 pub async fn delete_channel(
-    Path((_, channelid)): Path<(String, String)>,
+    headers: HeaderMap,
+    Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
-
-    if let Some(channel) =
-        Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database).await
-    {
-        if let Err(error) = channel.delete_channel(&database).await {
-            error!(error);
-            FydiaResponse::new_error(error).update_response(&mut res);
+    let (_, _, channel) =
+        match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+            &headers, serverid, channelid, &database,
+        )
+        .await
+        {
+            Ok(v) => v,
+            Err(error) => return FydiaResponse::new_error(error),
         };
-    };
 
-    res
+    if let Err(error) = channel.delete_channel(&database).await {
+        error!(error);
+        return FydiaResponse::new_error(error);
+    }
+
+    FydiaResponse::new_ok("Channel deleted")
 }

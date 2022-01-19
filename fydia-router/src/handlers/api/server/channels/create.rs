@@ -9,7 +9,6 @@ use http::HeaderMap;
 use serde_json::Value;
 
 use crate::handlers::basic::BasicValues;
-use crate::new_response;
 
 pub async fn create_channel(
     body: Bytes,
@@ -17,16 +16,13 @@ pub async fn create_channel(
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let mut res = new_response();
-
     let (_, mut server) =
         match BasicValues::get_user_and_server_and_check_if_joined(&headers, serverid, &database)
             .await
         {
             Ok(v) => v,
             Err(error) => {
-                FydiaResponse::new_error(error).update_response(&mut res);
-                return res;
+                return FydiaResponse::new_error(error);
             }
         };
 
@@ -46,25 +42,22 @@ pub async fn create_channel(
                         );
                         if let Err(error) = server.insert_channel(channel.clone(), &database).await
                         {
-                            FydiaResponse::new_error("Cannot create the channel")
-                                .update_response(&mut res);
                             error!(error);
+                            return FydiaResponse::new_error("Cannot create the channel");
                         } else {
-                            FydiaResponse::new_ok(channel.id.id).update_response(&mut res);
+                            return FydiaResponse::new_ok(channel.id.id);
                         }
                     }
-                    _ => FydiaResponse::new_error("Error with name or Channel Type")
-                        .update_response(&mut res),
+                    _ => {}
                 },
-                _ => {
-                    FydiaResponse::new_error("Error with name or Channel Type")
-                        .update_response(&mut res);
-                }
+                _ => {}
             }
+
+            return FydiaResponse::new_error("Error with name or Channel Type");
         }
-    } else {
-        FydiaResponse::new_error("Body isn't UTF-8").update_response(&mut res)
+
+        return FydiaResponse::new_error("Json error");
     }
 
-    res
+    FydiaResponse::new_error("Body isn't UTF-8")
 }

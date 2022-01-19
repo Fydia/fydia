@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use crate::handlers::api::manager::websockets::ChannelMessage;
-use crate::new_response;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Extension, Query};
 use axum::response::IntoResponse;
@@ -23,7 +22,6 @@ pub async fn ws_handler(
     Query(token): Query<QsToken>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    let _res = new_response();
     let token = Token(token.token.unwrap_or_default());
     let user = token.get_user(&database).await;
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
