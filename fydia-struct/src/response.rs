@@ -82,30 +82,6 @@ impl FydiaResponse {
             HeaderValue::from_bytes(value.into().as_bytes()).unwrap(),
         );
     }
-
-    /*pub fn update_response(&self, res: &mut (StatusCode, HeaderMap, String)) {
-        if let Some(header) = res.1.get_mut(CONTENT_TYPE) {
-            if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
-                if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
-                    *header = content_type;
-                }
-            }
-        } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
-            res.1.insert(CONTENT_TYPE, e);
-        }
-
-        res.0 = self.statuscode;
-
-        match serde_json::to_string(self) {
-            Ok(response) => res.2 = response,
-            Err(e) => {
-                if res.0 != StatusCode::BAD_REQUEST {
-                    res.0 = StatusCode::BAD_REQUEST;
-                }
-                res.2 = format!(r#"{{"status":"Error", "content":{}}}"#, e);
-            }
-        }
-    }*/
 }
 
 impl Default for FydiaResponse {
