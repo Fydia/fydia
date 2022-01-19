@@ -2,7 +2,6 @@ use crate::handlers::api::manager::websockets::manager::{
     WbManagerChannelTrait, WebsocketManagerChannel,
 };
 use crate::handlers::basic::BasicValues;
-use crate::new_response;
 use axum::body::Bytes;
 use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
@@ -39,7 +38,6 @@ pub async fn post_messages(
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
     let (user, server, channel) =
         match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
             &headers, serverid, channelid, &database,
@@ -48,8 +46,7 @@ pub async fn post_messages(
         {
             Ok(v) => v,
             Err(error) => {
-                FydiaResponse::new_error(error).update_response(&mut res);
-                return res;
+                return FydiaResponse::new_error(error);
             }
         };
     if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
@@ -66,19 +63,17 @@ pub async fn post_messages(
             {
                 Ok(event) => event,
                 Err(err) => {
-                    err.update_response(&mut res);
-                    return res;
+                    return err;
                 }
             };
             let key = rsa.clone();
             if let Ok(members) = server.get_user(&database).await {
                 if let EventContent::Message { ref content } = msg.content {
                     if content.insert_message(&database).await.is_err() {
-                        FydiaResponse::new_error_custom_status(
+                        return FydiaResponse::new_error_custom_status(
                             "Cannot send message",
                             StatusCode::INTERNAL_SERVER_ERROR,
-                        )
-                        .update_response(&mut res);
+                        );
                     } else {
                         tokio::spawn(async move {
                             if wbsocket
@@ -91,22 +86,19 @@ pub async fn post_messages(
                         });
                     }
                 }
-                FydiaResponse::new_ok("Message send").update_response(&mut res);
+                return FydiaResponse::new_ok("Message send");
             } else {
                 FydiaResponse::new_error_custom_status(
                     "Cannot get users of the server",
                     StatusCode::INTERNAL_SERVER_ERROR,
                 )
-                .update_response(&mut res);
             }
         } else {
-            FydiaResponse::new_error("Bad Content-Type").update_response(&mut res);
+            FydiaResponse::new_error("Bad Content-Type")
         }
     } else {
-        FydiaResponse::new_error("Where is the Content-Type").update_response(&mut res);
+        FydiaResponse::new_error("Where is the Content-Type")
     }
-
-    res
 }
 
 pub async fn messages_dispatcher(

@@ -13,19 +13,15 @@ use fydia_struct::{
     response::FydiaResponse,
 };
 
-use crate::new_response;
-
 pub async fn info_channel(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
     if let Some(channel) =
         Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database).await
     {
-        FydiaResponse::new_ok_json(&channel).update_response(&mut res);
-    } else {
-        FydiaResponse::new_error("Error").update_response(&mut res);
+        return FydiaResponse::new_ok_json(&channel);
     }
-    res
+
+    FydiaResponse::new_error("Error")
 }

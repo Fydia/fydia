@@ -29,7 +29,8 @@ use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::instance::{Instance, RsaData};
-use http::{HeaderMap, HeaderValue, Response, StatusCode};
+//use http::{HeaderMap, HeaderValue, Response, StatusCode};
+use http::Response;
 use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
@@ -37,9 +38,9 @@ use tower::ServiceBuilder;
 use tower_http::trace::{OnRequest, OnResponse, TraceLayer};
 use tracing::Span;
 
-pub fn new_response() -> (StatusCode, HeaderMap<HeaderValue>, String) {
+/*pub fn new_response() -> (StatusCode, HeaderMap<HeaderValue>, String) {
     (StatusCode::OK, HeaderMap::new(), String::new())
-}
+}*/
 
 pub async fn get_axum_router(config: Config) -> axum::Router {
     info!(format!(

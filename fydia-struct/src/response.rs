@@ -1,35 +1,64 @@
+use axum::{body, headers::HeaderName, response::IntoResponse};
+use http::{HeaderValue, Response};
 use hyper::{header::CONTENT_TYPE, HeaderMap, StatusCode};
 use serde::Serialize;
 use serde_json::Value;
+
+#[derive(Serialize)]
+pub enum FydiaStatus {
+    OK,
+    Error,
+}
+
+impl Default for FydiaStatus {
+    fn default() -> Self {
+        FydiaStatus::Error
+    }
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum FydiaResponseBody {
+    String(String),
+    Json(Value),
+}
+
+impl Default for FydiaResponseBody {
+    fn default() -> Self {
+        Self::String(String::from("Default value"))
+    }
+}
+
 #[derive(Serialize)]
 pub struct FydiaResponse {
     status: FydiaStatus,
     #[serde(rename(serialize = "content"))]
     body: FydiaResponseBody,
     #[serde(skip)]
-    custom_statuscode: Option<StatusCode>,
+    statuscode: StatusCode,
+    #[serde(skip)]
+    headers: HeaderMap,
 }
+
 impl FydiaResponse {
-    pub fn new<T: Into<String>>(status: FydiaStatus, body: T) -> Self {
-        let body: String = body.into();
+    pub fn new<T: Into<String>>(status: FydiaStatus, body: T, statuscode: StatusCode) -> Self {
         Self {
             status,
-            body: FydiaResponseBody::String(body),
-            custom_statuscode: None,
+            body: FydiaResponseBody::String(body.into()),
+            statuscode,
+            ..Default::default()
         }
     }
     pub fn new_error<T: Into<String>>(body: T) -> Self {
-        Self::new(FydiaStatus::Error, body)
+        Self::new(FydiaStatus::Error, body, StatusCode::BAD_REQUEST)
     }
 
     pub fn new_error_custom_status<T: Into<String>>(body: T, status_code: StatusCode) -> Self {
-        let mut s = Self::new(FydiaStatus::Error, body);
-        s.custom_statuscode = Some(status_code);
-        s
+        Self::new(FydiaStatus::Error, body, status_code)
     }
 
     pub fn new_ok<T: Into<String>>(body: T) -> Self {
-        Self::new(FydiaStatus::OK, body)
+        Self::new(FydiaStatus::OK, body, StatusCode::OK)
     }
     pub fn new_ok_json<S: Serialize>(body: S) -> Self
     where
@@ -41,13 +70,20 @@ impl FydiaResponse {
                 body: FydiaResponseBody::Json(
                     serde_json::from_str::<Value>(&body).unwrap_or_default(),
                 ),
-                custom_statuscode: None,
+                ..Default::default()
             },
             Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{}}}"#, e)),
         }
     }
 
-    pub fn update_response(&self, res: &mut (StatusCode, HeaderMap, String)) {
+    pub fn add_headers<T: Into<String>>(&mut self, name: T, value: T) {
+        self.headers.insert(
+            HeaderName::from_bytes(name.into().as_bytes()).unwrap(),
+            HeaderValue::from_bytes(value.into().as_bytes()).unwrap(),
+        );
+    }
+
+    /*pub fn update_response(&self, res: &mut (StatusCode, HeaderMap, String)) {
         if let Some(header) = res.1.get_mut(CONTENT_TYPE) {
             if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
                 if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
@@ -57,20 +93,9 @@ impl FydiaResponse {
         } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
             res.1.insert(CONTENT_TYPE, e);
         }
-        match self.status {
-            FydiaStatus::Error => {
-                if let Some(status_code) = self.custom_statuscode {
-                    res.0 = status_code;
-                } else if res.0 != StatusCode::BAD_REQUEST {
-                    res.0 = StatusCode::BAD_REQUEST;
-                }
-            }
-            FydiaStatus::OK => {
-                if res.0 != StatusCode::OK {
-                    res.0 = StatusCode::OK;
-                }
-            }
-        }
+
+        res.0 = self.statuscode;
+
         match serde_json::to_string(self) {
             Ok(response) => res.2 = response,
             Err(e) => {
@@ -80,17 +105,53 @@ impl FydiaResponse {
                 res.2 = format!(r#"{{"status":"Error", "content":{}}}"#, e);
             }
         }
+    }*/
+}
+
+impl Default for FydiaResponse {
+    fn default() -> Self {
+        Self {
+            status: Default::default(),
+            body: Default::default(),
+            statuscode: Default::default(),
+            headers: Default::default(),
+        }
     }
 }
 
-#[derive(Serialize)]
-pub enum FydiaStatus {
-    OK,
-    Error,
-}
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum FydiaResponseBody {
-    String(String),
-    Json(Value),
+impl IntoResponse for FydiaResponse {
+    fn into_response(self) -> axum::response::Response {
+        let mut response = Response::builder();
+        let headers = response.headers_mut();
+        if let Some(headers) = headers {
+            if let Some(header) = headers.get_mut(CONTENT_TYPE) {
+                if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
+                    if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
+                        *header = content_type;
+                    }
+                }
+            } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
+                headers.insert(CONTENT_TYPE, e);
+            }
+        }
+
+        response = response.status(self.statuscode);
+
+        match serde_json::to_string(&self) {
+            Ok(response_str) => {
+                return response
+                    .body(body::boxed(body::Full::from(response_str)))
+                    .unwrap()
+            }
+            Err(e) => {
+                return response
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(body::boxed(body::Full::from(format!(
+                        r#"{{"status":"Error", "content":{}}}"#,
+                        e
+                    ))))
+                    .unwrap()
+            }
+        }
+    }
 }

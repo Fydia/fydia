@@ -16,8 +16,6 @@ use fydia_struct::server::ServerId;
 use fydia_struct::user::User;
 use http::HeaderMap;
 
-use crate::new_response;
-
 pub async fn event_handler(
     headers: HeaderMap,
     body: Bytes,
@@ -26,20 +24,19 @@ pub async fn event_handler(
     Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
 ) -> impl IntoResponse {
     let rsa = &rsa;
-    let mut res = new_response();
     let body = body.to_vec();
 
     if let Some(msg) = receive_message(&headers, body, rsa).await {
         if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
             crate::handlers::event::event_handler(event, &database, &wbsockets).await;
         } else {
-            FydiaResponse::new_error("Bad Body").update_response(&mut res);
+            return FydiaResponse::new_error("Bad Body");
         }
     } else {
-        FydiaResponse::new_error("Decryption Error").update_response(&mut res);
+        return FydiaResponse::new_error("Decryption Error");
     }
 
-    res
+    FydiaResponse::new_error("Error: No message received")
 }
 
 pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl IntoResponse {
@@ -56,8 +53,6 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
             )),
         },
     );
-
-    let mut res = new_response();
 
     if let Some(publickey) = get_public_key(Instance {
         protocol: fydia_struct::instance::Protocol::HTTP,
@@ -84,9 +79,9 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
         .await
         .is_err()
         {
-            FydiaResponse::new_error("Error when send message").update_response(&mut res);
+            return FydiaResponse::new_error("Error when send message");
         };
     };
 
-    res
+    FydiaResponse::new_error("Can't Send message")
 }

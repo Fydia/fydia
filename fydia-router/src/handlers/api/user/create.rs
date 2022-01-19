@@ -4,13 +4,10 @@ use fydia_struct::{instance::Instance, response::FydiaResponse, user::User};
 
 use serde_json::Value;
 
-use crate::new_response;
-
 pub async fn create_user(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
     if let Ok(e) = String::from_utf8(body.to_vec()) {
         if let Ok(json) = serde_json::from_str::<Value>(&e) {
             let name = json.get("name");
@@ -26,28 +23,20 @@ pub async fn create_user(
                                 .await
                             {
                                 error!(e);
-                                FydiaResponse::new_error("Database error")
-                                    .update_response(&mut res);
-                            } else {
-                                FydiaResponse::new_ok("Register successfully")
-                                    .update_response(&mut res);
+                                return FydiaResponse::new_error("Database error");
                             }
+
+                            return FydiaResponse::new_ok("Register successfully");
                         }
-                        _ => {
-                            FydiaResponse::new_error("Json error").update_response(&mut res);
-                        }
+                        _ => return FydiaResponse::new_error("Json error"),
                     }
                 }
-                _ => {
-                    FydiaResponse::new_error("Json error").update_response(&mut res);
-                }
+                _ => return FydiaResponse::new_error("Json error"),
             }
-        } else {
-            FydiaResponse::new_error("Body is not json").update_response(&mut res);
         }
-    } else {
-        FydiaResponse::new_error("Utf-8 Body").update_response(&mut res);
+
+        return FydiaResponse::new_error("Body is not json");
     }
 
-    res
+    FydiaResponse::new_error("Utf-8 Body")
 }

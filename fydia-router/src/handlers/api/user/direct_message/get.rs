@@ -8,19 +8,15 @@ use fydia_struct::{channel::DirectMessage, response::FydiaResponse};
 use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
-use crate::new_response;
 
 pub async fn get_direct_messages(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
-
     let user = match BasicValues::get_user(&headers, &database).await {
         Ok(v) => v,
         Err(string) => {
-            FydiaResponse::new_error(string).update_response(&mut res);
-            return res;
+            return FydiaResponse::new_error(string);
         }
     };
 
@@ -34,13 +30,11 @@ pub async fn get_direct_messages(
                 }
             }
 
-            FydiaResponse::new_ok_json(channels).update_response(&mut res);
+            FydiaResponse::new_ok_json(channels)
         }
         Err(e) => {
             error!(e);
-            FydiaResponse::new_error("Error").update_response(&mut res);
+            FydiaResponse::new_error("Error")
         }
     }
-
-    res
 }

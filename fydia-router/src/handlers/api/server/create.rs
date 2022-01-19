@@ -2,52 +2,41 @@ use axum::body::Bytes;
 use axum::extract::Extension;
 use axum::response::IntoResponse;
 use fydia_sql::impls::server::SqlServer;
-use fydia_sql::impls::user::SqlUser;
-
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::Server;
-use fydia_struct::user::{Token, User};
 
 use http::HeaderMap;
 use serde_json::Value;
 
-use crate::new_response;
+use crate::handlers::basic::BasicValues;
 
 pub async fn create_server(
     headers: HeaderMap,
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let mut res = new_response();
-    let token = if let Some(token) = Token::from_headervalue(&headers) {
-        token
-    } else {
-        return res;
+    let mut user = match BasicValues::get_user(&headers, &database).await {
+        Ok(v) => v,
+        Err(error) => return FydiaResponse::new_error(error),
     };
 
     if let Ok(body) = String::from_utf8(body.to_vec()) {
-        if let Some(mut user) = User::get_user_by_token(&token, &database).await {
-            if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
-                if let Some(name) = value.get("name") {
-                    if let Some(name_str) = name.as_str() {
-                        let mut server = Server::new(name_str.to_string(), user.id.clone());
-                        match server.insert_server(&database).await {
-                            Ok(_) => match server.join(&mut user, &database).await {
-                                Ok(_) => {
-                                    FydiaResponse::new_ok(server.id.id).update_response(&mut res)
-                                }
-                                Err(e) => {
-                                    FydiaResponse::new_error("Cannot join the server")
-                                        .update_response(&mut res);
-                                    error!(e);
-                                }
-                            },
+        if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
+            if let Some(name) = value.get("name") {
+                if let Some(name_str) = name.as_str() {
+                    let mut server = Server::new(name_str.to_string(), user.id.clone());
+                    match server.insert_server(&database).await {
+                        Ok(_) => match server.join(&mut user, &database).await {
+                            Ok(_) => return FydiaResponse::new_ok(server.id.id),
                             Err(e) => {
-                                FydiaResponse::new_error("Cannot join the server")
-                                    .update_response(&mut res);
                                 error!(e);
+                                return FydiaResponse::new_error("Cannot join the server");
                             }
+                        },
+                        Err(e) => {
+                            error!(e);
+                            return FydiaResponse::new_error("Cannot join the server");
                         }
                     }
                 }
@@ -55,5 +44,5 @@ pub async fn create_server(
         }
     }
 
-    res
+    FydiaResponse::new_error("Json Error")
 }
