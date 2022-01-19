@@ -1,27 +1,23 @@
 use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
-use axum::{body::Body, http::Request};
 use fydia_sql::impls::{channel::SqlDirectMessages, user::UserIdSql};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::{
-    channel::DirectMessage,
-    format::UserFormat,
-    response::FydiaResponse,
-    user::{UserId},
+    channel::DirectMessage, format::UserFormat, response::FydiaResponse, user::UserId,
 };
+use http::HeaderMap;
 use reqwest::StatusCode;
 
 use crate::handlers::basic::BasicValues;
 use crate::new_response;
 
 pub async fn create_direct_message(
-    request: Request<Body>,
+    headers: HeaderMap,
     Path(target_user): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
     let mut res = new_response();
-    let headers = request.headers();
-    let user = match BasicValues::get_user(headers, &database).await {
+    let user = match BasicValues::get_user(&headers, &database).await {
         Ok(v) => v,
         Err(error) => {
             FydiaResponse::new_error(error).update_response(&mut res);
@@ -45,7 +41,7 @@ pub async fn create_direct_message(
     } else {
         FydiaResponse::new_error("Bad user id").update_response(&mut res);
     }
-    
+
     info!(&target_user.to_string());
 
     res
