@@ -34,3 +34,6 @@ rand = "0.8.4"
 parking_lot =  {version = "0.11.2"}
 hyper = "0.14.16"
 flume = "0.10.10"
+
+[dev-dependencies]
+rstest = "0.12.0"

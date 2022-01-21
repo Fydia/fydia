@@ -25,7 +25,7 @@ async fn main() {
     };
     axum::Server::bind(&(config.format_ip().as_str()).parse().unwrap())
         .serve(
-            fydia_router::get_axum_router(config)
+            fydia_router::get_axum_router_from_config(config)
                 .await
                 .into_make_service(),
         )

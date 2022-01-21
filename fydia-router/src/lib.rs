@@ -22,13 +22,15 @@ use crate::routes::user::user_routes;
 use axum::body::Body;
 use axum::handler::Handler;
 use axum::response::{Html, IntoResponse};
-use axum::AddExtensionLayer;
-use fydia_config::Config;
+use axum::{AddExtensionLayer, Router};
+use fydia_config::{Config, DatabaseConfig, InstanceConfig};
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::instance::{Instance, RsaData};
+use handlers::api::manager::typing::TypingManagerChannel;
+use handlers::api::manager::websockets::manager::WebsocketManagerChannel;
 use http::Response;
 use std::process::exit;
 use std::sync::Arc;
@@ -37,14 +39,9 @@ use tower::ServiceBuilder;
 use tower_http::trace::{OnRequest, OnResponse, TraceLayer};
 use tracing::Span;
 
-pub async fn get_axum_router(config: Config) -> axum::Router {
-    info!(format!(
-        "Fydia - {}({})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    ));
+pub async fn get_database_connection(config: &DatabaseConfig) -> DbConnection {
     info!("Waiting database");
-    let database = Arc::new(get_connection(&config.database).await) as DbConnection;
+    let database = Arc::new(get_connection(config).await) as DbConnection;
     success!("Database connected");
     info!("Init database");
     if let Err(e) = create_tables(&database).await {
@@ -53,6 +50,32 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
     }
     success!("Init successfully");
 
+    database
+}
+
+pub async fn get_axum_router_from_config(config: Config) -> axum::Router {
+    get_axum_router(
+        get_database_connection(&config.database).await,
+        &config.instance,
+        &config.format_ip(),
+        *&config.server.port as u16,
+    )
+    .await
+}
+
+pub async fn get_axum_router(
+    database: DbConnection,
+    instance: &InstanceConfig,
+    formated_ip: &String,
+    port: u16,
+) -> axum::Router {
+    info!(format!(
+        "Fydia - {}({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    ));
+
+    #[cfg(not(test))]
     #[cfg(debug_assertions)]
     fydia_sql::samples::insert_samples(&database).await;
 
@@ -67,8 +90,8 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
             exit(0);
         }
     };
-    success!(format!("Ip is : {}", config.instance.domain));
-    info!(format!("Listen on: http://{}", config.format_ip()));
+    success!(format!("Ip is : {}", instance.domain));
+    info!(format!("Listen on: http://{}", formated_ip));
     let public_key = if let Some(public_key) = private_to_public(privatekey.clone()) {
         public_key
     } else {
@@ -87,6 +110,27 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
         error!(error);
         exit(1)
     }
+
+    get_router(
+        database,
+        Arc::new(Instance::new(
+            fydia_struct::instance::Protocol::HTTP,
+            &instance.domain,
+            port,
+        )),
+        Arc::new(RsaData(privatekey, public_key)),
+        websocket_manager,
+        typing_manager,
+    )
+}
+
+pub fn get_router(
+    database: DbConnection,
+    instance: Arc<Instance>,
+    rsadata: Arc<RsaData>,
+    websocket_manager: Arc<WebsocketManagerChannel>,
+    typing_manager: Arc<TypingManagerChannel>,
+) -> Router {
     axum::Router::new()
         .route("/", axum::routing::get(client))
         .route("/test", axum::routing::get(test_message))
@@ -99,16 +143,9 @@ pub async fn get_axum_router(config: Config) -> axum::Router {
                 .nest("/federation", federation_routes()),
         )
         .fallback(not_found.into_service())
-        .layer(AddExtensionLayer::new(database as DbConnection))
-        .layer(AddExtensionLayer::new(Arc::new(Instance::new(
-            fydia_struct::instance::Protocol::HTTP,
-            config.instance.domain,
-            config.server.port as u16,
-        ))))
-        .layer(AddExtensionLayer::new(Arc::new(RsaData(
-            privatekey.clone(),
-            public_key,
-        ))))
+        .layer(AddExtensionLayer::new(database))
+        .layer(AddExtensionLayer::new(instance))
+        .layer(AddExtensionLayer::new(rsadata))
         .layer(AddExtensionLayer::new(websocket_manager))
         .layer(AddExtensionLayer::new(typing_manager))
         .layer(

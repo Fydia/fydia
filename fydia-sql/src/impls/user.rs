@@ -254,7 +254,6 @@ impl SqlUser for User {
                     return Ok(());
                 }
                 Err(e) => {
-                    error!("Error");
                     return Err(e.to_string());
                 }
             }

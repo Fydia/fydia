@@ -13,15 +13,14 @@ pub async fn delete_channel(
     Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let (_, _, channel) =
-        match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-            &headers, serverid, channelid, &database,
-        )
-        .await
-        {
-            Ok(v) => v,
-            Err(error) => return FydiaResponse::new_error(error),
-        };
+    let (_, _, channel) = match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+        &headers, serverid, channelid, &database,
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(error) => return FydiaResponse::new_error(error),
+    };
 
     if let Err(error) = channel.delete_channel(&database).await {
         error!(error);

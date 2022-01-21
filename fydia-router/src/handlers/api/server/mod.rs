@@ -1,9 +1,9 @@
+use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
 use axum::response::IntoResponse;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResponse;
 use http::HeaderMap;
-use crate::handlers::basic::BasicValues;
 
 pub mod channels;
 pub mod create;
@@ -27,5 +27,3 @@ pub async fn get_server(
 
     FydiaResponse::new_ok_json(&server)
 }
-
-
