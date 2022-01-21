@@ -33,10 +33,10 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn new(protocol: Protocol, domain: String, port: u16) -> Self {
+    pub fn new<T: Into<String>>(protocol: Protocol, domain: T, port: u16) -> Self {
         Self {
             protocol,
-            domain,
+            domain: domain.into(),
             port,
         }
     }

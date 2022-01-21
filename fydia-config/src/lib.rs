@@ -19,14 +19,21 @@ pub struct DatabaseConfig {
 }
 
 impl DatabaseConfig {
-    pub fn new() -> Self {
+    pub fn new<T: Into<String>>(
+        ip: T,
+        port: i16,
+        name: T,
+        password: T,
+        database_name: T,
+        database_type: DatabaseType,
+    ) -> Self {
         Self {
-            ip: "127.0.0.1".to_string(),
-            port: 0,
-            name: "default".to_string(),
-            password: "default".to_string(),
-            database_name: "default".to_string(),
-            database_type: DatabaseType::Mysql,
+            ip: ip.into(),
+            port,
+            name: name.into(),
+            password: password.into(),
+            database_name: database_name.into(),
+            database_type,
         }
     }
 
@@ -40,14 +47,21 @@ impl DatabaseConfig {
                 "postgres://{}:{}@{}/{}",
                 self.name, self.password, self.ip, self.database_name
             ),
-            DatabaseType::Sqlite => format!("sqlite://{}.sql", self.name),
+            DatabaseType::Sqlite => format!("sqlite://{}.db", self.ip),
         }
     }
 }
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        Self::new()
+        Self {
+            ip: "127.0.0.1".to_string(),
+            port: 0,
+            name: "default".to_string(),
+            password: "default".to_string(),
+            database_name: "default".to_string(),
+            database_type: DatabaseType::Mysql,
+        }
     }
 }
 
@@ -103,7 +117,7 @@ impl Default for Config {
         Self {
             instance: InstanceConfig::new(),
             server: ServerConfig::new(),
-            database: DatabaseConfig::new(),
+            database: DatabaseConfig::default(),
         }
     }
 }

@@ -710,9 +710,11 @@ dependencies = [
  "serde_json",
  "time 0.3.6",
  "tokio",
+ "tokio-tungstenite",
  "tower",
  "tower-http",
  "tracing",
+ "url",
 ]
 
 [[package]]

@@ -59,8 +59,8 @@ pub fn channelid() -> Router {
             "/:channelid",
             axum::Router::new()
                 .route("/", axum::routing::get(info_channel).delete(delete_channel))
-                .route("/name", axum::routing::get(update_name))
-                .route("/description", axum::routing::get(update_description))
+                .route("/name", axum::routing::put(update_name))
+                .route("/description", axum::routing::put(update_description))
                 .route("/join", axum::routing::get(join_channel))
                 .nest(
                     "/typing",

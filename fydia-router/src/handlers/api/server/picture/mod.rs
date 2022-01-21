@@ -4,14 +4,8 @@ use axum::{
     headers::HeaderName,
     response::IntoResponse,
 };
-use fydia_sql::{
-    impls::{
-        server::{SqlServer, SqlServerId},
-        token::SqlToken,
-    },
-    sqlpool::DbConnection,
-};
-use fydia_struct::{file::File, server::ServerId, user::Token};
+use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
+use fydia_struct::{file::File, response::FydiaResponse};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
 use crate::handlers::basic::BasicValues;
@@ -60,50 +54,55 @@ pub async fn post_picture_of_server(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
 ) -> impl IntoResponse {
-    let res = (StatusCode::OK, "");
+    let (_, mut server) =
+        match BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
+            .await
+        {
+            Ok(v) => v,
+            Err(string) => return FydiaResponse::new_error(string),
+        };
+    let vec_body = body.to_vec();
+    if vec_body.len() > MAX_CONTENT_LENGHT {
+        return FydiaResponse::new_error_custom_status("", StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    if let Some(mimetype) = infer::get(&vec_body) {
+        let mimetype_str = mimetype.extension();
+        if mimetype_str == "png" || mimetype_str == "jpg" || mimetype_str == "gif" {
+            let file = File::new();
+            if let Err(error) = file.create() {
+                error!(error);
+                return FydiaResponse::new_error_custom_status(
+                    "",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            };
 
-    if let Some(token) = Token::from_headervalue(&headers) {
-        if let Some(user) = token.get_user(&database).await {
-            let serverid = ServerId::new(server_id);
-            if user.servers.is_join(&serverid) {
-                if let Ok(mut server) = serverid.get_server(&database).await {
-                    let vec_body = body.to_vec();
-                    if vec_body.len() > MAX_CONTENT_LENGHT {
-                        return (StatusCode::PAYLOAD_TOO_LARGE, "");
-                    }
-                    if let Some(mimetype) = infer::get(&vec_body) {
-                        let mimetype_str = mimetype.extension();
-                        if mimetype_str == "png" || mimetype_str == "jpg" || mimetype_str == "gif" {
-                            let file = File::new();
-                            if let Err(error) = file.create() {
-                                error!(error);
-                                return (StatusCode::INTERNAL_SERVER_ERROR, "");
-                            };
+            println!("{} / ({})", file.get_name(), vec_body.len());
+            if let Err(error) = file.write(vec_body) {
+                error!(error);
+                return FydiaResponse::new_error_custom_status(
+                    "",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            };
 
-                            println!("{} / ({})", file.get_name(), vec_body.len());
-                            if let Err(error) = file.write(vec_body) {
-                                error!(error);
-                                return (StatusCode::INTERNAL_SERVER_ERROR, "");
-                            };
-
-                            server.icon = file.get_name();
-                            if let Err(error) = server.update(&database).await {
-                                error!(error);
-                                return (StatusCode::INTERNAL_SERVER_ERROR, "");
-                            }
-
-                            return (StatusCode::OK, "Icon have been update");
-                        }
-
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            "Bad Image type retry with png / jpg / gif",
-                        );
-                    }
-                }
+            server.icon = file.get_name();
+            if let Err(error) = server.update(&database).await {
+                error!(error);
+                return FydiaResponse::new_error_custom_status(
+                    "",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
             }
+
+            return FydiaResponse::new_ok("Icon have been update");
         }
+
+        return FydiaResponse::new_error_custom_status(
+            "Bad Image type retry with png / jpg / gif",
+            StatusCode::BAD_REQUEST,
+        );
     }
 
-    res
+    FydiaResponse::new_error("No body")
 }

@@ -6,3 +6,6 @@ test/
 .vscode/
 .gdb_history
 storage/
+*.db
+*.db-shm
+*.db-wal

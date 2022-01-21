@@ -84,7 +84,7 @@ impl UserId {
     }
 }
 
-const HEADERNAME: &str = "token";
+pub const HEADERNAME: &str = "token";
 
 pub struct Token(pub String);
 
