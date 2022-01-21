@@ -7,6 +7,7 @@ use openssl::rsa::Rsa;
 pub mod decrypt;
 pub mod encrypt;
 pub mod key;
+pub mod password;
 pub mod pem;
 pub mod structs;
 
