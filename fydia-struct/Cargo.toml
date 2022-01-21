@@ -11,7 +11,7 @@ fydia-utils = { path="../fydia-utils" }
 tokio = { version="1.15", default-features=false }
 async-trait = "0.1.52"
 futures = "0.3.19"
-serde = { version="1.0.133", features=["derive"] }
+serde = { version="1.0.134", features=["derive"] }
 serde_json = { version="1.0.75" }
 chrono = "0.4.19"
 url = "2.2.2"
