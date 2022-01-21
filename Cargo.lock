@@ -661,6 +661,7 @@ dependencies = [
 name = "fydia-crypto"
 version = "0.1.0"
 dependencies = [
+ "argon2",
  "fydia-utils",
  "openssl",
 ]
@@ -724,6 +725,7 @@ dependencies = [
  "async-trait",
  "futures",
  "fydia-config",
+ "fydia-crypto",
  "fydia-struct",
  "fydia-utils",
  "logger",
@@ -762,7 +764,6 @@ version = "0.1.0"
 name = "fydia-utils"
 version = "0.1.0"
 dependencies = [
- "argon2",
  "rand",
  "rand_core",
 ]
