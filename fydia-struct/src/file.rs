@@ -25,6 +25,7 @@ impl File {
 
     pub fn create(&self) -> Result<(), String> {
         println!("{}", self.path);
+        drop(std::fs::create_dir(PREFIX));
         std::fs::File::create(&self.path)
             .map_err(|f| f.to_string())
             .map(|_| ())
