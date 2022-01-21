@@ -4,12 +4,7 @@ use axum::{
     headers::HeaderName,
     response::IntoResponse,
 };
-use fydia_sql::{
-    impls::{
-        server::SqlServer,
-    },
-    sqlpool::DbConnection,
-};
+use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
 use fydia_struct::{file::File, response::FydiaResponse};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
@@ -61,10 +56,11 @@ pub async fn post_picture_of_server(
 ) -> impl IntoResponse {
     let (_, mut server) =
         match BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
-            .await {
-                Ok(v) => v,
-                Err(string) => return FydiaResponse::new_error(string),
-            };
+            .await
+        {
+            Ok(v) => v,
+            Err(string) => return FydiaResponse::new_error(string),
+        };
     let vec_body = body.to_vec();
     if vec_body.len() > MAX_CONTENT_LENGHT {
         return FydiaResponse::new_error_custom_status("", StatusCode::PAYLOAD_TOO_LARGE);
