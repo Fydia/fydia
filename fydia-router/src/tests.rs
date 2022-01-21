@@ -4,9 +4,12 @@ mod tests {
 
     use crate::*;
     use axum::http::StatusCode;
+    use futures::StreamExt;
     use fydia_config::DatabaseConfig;
     use http::{header::CONTENT_TYPE, HeaderValue};
     use serde_json::Value;
+    use time::Instant;
+    use tokio::task::JoinHandle;
 
     pub fn get_sqlite() -> Config {
         Config {
@@ -69,9 +72,14 @@ mod tests {
         get_server_picture(&token, &server_id).await?;
         create_channel(&token, &server_id, &mut channel_id).await?;
         post_messages(&token, &server_id, &channel_id).await?;
+        start_typing(&token, &server_id, &channel_id).await?;
+        stop_typing(&token, &server_id, &channel_id).await?;
         update_name_channel(&token, &server_id, &channel_id).await?;
         update_description_channel(&token, &server_id, &channel_id).await?;
-
+        test_wb_post_message(&token, &server_id, &channel_id).await?;
+        // TODO: ReAdd When TypingManager will work nicely
+        //test_wb_start_typing(&token, &server_id, &channel_id).await?;
+        //test_wb_stop_typing(&token, &server_id, &channel_id).await?;
         Ok(())
     }
     async fn create_user() -> Result<(), String> {
@@ -388,6 +396,69 @@ mod tests {
         Err(body)
     }
 
+    async fn start_typing(
+        token: &String,
+        server_id: &String,
+        channel_id: &String,
+    ) -> Result<(), String> {
+        let response = reqwest::Client::new()
+            .post(format!(
+                "http://127.0.0.1:8000/api/server/{}/channel/{}/typing/start",
+                server_id, channel_id
+            ))
+            .body(r#"{"content": "MESSAGE", "type":"TEXT"}"#)
+            .header(
+                fydia_struct::user::HEADERNAME,
+                HeaderValue::from_bytes(token.as_bytes()).unwrap(),
+            )
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_bytes(b"application/json").unwrap(),
+            )
+            .send()
+            .await
+            .unwrap();
+        let statuscode = response.status();
+        let body = response.text().await.unwrap();
+
+        if statuscode == StatusCode::OK {
+            return Ok(());
+        }
+
+        Err(body)
+    }
+    async fn stop_typing(
+        token: &String,
+        server_id: &String,
+        channel_id: &String,
+    ) -> Result<(), String> {
+        let response = reqwest::Client::new()
+            .post(format!(
+                "http://127.0.0.1:8000/api/server/{}/channel/{}/typing/stop",
+                server_id, channel_id
+            ))
+            .body(r#"{"content": "MESSAGE", "type":"TEXT"}"#)
+            .header(
+                fydia_struct::user::HEADERNAME,
+                HeaderValue::from_bytes(token.as_bytes()).unwrap(),
+            )
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_bytes(b"application/json").unwrap(),
+            )
+            .send()
+            .await
+            .unwrap();
+        let statuscode = response.status();
+        let body = response.text().await.unwrap();
+
+        if statuscode == StatusCode::OK {
+            return Ok(());
+        }
+
+        Err(body)
+    }
+
     async fn update_name_channel(
         token: &String,
         server_id: &String,
@@ -461,5 +532,112 @@ mod tests {
         }
 
         Err(body)
+    }
+
+    async fn test_wb_post_message(
+        token: &String,
+        server_id: &String,
+        channel_id: &String,
+    ) -> Result<(), String> {
+        //ws://127.0.0.1:8080/api/user/websocket?token=default_token
+        let url = url::Url::parse(
+            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+        )
+        .unwrap();
+        let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
+            let (mut socket, _) = tokio_tungstenite::connect_async(url)
+                .await
+                .expect("Connection error");
+            let time = Instant::now();
+            while let Some(Ok(wb)) = socket.next().await {
+                match wb {
+                    tokio_tungstenite::tungstenite::Message::Text(e) => {
+                        println!("{}", e);
+                        return Ok(());
+                    }
+                    _ => {
+                        if time.elapsed().whole_seconds() == 10 {
+                            break;
+                        }
+                    }
+                };
+            }
+
+            Err(String::from("No message"))
+        });
+
+        post_messages(token, server_id, channel_id).await?;
+        return a.await.unwrap();
+    }
+
+    async fn _test_wb_start_typing(
+        token: &String,
+        server_id: &String,
+        channel_id: &String,
+    ) -> Result<(), String> {
+        //ws://127.0.0.1:8080/api/user/websocket?token=default_token
+        let url = url::Url::parse(
+            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+        )
+        .unwrap();
+        let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
+            let (mut socket, _) = tokio_tungstenite::connect_async(url)
+                .await
+                .expect("Connection error");
+            let time = Instant::now();
+            while let Some(Ok(wb)) = socket.next().await {
+                match wb {
+                    tokio_tungstenite::tungstenite::Message::Text(e) => {
+                        println!("{}", e);
+                        return Ok(());
+                    }
+                    _ => {
+                        if time.elapsed().whole_seconds() == 10 {
+                            break;
+                        }
+                    }
+                };
+            }
+
+            Err(String::from("No message"))
+        });
+        start_typing(token, server_id, channel_id).await?;
+        return a.await.unwrap();
+    }
+
+    async fn _test_wb_stop_typing(
+        token: &String,
+        server_id: &String,
+        channel_id: &String,
+    ) -> Result<(), String> {
+        //ws://127.0.0.1:8080/api/user/websocket?token=default_token
+        let url = url::Url::parse(
+            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+        )
+        .unwrap();
+        let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
+            let (mut socket, _) = tokio_tungstenite::connect_async(url)
+                .await
+                .expect("Connection error");
+            let time = Instant::now();
+            while let Some(Ok(wb)) = socket.next().await {
+                match wb {
+                    tokio_tungstenite::tungstenite::Message::Text(e) => {
+                        println!("{}", e);
+                        return Ok(());
+                    }
+                    _ => {
+                        if time.elapsed().whole_seconds() == 10 {
+                            break;
+                        }
+                    }
+                };
+            }
+
+            Err(String::from("No message"))
+        });
+        std::thread::sleep(Duration::from_secs(2));
+        stop_typing(token, server_id, channel_id).await?;
+        return a.await.unwrap();
     }
 }

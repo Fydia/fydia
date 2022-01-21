@@ -714,6 +714,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+ "url",
 ]
 
 [[package]]
