@@ -1,5 +1,5 @@
 use crate::{instance::Instance, server::Servers};
-use fydia_utils::hash;
+use fydia_crypto::password::hash;
 use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
 
