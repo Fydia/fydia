@@ -21,14 +21,14 @@ pub trait SqlChannel {
         executor: &DatabaseConnection,
     ) -> Result<Channels, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn update_description(
+    async fn update_description<T: Into<String> + Send>(
         &mut self,
-        description: String,
+        description: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -123,11 +123,12 @@ impl SqlChannel for Channel {
             Err(e) => Err(e.to_string()),
         }
     }
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let name = name.into();
         match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
@@ -158,11 +159,12 @@ impl SqlChannel for Channel {
         }
     }
 
-    async fn update_description(
+    async fn update_description<T: Into<String> + Send>(
         &mut self,
-        description: String,
+        description: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let description = description.into();
         match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await

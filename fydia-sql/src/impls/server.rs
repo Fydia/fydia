@@ -23,9 +23,9 @@ pub trait SqlServer {
     ) -> Result<Server, String>;
     async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn update(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -157,11 +157,12 @@ impl SqlServer for Server {
         }
     }
 
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let name = name.into();
         match crate::entity::server::Entity::find()
             .filter(server::Column::Id.contains(self.id.id.as_str()))
             .one(executor)

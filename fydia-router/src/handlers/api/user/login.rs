@@ -20,8 +20,8 @@ pub async fn user_login(
                 (Some(email), Some(password)) => match (email.as_str(), password.as_str()) {
                     (Some(email), Some(password)) => {
                         let user = User::get_user_by_email_and_password(
-                            email.to_string(),
-                            password.to_string(),
+                            email,
+                            password,
                             &database,
                         )
                         .await;

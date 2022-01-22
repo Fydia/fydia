@@ -21,9 +21,9 @@ pub trait SqlMessage {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn update_message(
+    async fn update_message<T: Into<String> + Send>(
         &mut self,
-        content: String,
+        content: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -151,13 +151,14 @@ impl SqlMessage for Message {
         }
     }
 
-    async fn update_message(
+    async fn update_message<T: Into<String> + Send>(
         &mut self,
-        content: String,
+        content: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let content = content.into();
         let active_model = crate::entity::messages::ActiveModel {
-            content: Set(Some(content.to_string())),
+            content: Set(Some(content.clone())),
             edited: Set(true as i8),
             ..Default::default()
         };

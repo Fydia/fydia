@@ -41,7 +41,7 @@ pub async fn event_handler(
 
 pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl IntoResponse {
     let event = Event::new(
-        ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD".to_string()),
+        ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD"),
         EventContent::Message {
             content: Box::from(Message::new(
                 String::from("This is a new message"),
@@ -49,7 +49,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
                 false,
                 SqlDate::now(),
                 User::default(),
-                ChannelId::new("CkFg9d9IVf7Shht".to_string()),
+                ChannelId::new("CkFg9d9IVf7Shht"),
             )),
         },
     );
@@ -65,14 +65,14 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
             &keys,
             Instance::new(
                 fydia_struct::instance::Protocol::HTTP,
-                "localhost".to_string(),
+                "localhost",
                 8080,
             ),
             publickey,
             event,
             vec![Instance::new(
                 fydia_struct::instance::Protocol::HTTP,
-                "localhost".to_string(),
+                "localhost",
                 8080,
             )],
         )

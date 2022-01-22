@@ -1,8 +1,8 @@
 use openssl::pkey::Public;
 use openssl::rsa::Rsa;
 
-pub fn get_key_from_string(pem: String) -> Option<Rsa<Public>> {
-    if let Ok(public_key) = Rsa::public_key_from_pem(pem.as_bytes()) {
+pub fn get_key_from_string<T: Into<String>>(pem: T) -> Option<Rsa<Public>> {
+    if let Ok(public_key) = Rsa::public_key_from_pem(pem.into().as_bytes()) {
         Some(public_key)
     } else {
         None

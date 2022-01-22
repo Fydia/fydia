@@ -56,8 +56,8 @@ impl ServerId {
         Self { id: id.into() }
     }
 
-    pub fn eq(&mut self, id: String) -> bool {
-        if self.id == id {
+    pub fn eq<T: Into<String>>(&mut self, id: T) -> bool {
+        if self.id == id.into() {
             return true;
         }
 
@@ -82,7 +82,8 @@ impl Servers {
         false
     }
 
-    pub fn get(&self, server_id: String) -> Option<ServerId> {
+    pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
+        let server_id = server_id.into();
         for i in self.0.clone().iter_mut() {
             if i.id == server_id {
                 return Some(i.clone());
