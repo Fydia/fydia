@@ -214,7 +214,7 @@ mod tests {
 
     async fn create_a_server(token: &String, server_id: &mut String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .get("http://127.0.0.1:8000/api/server/create")
+            .post("http://127.0.0.1:8000/api/server/create")
             .body(r#"{"name":"default_name_server"}"#)
             .header(
                 fydia_struct::user::HEADERNAME,
@@ -331,7 +331,7 @@ mod tests {
         channel_id: &mut String,
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .get(format!(
+            .post(format!(
                 "http://127.0.0.1:8000/api/server/{}/channel/create",
                 server_id
             ))
