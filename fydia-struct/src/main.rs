@@ -1,6 +1,7 @@
 use fydia_struct::{
     channel::{DirectMessage, DirectMessageValue, ParentId},
-    server::ServerId, roles::ChannelAccess,
+    roles::ChannelAccess,
+    server::ServerId,
 };
 
 pub fn main() {
@@ -20,7 +21,6 @@ pub fn main() {
 
     println!(
         "{}",
-        serde_json::to_string(&ChannelAccess(Vec::new()))
-            .unwrap_or_default()
+        serde_json::to_string(&ChannelAccess(Vec::new())).unwrap_or_default()
     );
 }

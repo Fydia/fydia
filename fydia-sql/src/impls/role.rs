@@ -1,5 +1,5 @@
 use crate::entity;
-use fydia_struct::{roles::Role};
+use fydia_struct::roles::Role;
 
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 

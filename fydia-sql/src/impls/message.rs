@@ -3,7 +3,7 @@
 use super::user::SqlUser;
 use fydia_struct::{
     channel::ChannelId,
-    messages::{Message, MessageType, Date},
+    messages::{Date, Message, MessageType},
     user::User,
 };
 use sea_orm::{

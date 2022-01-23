@@ -10,7 +10,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::instance::{Instance, RsaData};
-use fydia_struct::messages::{Message, MessageType, Date};
+use fydia_struct::messages::{Date, Message, MessageType};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::User;

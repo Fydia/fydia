@@ -1,7 +1,7 @@
 use fydia_struct::{
     channel::{Channel, ChannelId},
     instance::Instance,
-    messages::{Message, Date},
+    messages::{Date, Message},
     server::{Server, ServerId},
     user::User,
 };

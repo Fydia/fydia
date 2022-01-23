@@ -44,7 +44,6 @@ pub async fn get_picture_of_server(
             } else {
                 res.2 = "No error message".as_bytes().to_vec();
             }
-            
         }
     }
 
