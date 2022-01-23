@@ -28,7 +28,7 @@ use super::roles::roles_routes;
 pub fn server_routes() -> Router {
     axum::Router::new()
         .route("/", axum::routing::get(get_server_of_user))
-        .route("/create", axum::routing::get(create_server))
+        .route("/create", axum::routing::post(create_server))
         .route("/join/:serverid", axum::routing::get(join))
         .nest(
             "/:serverid",
@@ -54,7 +54,7 @@ pub fn server_routes() -> Router {
 ///         - POST /messages -> Post a message into channel
 pub fn channelid() -> Router {
     axum::Router::new()
-        .route("/create", axum::routing::get(create_channel))
+        .route("/create", axum::routing::post(create_channel))
         .nest(
             "/:channelid",
             axum::Router::new()
@@ -77,11 +77,13 @@ pub fn channelid() -> Router {
         )
 }
 
+/// ```ignore
 /// MessageId Route:
 ///     /api/server/:serverid/channel/:channelid/messages/:messageid
 ///         - GET /
 ///         - POST /
 ///         - DELETE /
+/// ```
 pub fn messageid() -> Router {
     axum::Router::new()
         .route(
