@@ -14,7 +14,7 @@ use fydia_struct::channel::{Channel, ChannelId};
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
-use fydia_struct::messages::{Message, MessageType, SqlDate};
+use fydia_struct::messages::{Message, MessageType, Date};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::User;
@@ -218,7 +218,7 @@ pub async fn multipart_to_event(
                 file.get_name(),
                 MessageType::FILE,
                 false,
-                SqlDate::new(DateTime::from(SystemTime::now())),
+                Date::new(DateTime::from(SystemTime::now())),
                 user.clone(),
                 channelid.clone(),
             )),
@@ -258,7 +258,7 @@ pub async fn json_message(
                     content,
                     messagetype,
                     false,
-                    SqlDate::new(DateTime::from(SystemTime::now())),
+                    Date::new(DateTime::from(SystemTime::now())),
                     user.clone(),
                     channelid.clone(),
                 )),

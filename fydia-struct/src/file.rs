@@ -1,30 +1,30 @@
-use chrono::{DateTime, Utc};
 use futures::prelude::*;
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::OpenOptions,
     io::{self, BufReader, Read, Write},
-    time::SystemTime,
 };
+
+use crate::messages::Date;
 
 const PREFIX: &str = "./storage/";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileDescriptor {
     pub name: String,
-    pub date: DateTime<Utc>,
+    pub date: Date,
 }
 
 impl FileDescriptor {
-    pub fn new<T: Into<String>>(name: T, date: DateTime<Utc>) -> Self {
+    pub fn new<T: Into<String>>(name: T, date: Date) -> Self {
         Self {
             name: name.into(),
             date,
         }
     }
     pub fn new_with_now<T: Into<String>>(name: T) -> Self {
-        Self::new(name, DateTime::from(SystemTime::now()))
+        Self::new(name, Date::now())
     }
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(&self) {

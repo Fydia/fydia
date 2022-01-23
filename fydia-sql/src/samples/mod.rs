@@ -1,7 +1,7 @@
 use fydia_struct::{
     channel::{Channel, ChannelId},
     instance::Instance,
-    messages::{Message, SqlDate},
+    messages::{Message, Date},
     server::{Server, ServerId},
     user::User,
 };
@@ -71,7 +71,7 @@ pub async fn insert_samples(db: &DbConnection) {
                     "Message",
                     fydia_struct::messages::MessageType::TEXT,
                     false,
-                    SqlDate::now(),
+                    Date::now(),
                     user.clone(),
                     ChannelId::new("channel_default_id"),
                 )

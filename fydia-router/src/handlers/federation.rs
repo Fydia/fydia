@@ -10,7 +10,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::instance::{Instance, RsaData};
-use fydia_struct::messages::{Message, MessageType, SqlDate};
+use fydia_struct::messages::{Message, MessageType, Date};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::User;
@@ -47,7 +47,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
                 String::from("This is a new message"),
                 MessageType::TEXT,
                 false,
-                SqlDate::now(),
+                Date::now(),
                 User::default(),
                 ChannelId::new("CkFg9d9IVf7Shht"),
             )),

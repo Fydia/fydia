@@ -3,7 +3,7 @@
 use super::user::SqlUser;
 use fydia_struct::{
     channel::ChannelId,
-    messages::{Message, MessageType, SqlDate},
+    messages::{Message, MessageType, Date},
     user::User,
 };
 use sea_orm::{
@@ -60,7 +60,7 @@ impl SqlMessage for Message {
                     content: i.content.unwrap_or_default(),
                     message_type,
                     edited: i.edited != 0,
-                    timestamp: SqlDate::parse_from_naivetime(i.timestamp),
+                    timestamp: Date::parse_from_naivetime(i.timestamp),
                     channel_id: ChannelId::new(i.channel_id),
                     author_id,
                 })
@@ -104,7 +104,7 @@ impl SqlMessage for Message {
                                 content: i.content.unwrap_or_default(),
                                 message_type,
                                 edited: i.edited != 0,
-                                timestamp: SqlDate::parse_from_naivetime(i.timestamp),
+                                timestamp: Date::parse_from_naivetime(i.timestamp),
                                 channel_id: ChannelId::new(i.channel_id),
                                 author_id,
                             })

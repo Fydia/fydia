@@ -50,7 +50,7 @@ pub struct Message {
     pub content: String,
     pub message_type: MessageType,
     pub edited: bool,
-    pub timestamp: SqlDate,
+    pub timestamp: Date,
     #[serde(rename = "channel")]
     pub channel_id: ChannelId,
     #[serde(rename = "author")]
@@ -62,7 +62,7 @@ impl Message {
         content: T,
         message_type: MessageType,
         edited: bool,
-        timestamp: SqlDate,
+        timestamp: Date,
         author_id: User,
         channel_id: ChannelId,
     ) -> Self {
@@ -79,9 +79,9 @@ impl Message {
 }
 
 #[derive(Debug, Clone)]
-pub struct SqlDate(pub DateTime<Utc>);
+pub struct Date(pub DateTime<Utc>);
 
-impl SqlDate {
+impl Date {
     pub fn new(date: DateTime<Utc>) -> Self {
         Self { 0: date }
     }
@@ -111,7 +111,7 @@ impl SqlDate {
     }
 }
 
-impl Serialize for SqlDate {
+impl Serialize for Date {
     fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
     where
         S: Serializer,
@@ -120,7 +120,7 @@ impl Serialize for SqlDate {
     }
 }
 
-impl<'de> Deserialize<'de> for SqlDate {
+impl<'de> Deserialize<'de> for Date {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -128,18 +128,18 @@ impl<'de> Deserialize<'de> for SqlDate {
         if let Ok(string_deser) = String::deserialize(deserializer) {
             if let Ok(e) = NaiveDateTime::parse_from_str(string_deser.as_str(), "%Y-%m-%d %H:%M:%S")
             {
-                Ok(SqlDate::new(DateTime::<Utc>::from_utc(e, Utc)))
+                Ok(Date::new(DateTime::<Utc>::from_utc(e, Utc)))
             } else {
-                Err(de::Error::custom("Error on SqlDate"))
+                Err(de::Error::custom("Error on Date"))
             }
         } else {
-            Err(de::Error::custom("Error on SqlDate"))
+            Err(de::Error::custom("Error on Date"))
         }
     }
 }
 
-impl<'de> Visitor<'de> for SqlDate {
-    type Value = SqlDate;
+impl<'de> Visitor<'de> for Date {
+    type Value = Date;
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
         formatter.write_str("An string")
@@ -150,7 +150,7 @@ impl<'de> Visitor<'de> for SqlDate {
         E: Error,
     {
         if let Ok(e) = DateTime::parse_from_str(v, "F T") {
-            let value = SqlDate::new(DateTime::from(e));
+            let value = Date::new(DateTime::from(e));
             Ok(value)
         } else {
             Err(de::Error::invalid_type(Unexpected::Str("Error"), &self))
