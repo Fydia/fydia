@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use std::net::SocketAddr;
-
     use crate::*;
     use axum::http::StatusCode;
     use futures::StreamExt;
@@ -43,10 +42,14 @@ mod tests {
         .await
     }
 
+    const IP: &str = "127.0.0.1:8000";
+    const IP_WITH_HTTP: &str = "http://127.0.0.1:8000";
+    const IP_WITH_WS: &str = "ws://127.0.0.1:8000";
+    
     #[tokio::test]
     async fn test() -> Result<(), String> {
         let listener =
-            std::net::TcpListener::bind("127.0.0.1:8000".parse::<SocketAddr>().unwrap()).unwrap();
+            std::net::TcpListener::bind(IP.parse::<SocketAddr>().unwrap()).unwrap();
 
         tokio::spawn(async move {
             axum::Server::from_tcp(listener)
@@ -84,7 +87,7 @@ mod tests {
     }
     async fn create_user() -> Result<(), String> {
         let response = reqwest::Client::new()
-            .post("http://127.0.0.1:8000/api/user/create")
+            .post(format!("{}/api/user/create", IP_WITH_HTTP))
             .body(r#"{"name":"default", "email":"default@default", "password":"default"}"#)
             .send()
             .await
@@ -103,7 +106,7 @@ mod tests {
 
     async fn create_user_without_email() -> Result<(), String> {
         let response = reqwest::Client::new()
-            .post("http://127.0.0.1:8000/api/user/create")
+            .post(format!("{}/api/user/create", IP_WITH_HTTP))
             .body(r#"{"name":"default", "password":"default"}"#)
             .send()
             .await
@@ -123,7 +126,7 @@ mod tests {
 
     async fn login_user(token: &mut String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .post("http://127.0.0.1:8000/api/user/login")
+            .post(format!("{}/api/user/login",IP_WITH_HTTP))
             .body(r#"{"email":"default@default", "password":"default"}"#)
             .send()
             .await
@@ -149,7 +152,7 @@ mod tests {
 
     async fn login_user_with_bad_json() -> Result<(), String> {
         let response = reqwest::Client::new()
-            .post("http://127.0.0.1:8000/api/user/login")
+            .post(format!("{}/api/user/login",IP_WITH_HTTP))
             .body(r#"{"bad":"", "json":""}"#)
             .send()
             .await
@@ -168,7 +171,7 @@ mod tests {
 
     async fn token_verify(token: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .get("http://127.0.0.1:8000/api/user/token/verify")
+            .get(format!("{}/api/user/token/verify",IP_WITH_HTTP))
             .header(
                 fydia_struct::user::HEADERNAME,
                 HeaderValue::from_bytes(token.as_bytes()).unwrap(),
@@ -189,7 +192,7 @@ mod tests {
 
     async fn get_me(token: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .get("http://127.0.0.1:8000/api/user/me")
+            .get(format!("{}/api/user/me",IP_WITH_HTTP))
             .header(
                 fydia_struct::user::HEADERNAME,
                 HeaderValue::from_bytes(token.as_bytes()).unwrap(),
@@ -214,7 +217,7 @@ mod tests {
 
     async fn create_a_server(token: &String, server_id: &mut String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .post("http://127.0.0.1:8000/api/server/create")
+            .post(format!("{}/api/server/create",IP_WITH_HTTP))
             .body(r#"{"name":"default_name_server"}"#)
             .header(
                 fydia_struct::user::HEADERNAME,
@@ -241,7 +244,7 @@ mod tests {
 
     async fn get_server_info(token: &String, server_id: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
-            .get(format!("http://127.0.0.1:8000/api/server/{}", server_id))
+            .get(format!("{}/api/server/{}",IP_WITH_HTTP,server_id))
             .body(r#"{"name":"default_name_server"}"#)
             .header(
                 fydia_struct::user::HEADERNAME,
@@ -270,7 +273,8 @@ mod tests {
     async fn get_server_picture(token: &String, server_id: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
             .get(format!(
-                "http://127.0.0.1:8000/api/server/{}/picture",
+                "{}/api/server/{}/picture",
+                IP_WITH_HTTP,
                 server_id
             ))
             .body(r#"{"name":"default_name_server"}"#)
@@ -297,7 +301,8 @@ mod tests {
     async fn post_server_picture(token: &String, server_id: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!(
-                "http://127.0.0.1:8000/api/server/{}/picture",
+                "{}/api/server/{}/picture",
+                IP_WITH_HTTP,
                 server_id
             ))
             .body(include_bytes!("image.png").to_vec())
@@ -332,7 +337,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/create",
+                "{}/api/server/{}/channel/create",
+                IP_WITH_HTTP,
                 server_id
             ))
             .body(r#"{"name": "channel_default", "type":"TEXT"}"#)
@@ -365,7 +371,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/{}/messages",
+                "{}/api/server/{}/channel/{}/messages",
+                IP_WITH_HTTP,
                 server_id, channel_id
             ))
             .body(r#"{"content": "MESSAGE", "type":"TEXT"}"#)
@@ -403,7 +410,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/{}/typing/start",
+                "{}/api/server/{}/channel/{}/typing/start",
+                IP_WITH_HTTP,
                 server_id, channel_id
             ))
             .body(r#"{"content": "MESSAGE", "type":"TEXT"}"#)
@@ -434,7 +442,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/{}/typing/stop",
+                "{}/api/server/{}/channel/{}/typing/stop",
+                IP_WITH_HTTP,
                 server_id, channel_id
             ))
             .body(r#"{"content": "MESSAGE", "type":"TEXT"}"#)
@@ -466,7 +475,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .put(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/{}/name",
+                "{}/api/server/{}/channel/{}/name",
+                IP_WITH_HTTP,
                 server_id, channel_id
             ))
             .body(r#"{"name":"new_name"}"#)
@@ -503,7 +513,8 @@ mod tests {
     ) -> Result<(), String> {
         let response = reqwest::Client::new()
             .put(format!(
-                "http://127.0.0.1:8000/api/server/{}/channel/{}/description",
+                "{}/api/server/{}/channel/{}/description",
+                IP_WITH_HTTP,
                 server_id, channel_id
             ))
             .body(r#"{"description":"new_name"}"#)
@@ -541,7 +552,7 @@ mod tests {
     ) -> Result<(), String> {
         //ws://127.0.0.1:8080/api/user/websocket?token=default_token
         let url = url::Url::parse(
-            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+            format!("{}/api/user/websocket?token={}",IP_WITH_WS, token).as_str(),
         )
         .unwrap();
         let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
@@ -577,7 +588,7 @@ mod tests {
     ) -> Result<(), String> {
         //ws://127.0.0.1:8080/api/user/websocket?token=default_token
         let url = url::Url::parse(
-            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+            format!("{}/api/user/websocket?token={}",IP_WITH_WS, token).as_str(),
         )
         .unwrap();
         let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
@@ -612,7 +623,7 @@ mod tests {
     ) -> Result<(), String> {
         //ws://127.0.0.1:8080/api/user/websocket?token=default_token
         let url = url::Url::parse(
-            format!("ws://127.0.0.1:8000/api/user/websocket?token={}", token).as_str(),
+            format!("{}/api/user/websocket?token={}",IP_WITH_WS, token).as_str(),
         )
         .unwrap();
         let a: JoinHandle<Result<(), String>> = tokio::spawn(async move {
