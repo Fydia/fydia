@@ -22,9 +22,9 @@ impl BasicValues {
             .ok_or("Wrong token".to_string())
     }
 
-    pub async fn get_user_and_server_and_check_if_joined(
+    pub async fn get_user_and_server_and_check_if_joined<T: Into<String>>(
         headers: &HeaderMap,
-        serverid: String,
+        serverid: T,
         executor: &DbConnection,
     ) -> Result<(User, Server), String> {
         let user = Self::get_user(headers, executor).await?;
@@ -40,9 +40,9 @@ impl BasicValues {
         Ok((user, server))
     }
 
-    pub async fn get_user_and_server(
+    pub async fn get_user_and_server<T: Into<String>>(
         headers: &HeaderMap,
-        serverid: String,
+        serverid: T,
         executor: &DbConnection,
     ) -> Result<(User, Server), String> {
         let user = Self::get_user(headers, executor).await?;
@@ -55,10 +55,10 @@ impl BasicValues {
         Ok((user, server))
     }
 
-    pub async fn get_user_and_server_and_check_if_joined_and_channel(
+    pub async fn get_user_and_server_and_check_if_joined_and_channel<T: Into<String>>(
         headers: &HeaderMap,
-        serverid: String,
-        channelid: String,
+        serverid: T,
+        channelid: T,
         executor: &DbConnection,
     ) -> Result<(User, Server, Channel), String> {
         let (user, server) =

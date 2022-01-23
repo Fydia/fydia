@@ -38,7 +38,7 @@ pub async fn create_channel(
                             name,
                             "",
                             ParentId::ServerId(server.id.clone()),
-                            ChannelType::from_string(ctype.to_string()),
+                            ChannelType::from_string(ctype),
                         );
                         if let Err(error) = server.insert_channel(channel.clone(), &database).await
                         {

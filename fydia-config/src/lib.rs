@@ -123,11 +123,11 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn read_config(parse: String) -> Self {
-        toml::from_str(parse.as_str()).expect("Error")
+    pub fn read_config<T: Into<String>>(parse: T) -> Self {
+        toml::from_str(parse.into().as_str()).expect("Error")
     }
-    pub fn write_to(&self, path: String) -> std::io::Result<()> {
-        std::fs::write(path.as_str(), self.serialize_to_string().as_str())
+    pub fn write_to<T: Into<String>>(&self, path: T) -> std::io::Result<()> {
+        std::fs::write(path.into().as_str(), self.serialize_to_string().as_str())
     }
     pub fn serialize_to_string(&self) -> String {
         toml::to_string(self).expect("Error")
@@ -143,7 +143,7 @@ pub fn get_config_or_init() -> Config {
         Config::read_config(read_config)
     } else {
         let config = Config::default();
-        config.write_to("config.toml".to_string()).expect("Error");
+        config.write_to("config.toml").expect("Error");
         println!("Change Config with your database config");
         exit(127);
     }

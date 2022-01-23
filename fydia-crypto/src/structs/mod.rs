@@ -1,8 +1,9 @@
 #[derive(Clone)]
 pub struct Iv(pub String);
+
 impl Iv {
-    pub fn new(new: String) -> Self {
-        Self(new)
+    pub fn new<T: Into<String>>(new: T) -> Self {
+        Self(new.into())
     }
 }
 
@@ -16,8 +17,8 @@ impl AesKeyEncrypt {
 
 pub struct AesKey(pub String);
 impl AesKey {
-    pub fn new(new: String) -> Self {
-        Self(new)
+    pub fn new<T: Into<String>>(new: T) -> Self {
+        Self(new.into())
     }
 }
 
@@ -33,7 +34,7 @@ impl EncryptedBody {
 pub struct Body(pub String);
 
 impl Body {
-    pub fn new(new: String) -> Self {
-        Self(new)
+    pub fn new<T: Into<String>>(new: T) -> Self {
+        Self(new.into())
     }
 }

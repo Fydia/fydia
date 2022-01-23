@@ -25,7 +25,7 @@ pub async fn create_server(
         if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
             if let Some(name) = value.get("name") {
                 if let Some(name_str) = name.as_str() {
-                    let mut server = Server::new(name_str.to_string(), user.id.clone());
+                    let mut server = Server::new(name_str, user.id.clone());
                     match server.insert_server(&database).await {
                         Ok(_) => match server.join(&mut user, &database).await {
                             Ok(_) => return FydiaResponse::new_ok(server.id.id),

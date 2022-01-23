@@ -31,8 +31,8 @@ impl Display for MessageType {
 }
 
 impl MessageType {
-    pub fn from_string(from: String) -> Option<Self> {
-        match from.to_uppercase().as_str() {
+    pub fn from_string<T: Into<String>>(from: T) -> Option<Self> {
+        match from.into().to_uppercase().as_str() {
             "TEXT" => Some(Self::TEXT),
             "FILE" => Some(Self::FILE),
             "URL" => Some(Self::URL),
@@ -88,8 +88,8 @@ impl SqlDate {
     pub fn parse_from_naivetime(naivetime: NaiveDateTime) -> Self {
         Self(DateTime::from_utc(naivetime, Utc))
     }
-    pub fn parse_string(parse: String) -> Option<Self> {
-        if let Ok(datetime) = DateTime::parse_from_str(parse.as_str(), "%F %T") {
+    pub fn parse_string<T: Into<String>>(parse: T) -> Option<Self> {
+        if let Ok(datetime) = DateTime::parse_from_str(parse.into().as_str(), "%F %T") {
             Some(Self::new_fixed(datetime))
         } else {
             None

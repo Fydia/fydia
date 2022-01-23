@@ -5,19 +5,19 @@ use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
 use openssl::symm::Cipher;
 
-pub fn encrypt(rsa: Rsa<Public>, string: String) -> Result<Vec<u8>, String> {
+pub fn encrypt<T: Into<String>>(rsa: Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    match rsa.public_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
+    match rsa.public_encrypt(string.into().as_bytes(), &mut buf, Padding::PKCS1) {
         Ok(_) => Ok(buf),
         Err(e) => Err(e.to_string()),
     }
 }
 
-pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, String> {
+pub fn private_encrypt<T: Into<String>>(rsa: Rsa<Private>, string: T) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
-    match rsa.private_encrypt(string.as_bytes(), &mut buf, Padding::PKCS1) {
+    match rsa.private_encrypt(string.into().as_bytes(), &mut buf, Padding::PKCS1) {
         Ok(_) => Ok(buf),
         Err(e) => Err(e.to_string()),
     }
@@ -34,9 +34,9 @@ pub fn private_encrypt(rsa: Rsa<Private>, string: String) -> Result<Vec<u8>, Str
 ///              KEY(16..48)         |              BODY(48..n)     |
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// ```
-pub fn aes_encrypt(
+pub fn aes_encrypt<T: Into<String>>(
     rsa: PublicKey,
-    string: String,
+    string: T,
 ) -> Result<(Iv, AesKeyEncrypt, EncryptedBody), String> {
     let key = generate_string(32);
     let cipher = Cipher::aes_256_ctr();
@@ -45,7 +45,7 @@ pub fn aes_encrypt(
         cipher,
         key.as_bytes(),
         Some(iv.as_bytes()),
-        string.as_bytes(),
+        string.into().as_bytes(),
     );
 
     match encrypt(rsa, key) {

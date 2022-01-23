@@ -41,8 +41,8 @@ impl Instance {
         }
     }
 
-    pub fn from(string: String) -> Option<Self> {
-        if let Ok(e) = url::Url::parse(string.as_str()) {
+    pub fn from<T: Into<String>>(string: T) -> Option<Self> {
+        if let Ok(e) = url::Url::parse(string.into().as_str()) {
             let protocol = Protocol::parse(e.scheme());
             if let (Some(domain), Some(port)) = (e.domain(), e.port()) {
                 return Some(Self {

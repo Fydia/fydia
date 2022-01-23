@@ -35,8 +35,8 @@ impl Display for ChannelType {
 }
 
 impl ChannelType {
-    pub fn from_string(toparse: String) -> Self {
-        match toparse.to_uppercase().as_str() {
+    pub fn from_string<T: Into<String>>(toparse: T) -> Self {
+        match toparse.into().to_uppercase().as_str() {
             "VOICE" => Self::Voice,
             "DIRECT_MESSAGE" => Self::DirectMessage,
             _ => Self::Text,

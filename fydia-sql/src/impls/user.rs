@@ -18,9 +18,9 @@ use sea_orm::Set;
 
 #[async_trait]
 pub trait SqlUser {
-    async fn get_user_by_email_and_password(
-        email: String,
-        password: String,
+    async fn get_user_by_email_and_password<T: Into<String> + Send>(
+        email: T,
+        password: T,
         executor: &DatabaseConnection,
     ) -> Option<Self>
     where
@@ -33,14 +33,14 @@ pub trait SqlUser {
         Self: Sized;
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String>;
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn update_password(
+    async fn update_password<T: Into<String> + Send>(
         &mut self,
-        clear_password: String,
+        clear_password: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     /// Prefere use [SqlServer::join()](`crate::impls::server::SqlServer::join()`)
@@ -58,18 +58,18 @@ pub trait SqlUser {
 
 #[async_trait]
 impl SqlUser for User {
-    async fn get_user_by_email_and_password(
-        email: String,
-        password: String,
+    async fn get_user_by_email_and_password<T: Into<String> + Send>(
+        email: T,
+        password: T,
         executor: &DatabaseConnection,
     ) -> Option<Self> {
         match UserEntity::find()
-            .filter(crate::entity::user::Column::Email.contains(email.as_str()))
+            .filter(crate::entity::user::Column::Email.contains(email.into().as_str()))
             .one(executor)
             .await
         {
             Ok(Some(model)) => {
-                if verify_password(password, &model.password) {
+                if verify_password(password.into(), model.password.clone()) {
                     model.to_user()
                 } else {
                     None
@@ -140,11 +140,12 @@ impl SqlUser for User {
         }
     }
 
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let name = name.into();
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let mut active_model: UserActiveModel = model.into();
@@ -169,11 +170,12 @@ impl SqlUser for User {
         }
     }
 
-    async fn update_password(
+    async fn update_password<T: Into<String> + Send>(
         &mut self,
-        clear_password: String,
+        clear_password: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let clear_password = clear_password.into();
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let password = hash(clear_password);

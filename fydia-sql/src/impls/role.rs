@@ -12,14 +12,14 @@ pub trait SqlRoles {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Role>, String>;
     async fn get_role_by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Role, String>;
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn update_color(
+    async fn update_color<T: Into<String> + Send>(
         &mut self,
-        color: String,
+        color: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn delete_role(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -75,11 +75,12 @@ impl SqlRoles for Role {
         }
     }
 
-    async fn update_name(
+    async fn update_name<T: Into<String> + Send>(
         &mut self,
-        name: String,
+        name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let name = name.into();
         let active_model = entity::roles::ActiveModel {
             name: Set(name.clone()),
             ..Default::default()
@@ -98,11 +99,12 @@ impl SqlRoles for Role {
         }
     }
 
-    async fn update_color(
+    async fn update_color<T: Into<String> + Send>(
         &mut self,
-        color: String,
+        color: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
+        let color = color.into();
         let active_model = entity::roles::ActiveModel {
             color: Set(color.clone()),
             ..Default::default()
