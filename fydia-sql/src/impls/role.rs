@@ -1,7 +1,5 @@
 use crate::entity;
-use crate::sqlpool::parse_array;
-use fydia_struct::permission::Permission;
-use fydia_struct::{roles::Role, server::ServerId};
+use fydia_struct::{roles::Role};
 
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -38,16 +36,7 @@ impl SqlRoles for Role {
             .await;
         if let Ok(query) = query {
             for i in query {
-                result.push(Self {
-                    id: i.id,
-                    server_id: ServerId::new(i.serverid),
-                    name: i.name,
-                    color: i.color,
-                    channel_access: parse_array(
-                        i.channel_access.unwrap_or_else(|| String::from("[]")),
-                    ),
-                    permission: Permission::from_string(i.permission.unwrap_or_default()),
-                });
+                result.push(i.to_role());
             }
         }
 
@@ -60,16 +49,7 @@ impl SqlRoles for Role {
             .one(executor)
             .await;
         match query {
-            Ok(Some(model)) => Ok(Role {
-                id: model.id,
-                name: model.name,
-                color: model.color,
-                server_id: ServerId::new(model.serverid),
-                channel_access: parse_array(
-                    model.channel_access.unwrap_or_else(|| String::from("[]")),
-                ),
-                permission: Permission::from_string(model.permission.unwrap_or_default()),
-            }),
+            Ok(Some(model)) => Ok(model.to_role()),
             Err(e) => Err(e.to_string()),
             _ => Err(String::from("No Role with this id")),
         }
