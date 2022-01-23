@@ -19,11 +19,11 @@ impl BasicValues {
         headers: &HeaderMap,
         executor: &DbConnection,
     ) -> Result<User, FydiaResponse> {
-        let token = Token::from_headervalue(headers).ok_or(FydiaResponse::new_error("No token"))?;
+        let token = Token::from_headervalue(headers).ok_or_else(|| FydiaResponse::new_error("No token"))?;
         token
             .get_user(executor)
             .await
-            .ok_or(FydiaResponse::new_error("Wrong token"))
+            .ok_or_else(|| FydiaResponse::new_error("Wrong token"))
     }
 
     pub async fn get_user_and_server_and_check_if_joined<T: Into<String>>(
@@ -74,7 +74,7 @@ impl BasicValues {
         let channel = channel_id
             .get_channel(executor)
             .await
-            .ok_or(FydiaResponse::new_error("Bad ChannelId"))?;
+            .ok_or_else(|| FydiaResponse::new_error("Bad ChannelId"))?;
 
         Ok((user, server, channel))
     }

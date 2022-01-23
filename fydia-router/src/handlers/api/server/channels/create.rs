@@ -31,9 +31,7 @@ pub async fn create_channel(
             let name = value.get("name");
             let ctype = value.get("type");
 
-            match (name, ctype) {
-                (Some(name), Some(ctype)) => match (name.as_str(), ctype.as_str()) {
-                    (Some(name), Some(ctype)) => {
+            if let (Some(name), Some(ctype)) = (name, ctype) { if let (Some(name), Some(ctype)) = (name.as_str(), ctype.as_str()) {
                         let channel = Channel::new_with_parentid(
                             name,
                             "",
@@ -47,10 +45,7 @@ pub async fn create_channel(
                         } else {
                             return FydiaResponse::new_ok(channel.id.id);
                         }
-                    }
-                    _ => {}
-                },
-                _ => {}
+                }
             }
 
             return FydiaResponse::new_error("Error with name or Channel Type");

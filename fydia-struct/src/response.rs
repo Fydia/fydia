@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 use axum::{body, headers::HeaderName, response::IntoResponse};
 use http::{HeaderValue, Response};
 use hyper::{header::CONTENT_TYPE, HeaderMap, StatusCode};
@@ -29,7 +32,7 @@ impl Default for FydiaResponseBody {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct FydiaResponse {
     status: FydiaStatus,
     #[serde(rename(serialize = "content"))]
@@ -92,17 +95,6 @@ impl FydiaResponse {
     }
 }
 
-impl Default for FydiaResponse {
-    fn default() -> Self {
-        Self {
-            status: Default::default(),
-            body: Default::default(),
-            statuscode: Default::default(),
-            headers: Default::default(),
-        }
-    }
-}
-
 impl IntoResponse for FydiaResponse {
     fn into_response(self) -> axum::response::Response {
         let mut response = Response::builder();
@@ -123,12 +115,12 @@ impl IntoResponse for FydiaResponse {
 
         match serde_json::to_string(&self) {
             Ok(response_str) => {
-                return response
+                response
                     .body(body::boxed(body::Full::from(response_str)))
                     .unwrap()
             }
             Err(e) => {
-                return response
+                response
                     .status(StatusCode::BAD_REQUEST)
                     .body(body::boxed(body::Full::from(format!(
                         r#"{{"status":"Error", "content":{}}}"#,

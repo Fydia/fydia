@@ -65,8 +65,15 @@ pub async fn post_messages(
                                 Err(error) => return error,
                             };
 
+                            let json = match serde_json::from_str(&body) {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    return  FydiaResponse::new_error("Can't parse body");
+                                }
+                            };
+
                             return post_messages_json(
-                                serde_json::from_str(&body).unwrap(),
+                                json,
                                 database,
                                 rsa,
                                 wbsocket,
@@ -176,10 +183,10 @@ pub async fn post_messages_json(
         return FydiaResponse::new_ok("Message send");
     }
 
-    return FydiaResponse::new_error_custom_status(
+    FydiaResponse::new_error_custom_status(
         "Cannot get users of the server",
         StatusCode::INTERNAL_SERVER_ERROR,
-    );
+    )
 }
 
 pub async fn multipart_to_event(
@@ -194,7 +201,7 @@ pub async fn multipart_to_event(
             if field_name == "file" {
                 let file = File::new();
                 file.create_with_description(FileDescriptor::new_with_now(
-                    field.file_name().unwrap_or(file.get_name().as_str()),
+                    field.file_name().map(|v| {v.to_string()}).unwrap_or_else(|| file.get_name()),
                 ))
                 .map_err(|_| {
                     FydiaResponse::new_error_custom_status(

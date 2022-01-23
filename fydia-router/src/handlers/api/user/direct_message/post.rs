@@ -37,5 +37,5 @@ pub async fn create_direct_message(
 
     info!(&target_user.to_string());
 
-    return FydiaResponse::new_error("Bad user id");
+    FydiaResponse::new_error("Bad user id")
 }

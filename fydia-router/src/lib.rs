@@ -63,7 +63,7 @@ pub async fn get_axum_router_from_config(config: Config) -> axum::Router {
         get_database_connection(&config.database).await,
         &config.instance,
         &config.format_ip(),
-        *&config.server.port as u16,
+        config.server.port as u16,
     )
     .await
 }
@@ -71,7 +71,7 @@ pub async fn get_axum_router_from_config(config: Config) -> axum::Router {
 pub async fn get_axum_router(
     database: DbConnection,
     instance: &InstanceConfig,
-    formated_ip: &String,
+    formated_ip: &str,
     port: u16,
 ) -> axum::Router {
     #[cfg(not(test))]

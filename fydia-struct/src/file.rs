@@ -28,8 +28,8 @@ impl FileDescriptor {
     }
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(&self) {
-            Ok(v) => return Ok(v),
-            Err(error) => return Err(error.to_string()),
+            Ok(v) => Ok(v),
+            Err(error) => Err(error.to_string()),
         }
     }
 }
@@ -39,9 +39,15 @@ pub struct File {
     description: Option<String>,
 }
 
+impl Default for File {
+    fn default() -> Self {
+        Self::get(generate_string(32))
+    }
+}
+
 impl File {
     pub fn new() -> Self {
-        Self::get(generate_string(32))
+        Self::default()
     }
 
     pub fn get_name(&self) -> String {
@@ -66,9 +72,8 @@ impl File {
             .map_err(|f| f.to_string())
             .map(|_| ())?;
 
-        let mut file = std::fs::File::create(format!("{}.json", &self.path))
-            .map_err(|f| f.to_string())
-            .map(|file| file)?;
+        let mut file =
+            std::fs::File::create(format!("{}.json", &self.path)).map_err(|f| f.to_string())?;
 
         file.write(file_descriptor.to_string()?.as_bytes())
             .map(|_| ())

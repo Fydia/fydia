@@ -11,7 +11,7 @@ pub struct Role {
     pub channel_access: ChannelAccess,
     pub permission: Permission,
 }
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct ChannelAccess(pub Vec<String>);
 
 impl ChannelAccess {

@@ -29,9 +29,9 @@ impl Model {
             name: self.name.clone(),
             color: self.color.clone(),
             channel_access: serde_json::from_str::<ChannelAccess>(
-                &self.channel_access.clone().unwrap(),
+                &self.channel_access.clone().unwrap_or_default(),
             )
-            .unwrap(),
+            .unwrap_or_default(),
             permission: Permission::from_string(self.permission.clone().unwrap_or_default()),
         }
     }

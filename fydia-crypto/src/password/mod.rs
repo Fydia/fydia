@@ -5,22 +5,24 @@ use argon2::{
 
 use fydia_utils::OsRng;
 
-pub fn hash<T: Into<String>>(to_hash: T) -> String {
+pub fn hash<T: Into<String>>(to_hash: T) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);
 
     let argon2 = Argon2::default();
 
-    argon2
+    Ok(argon2
         .hash_password(to_hash.into().as_ref(), salt.as_ref())
-        .unwrap()
-        .to_string()
+        .map_err(|error| error.to_string())?
+        .to_string())
 }
 
 pub fn verify_password<T: Into<String>>(clear_password: T, hashed_password: T) -> bool {
     let hashed_password = hashed_password.into();
-    let parsed_hash = PasswordHash::new(&hashed_password).unwrap();
+    if let Ok(parsed_hash) = PasswordHash::new(&hashed_password) {
+        return Argon2::default()
+            .verify_password(clear_password.into().as_ref(), &parsed_hash)
+            .is_ok();
+    }
 
-    Argon2::default()
-        .verify_password(clear_password.into().as_ref(), &parsed_hash)
-        .is_ok()
+    false
 }

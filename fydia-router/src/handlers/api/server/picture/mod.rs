@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use axum::{
     body::Bytes,
     extract::{Extension, Path},
@@ -30,7 +32,7 @@ pub async fn get_picture_of_server(
                     res.0 = StatusCode::OK;
                     res.1.insert(
                         HeaderName::from_static("Content-Type"),
-                        HeaderValue::from_bytes(mime_str.as_bytes()).unwrap(),
+                        HeaderValue::from_str(&mime_str).unwrap(),
                     );
                     res.2 = value;
 

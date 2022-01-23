@@ -178,7 +178,7 @@ impl SqlUser for User {
         let clear_password = clear_password.into();
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
-                let password = hash(clear_password);
+                let password = hash(clear_password)?;
                 let mut active_model: UserActiveModel = model.into();
                 active_model.password = Set(password.clone());
 

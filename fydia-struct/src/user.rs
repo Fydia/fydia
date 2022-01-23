@@ -28,7 +28,7 @@ impl User {
             instance,
             token: None,
             description: None,
-            password: Some(hash(password.into())),
+            password: hash(password.into()).ok(),
             servers: Servers::new(),
             email: email.into(),
         }
