@@ -4,7 +4,7 @@ use axum::response::IntoResponse;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::EventContent;
 use fydia_struct::manager::ManagerReceiverTrait;
-use fydia_struct::messages::{Message, MessageType, SqlDate};
+use fydia_struct::messages::{Message, MessageType, Date};
 use fydia_struct::server::ServerId;
 use fydia_struct::{event::Event, user::User};
 use parking_lot::Mutex;
@@ -233,7 +233,7 @@ pub async fn test_message(
                         String::new(),
                         MessageType::TEXT,
                         false,
-                        SqlDate::now(),
+                        Date::now(),
                         User::default(),
                         ChannelId::default(),
                     )),
