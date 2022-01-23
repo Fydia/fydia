@@ -14,7 +14,7 @@ use fydia_struct::channel::{Channel, ChannelId};
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
-use fydia_struct::messages::{Message, MessageType, Date};
+use fydia_struct::messages::{Date, Message, MessageType};
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::User;
@@ -45,50 +45,61 @@ pub async fn post_messages(
         .await
         {
             Ok(v) => v,
-            Err(error) => {
-                return error
-            }
+            Err(error) => return error,
         };
     if let Some(headervalue) = headers.get(CONTENT_TYPE) {
         match headervalue.to_str() {
-            Ok("application/json") => {
-                let body = match String::from_utf8(body.to_vec())
-                    .map_err(|_| FydiaResponse::new_error("Body error"))
+            Ok(value) => {
+                match Mime::from_str(value)
+                    .map_err(|_| FydiaResponse::new_error("Bad Content-Type"))
                 {
-                    Ok(v) => v,
+                    Ok(get_mime) => {
+                        if get_mime == mime::APPLICATION_JSON
+                            || get_mime == mime::TEXT_PLAIN
+                            || get_mime == mime::TEXT_PLAIN_UTF_8
+                        {
+                            let body = match String::from_utf8(body.to_vec())
+                                .map_err(|_| FydiaResponse::new_error("Body error"))
+                            {
+                                Ok(v) => v,
+                                Err(error) => return error,
+                            };
+
+                            return post_messages_json(
+                                serde_json::from_str(&body).unwrap(),
+                                database,
+                                rsa,
+                                wbsocket,
+                                (user, channel, server),
+                            )
+                            .await;
+                        }
+
+                        if get_mime == mime::MULTIPART_FORM_DATA {
+                            let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
+                            let boundary = match get_boundary(&headers) {
+                                Some(v) => v,
+                                None => return FydiaResponse::new_error("No boundary found"),
+                            };
+                            let multer = multer::Multipart::new(stream, boundary.clone());
+                            return post_messages_multipart(
+                                multer,
+                                database,
+                                rsa,
+                                wbsocket,
+                                (user, channel, server),
+                            )
+                            .await;
+                        }
+                    }
                     Err(error) => return error,
                 };
-
-                return post_messages_json(
-                    serde_json::from_str(&body).unwrap(),
-                    database,
-                    rsa,
-                    wbsocket,
-                    (user, channel, server),
-                )
-                .await;
             }
-            Ok("multipart/form-data") => {
-                let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
-                let boundary = match get_boundary(&headers) {
-                    Some(v) => v,
-                    None => return FydiaResponse::new_error("No boundary found"),
-                };
-                let multer = multer::Multipart::new(stream, boundary.clone());
-                return post_messages_multipart(
-                    multer,
-                    database,
-                    rsa,
-                    wbsocket,
-                    (user, channel, server),
-                )
-                .await;
-            }
-            _ => {}
+            _ => return FydiaResponse::new_error("Content-Type error"),
         }
     }
 
-    FydiaResponse::new_error("Bad Body")
+    FydiaResponse::new_error("No Content-Type header found")
 }
 
 pub async fn post_messages_multipart(
