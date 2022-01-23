@@ -19,12 +19,8 @@ pub async fn user_login(
             match (json.get("email"), json.get("password")) {
                 (Some(email), Some(password)) => match (email.as_str(), password.as_str()) {
                     (Some(email), Some(password)) => {
-                        let user = User::get_user_by_email_and_password(
-                            email,
-                            password,
-                            &database,
-                        )
-                        .await;
+                        let user =
+                            User::get_user_by_email_and_password(email, password, &database).await;
 
                         match user {
                             Some(mut user) => {

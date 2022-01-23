@@ -14,13 +14,7 @@ use crate::{
 pub async fn insert_samples(db: &DbConnection) {
     warn!("Insert Sample Values");
 
-    let mut user = match User::get_user_by_email_and_password(
-        "user@sample.com",
-        "user",
-        db,
-    )
-    .await
-    {
+    let mut user = match User::get_user_by_email_and_password("user@sample.com", "user", db).await {
         Some(user) => user,
         None => {
             let mut user = User::new("user", "user@sample.com", "user", Instance::default());

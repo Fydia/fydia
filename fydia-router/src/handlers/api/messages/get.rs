@@ -17,9 +17,7 @@ pub async fn get_message(
     .await
     {
         Ok(v) => v,
-        Err(error) => {
-            return FydiaResponse::new_error(error);
-        }
+        Err(error) => return error,
     };
 
     if let Ok(message) = &channel.get_messages(&database).await {

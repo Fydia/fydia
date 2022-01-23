@@ -12,6 +12,6 @@ pub async fn get_server_of_user(
 ) -> impl IntoResponse {
     match BasicValues::get_user(&headers, &database).await {
         Ok(user) => FydiaResponse::new_ok_json(&user.servers),
-        Err(error) => FydiaResponse::new_error(error),
+        Err(error) => error,
     }
 }

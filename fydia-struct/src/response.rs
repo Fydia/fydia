@@ -49,6 +49,14 @@ impl FydiaResponse {
             ..Default::default()
         }
     }
+
+    pub fn get_body(&self) -> Result<String, String> {
+        match &self.body {
+            FydiaResponseBody::String(string) => Ok(string.clone()),
+            FydiaResponseBody::Json(_) => Err(String::from("Error body is not a string")),
+        }
+    }
+
     pub fn new_error<T: Into<String>>(body: T) -> Self {
         Self::new(FydiaStatus::Error, body, StatusCode::BAD_REQUEST)
     }

@@ -46,7 +46,7 @@ pub async fn post_messages(
         {
             Ok(v) => v,
             Err(error) => {
-                return FydiaResponse::new_error(error);
+                return error
             }
         };
     if let Some(headervalue) = headers.get(CONTENT_TYPE) {

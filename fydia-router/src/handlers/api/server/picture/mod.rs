@@ -39,7 +39,12 @@ pub async fn get_picture_of_server(
             }
         }
         Err(error) => {
-            res.2 = error.as_bytes().to_vec();
+            if let Ok(error) = error.get_body() {
+                res.2 = error.as_bytes().to_vec();
+            } else {
+                res.2 = "No error message".as_bytes().to_vec();
+            }
+            
         }
     }
 
@@ -59,7 +64,7 @@ pub async fn post_picture_of_server(
             .await
         {
             Ok(v) => v,
-            Err(string) => return FydiaResponse::new_error(string),
+            Err(error) => return error,
         };
     let vec_body = body.to_vec();
     if vec_body.len() > MAX_CONTENT_LENGHT {

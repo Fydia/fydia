@@ -15,8 +15,8 @@ pub async fn get_direct_messages(
 ) -> impl IntoResponse {
     let user = match BasicValues::get_user(&headers, &database).await {
         Ok(v) => v,
-        Err(string) => {
-            return FydiaResponse::new_error(string);
+        Err(error) => {
+            return error;
         }
     };
 

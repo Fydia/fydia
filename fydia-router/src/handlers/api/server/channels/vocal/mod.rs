@@ -17,7 +17,7 @@ pub async fn join_channel(
     .await
     {
         Ok(v) => v,
-        Err(error) => return FydiaResponse::new_error(error),
+        Err(error) => return error,
     };
 
     if channel.channel_type.is_voice() {

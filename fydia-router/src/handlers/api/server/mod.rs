@@ -22,7 +22,7 @@ pub async fn get_server(
             .await
         {
             Ok(v) => v,
-            Err(error) => return FydiaResponse::new_error(error),
+            Err(error) => return error,
         };
 
     FydiaResponse::new_ok_json(&server)

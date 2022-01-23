@@ -23,7 +23,7 @@ pub async fn update_name(
         .await
         {
             Ok(v) => v,
-            Err(error) => return FydiaResponse::new_error(error),
+            Err(error) => return error,
         };
 
     if let Ok(body) = String::from_utf8(body.to_vec()) {
@@ -57,16 +57,14 @@ pub async fn update_description(
         .await
         {
             Ok(v) => v,
-            Err(error) => return FydiaResponse::new_error(error),
+            Err(error) => return error,
         };
 
     if let Ok(body) = String::from_utf8(body.to_vec()) {
         if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
             if let Some(description) = value.get("description") {
                 if let Some(description_str) = description.as_str() {
-                    if let Err(error) = channel
-                        .update_description(description_str, &database)
-                        .await
+                    if let Err(error) = channel.update_description(description_str, &database).await
                     {
                         error!(error);
                         return FydiaResponse::new_error("Cannot update description");

@@ -19,7 +19,7 @@ pub fn hash<T: Into<String>>(to_hash: T) -> String {
 pub fn verify_password<T: Into<String>>(clear_password: T, hashed_password: T) -> bool {
     let hashed_password = hashed_password.into();
     let parsed_hash = PasswordHash::new(&hashed_password).unwrap();
-    
+
     Argon2::default()
         .verify_password(clear_password.into().as_ref(), &parsed_hash)
         .is_ok()

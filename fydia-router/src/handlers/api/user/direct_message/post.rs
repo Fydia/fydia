@@ -18,7 +18,7 @@ pub async fn create_direct_message(
     let user = match BasicValues::get_user(&headers, &database).await {
         Ok(v) => v,
         Err(error) => {
-            return FydiaResponse::new_error(error);
+            return error;
         }
     };
 

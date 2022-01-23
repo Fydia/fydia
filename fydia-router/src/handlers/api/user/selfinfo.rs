@@ -11,6 +11,6 @@ pub async fn get_info_of_self(
 ) -> impl IntoResponse {
     match BasicValues::get_user(&headers, &executor).await {
         Ok(user) => FydiaResponse::new_ok_json(&user.to_userinfo()),
-        Err(error) => FydiaResponse::new_error(error),
+        Err(error) => error,
     }
 }

@@ -15,7 +15,7 @@ pub async fn join(
     let (mut user, mut server) =
         match BasicValues::get_user_and_server(&headers, server_id, &database).await {
             Ok(v) => v,
-            Err(error) => return FydiaResponse::new_error(error),
+            Err(error) => return error,
         };
 
     return if user.servers.is_join(&server.id) {

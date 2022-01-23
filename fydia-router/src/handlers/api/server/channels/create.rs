@@ -22,7 +22,7 @@ pub async fn create_channel(
         {
             Ok(v) => v,
             Err(error) => {
-                return FydiaResponse::new_error(error);
+                return error;
             }
         };
 

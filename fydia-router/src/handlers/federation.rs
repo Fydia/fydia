@@ -63,11 +63,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl
     {
         if fydia_dispatcher::message::send::send_message(
             &keys,
-            Instance::new(
-                fydia_struct::instance::Protocol::HTTP,
-                "localhost",
-                8080,
-            ),
+            Instance::new(fydia_struct::instance::Protocol::HTTP, "localhost", 8080),
             publickey,
             event,
             vec![Instance::new(

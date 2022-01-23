@@ -18,7 +18,7 @@ pub async fn create_server(
 ) -> impl IntoResponse {
     let mut user = match BasicValues::get_user(&headers, &database).await {
         Ok(v) => v,
-        Err(error) => return FydiaResponse::new_error(error),
+        Err(error) => return error,
     };
 
     if let Ok(body) = String::from_utf8(body.to_vec()) {

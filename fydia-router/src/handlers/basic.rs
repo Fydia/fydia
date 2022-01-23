@@ -6,6 +6,7 @@ use http::HeaderMap;
 
 use fydia_struct::{
     channel::{Channel, ChannelId},
+    response::FydiaResponse,
     server::{Server, ServerId},
     user::{Token, User},
 };
@@ -14,28 +15,31 @@ use fydia_struct::{
 pub struct BasicValues;
 
 impl BasicValues {
-    pub async fn get_user(headers: &HeaderMap, executor: &DbConnection) -> Result<User, String> {
-        let token = Token::from_headervalue(headers).ok_or("No token".to_string())?;
+    pub async fn get_user(
+        headers: &HeaderMap,
+        executor: &DbConnection,
+    ) -> Result<User, FydiaResponse> {
+        let token = Token::from_headervalue(headers).ok_or(FydiaResponse::new_error("No token"))?;
         token
             .get_user(executor)
             .await
-            .ok_or("Wrong token".to_string())
+            .ok_or(FydiaResponse::new_error("Wrong token"))
     }
 
     pub async fn get_user_and_server_and_check_if_joined<T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server), String> {
+    ) -> Result<(User, Server), FydiaResponse> {
         let user = Self::get_user(headers, executor).await?;
         let serverid = ServerId::new(serverid);
         if !user.servers.is_join(&serverid) {
-            return Err("Server not exists".to_string());
+            return Err(FydiaResponse::new_error("Server not exists"));
         }
         let server = serverid
             .get_server(executor)
             .await
-            .map_err(|_| "Bad ServerId".to_string())?;
+            .map_err(|_| FydiaResponse::new_error("Bad ServerId"))?;
 
         Ok((user, server))
     }
@@ -44,13 +48,13 @@ impl BasicValues {
         headers: &HeaderMap,
         serverid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server), String> {
+    ) -> Result<(User, Server), FydiaResponse> {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid)
             .get_server(executor)
             .await
-            .map_err(|_| "Bad ServerId".to_string())?;
+            .map_err(|_| FydiaResponse::new_error("Bad ServerId"))?;
 
         Ok((user, server))
     }
@@ -60,17 +64,17 @@ impl BasicValues {
         serverid: T,
         channelid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server, Channel), String> {
+    ) -> Result<(User, Server, Channel), FydiaResponse> {
         let (user, server) =
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
         let channel_id = ChannelId::new(channelid);
         if !server.channel.is_exists(channel_id.clone()) {
-            return Err("Channel is not exists".to_string());
+            return Err(FydiaResponse::new_error("Channel is not exists"));
         }
         let channel = channel_id
             .get_channel(executor)
             .await
-            .ok_or("Bad ChannelId".to_string())?;
+            .ok_or(FydiaResponse::new_error("Bad ChannelId"))?;
 
         Ok((user, server, channel))
     }
