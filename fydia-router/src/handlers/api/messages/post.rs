@@ -50,13 +50,13 @@ pub async fn post_messages(
     if let Some(headervalue) = headers.get(CONTENT_TYPE) {
         match headervalue.to_str() {
             Ok(value) => {
-                match Mime::from_str(value)
+                return match Mime::from_str(value)
                     .map_err(|_| FydiaResponse::new_error("Bad Content-Type"))
                 {
                     Ok(get_mime) => {
                         if get_mime == mime::APPLICATION_JSON
                             || get_mime == mime::TEXT_PLAIN
-                            || get_mime == mime::TEXT_PLAIN_UTF_8
+                            || get_mime == mime::TEXT_PLAIN_UTF_8 || value == "application/json; charset=utf-8"
                         {
                             let body = match String::from_utf8(body.to_vec())
                                 .map_err(|_| FydiaResponse::new_error("Body error"))
@@ -72,34 +72,34 @@ pub async fn post_messages(
                                 }
                             };
 
-                            return post_messages_json(
+                            post_messages_json(
                                 json,
                                 database,
                                 rsa,
                                 wbsocket,
                                 (user, channel, server),
                             )
-                            .await;
-                        }
-
-                        if get_mime == mime::MULTIPART_FORM_DATA {
+                            .await
+                        } else if get_mime == mime::MULTIPART_FORM_DATA {
                             let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
                             let boundary = match get_boundary(&headers) {
                                 Some(v) => v,
                                 None => return FydiaResponse::new_error("No boundary found"),
                             };
                             let multer = multer::Multipart::new(stream, boundary.clone());
-                            return post_messages_multipart(
+                            post_messages_multipart(
                                 multer,
                                 database,
                                 rsa,
                                 wbsocket,
                                 (user, channel, server),
                             )
-                            .await;
+                            .await
+                        } else {
+                            FydiaResponse::new_error("Content-Type error")           
                         }
                     }
-                    Err(error) => return error,
+                    Err(error) => error,
                 };
             }
             _ => return FydiaResponse::new_error("Content-Type error"),
