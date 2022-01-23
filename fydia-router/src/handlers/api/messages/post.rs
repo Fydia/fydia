@@ -10,20 +10,20 @@ use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::channel::ChannelId;
+use fydia_struct::channel::{Channel, ChannelId};
 use fydia_struct::event::{Event, EventContent};
+use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Message, MessageType, SqlDate};
 use fydia_struct::response::FydiaResponse;
-use fydia_struct::server::ServerId;
+use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::User;
-use fydia_utils::generate_string;
 use http::header::CONTENT_TYPE;
 use http::{HeaderMap, StatusCode};
 use mime::Mime;
+use multer::Multipart;
 use serde_json::Value;
 use std::convert::Infallible;
-use std::io::{Read, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -31,8 +31,8 @@ use std::time::SystemTime;
 const BOUNDARY: &str = "boundary=";
 
 pub async fn post_messages(
-    headers: HeaderMap,
     body: Bytes,
+    headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
@@ -49,168 +49,206 @@ pub async fn post_messages(
                 return FydiaResponse::new_error(error);
             }
         };
-    if let Some(header_content_type) = headers.get(CONTENT_TYPE) {
-        if let Ok(content_type) = header_content_type.to_str() {
-            let msg = match messages_dispatcher(
-                content_type,
-                body.to_vec(),
-                &headers,
-                &user,
-                &channel.id,
-                &server.id,
-            )
-            .await
-            {
-                Ok(event) => event,
-                Err(err) => {
-                    return err;
-                }
-            };
-            let key = rsa.clone();
-            if let Ok(members) = server.get_user(&database).await {
-                if let EventContent::Message { ref content } = msg.content {
-                    if content.insert_message(&database).await.is_err() {
-                        return FydiaResponse::new_error_custom_status(
-                            "Cannot send message",
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                        );
-                    } else {
-                        tokio::spawn(async move {
-                            if wbsocket
-                                .send(msg.clone(), members.members.clone(), Some(&key), None)
-                                .await
-                                .is_err()
-                            {
-                                error!("Error");
-                            };
-                        });
-                    }
-                }
-                return FydiaResponse::new_ok("Message send");
-            } else {
-                FydiaResponse::new_error_custom_status(
-                    "Cannot get users of the server",
-                    StatusCode::INTERNAL_SERVER_ERROR,
+    if let Some(headervalue) = headers.get(CONTENT_TYPE) {
+        match headervalue.to_str() {
+            Ok("application/json") => {
+                let body = match String::from_utf8(body.to_vec())
+                    .map_err(|_| FydiaResponse::new_error("Body error"))
+                {
+                    Ok(v) => v,
+                    Err(error) => return error,
+                };
+
+                return post_messages_json(
+                    serde_json::from_str(&body).unwrap(),
+                    database,
+                    rsa,
+                    wbsocket,
+                    (user, channel, server),
                 )
+                .await;
             }
-        } else {
-            FydiaResponse::new_error("Bad Content-Type")
+            Ok("multipart/form-data") => {
+                let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
+                let boundary = match get_boundary(&headers) {
+                    Some(v) => v,
+                    None => return FydiaResponse::new_error("No boundary found"),
+                };
+                let multer = multer::Multipart::new(stream, boundary.clone());
+                return post_messages_multipart(
+                    multer,
+                    database,
+                    rsa,
+                    wbsocket,
+                    (user, channel, server),
+                )
+                .await;
+            }
+            _ => {}
         }
-    } else {
-        FydiaResponse::new_error("Where is the Content-Type")
     }
+
+    FydiaResponse::new_error("Bad Body")
 }
 
-pub async fn messages_dispatcher(
-    content_type: &str,
-    body: Vec<u8>,
-    headers: &HeaderMap,
-    user: &User,
-    channelid: &ChannelId,
-    serverid: &ServerId,
-) -> Result<Event, FydiaResponse> {
-    match content_type {
-        "application/json" | "application/json; charset=utf-8" => match String::from_utf8(body) {
-            Ok(string_body) => json_message(string_body, user, channelid, serverid),
-            Err(_) => Err(FydiaResponse::new_error("Utf-8 Error")),
-        },
-
-        "multipart/form-data" | "multipart/form-data;" => {
-            multipart_to_event(body, headers, &user.clone(), channelid, serverid).await
+pub async fn post_messages_multipart(
+    multipart: Multipart<'static>,
+    database: DbConnection,
+    rsa: Arc<RsaData>,
+    wbsocket: Arc<WebsocketManagerChannel>,
+    (user, channel, server): (User, Channel, Server),
+) -> FydiaResponse {
+    let event = match multipart_to_event(multipart, &user.clone(), &channel.id, &server.id).await {
+        Ok(v) => v,
+        Err(error) => return error,
+    };
+    let key = rsa.clone();
+    if let Ok(members) = server.get_user(&database).await {
+        if let EventContent::Message { ref content } = event.content {
+            if content.insert_message(&database).await.is_err() {
+                return FydiaResponse::new_error_custom_status(
+                    "Cannot send message",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            } else {
+                tokio::spawn(async move {
+                    if wbsocket
+                        .send(event, members.members.clone(), Some(&key), None)
+                        .await
+                        .is_err()
+                    {
+                        error!("Error");
+                    };
+                });
+            }
         }
-
-        _ => Err(FydiaResponse::new_error("Bad Content-Type")),
+        return FydiaResponse::new_ok("Message send");
     }
+
+    FydiaResponse::new_error_custom_status(
+        "Cannot get users of the server",
+        StatusCode::INTERNAL_SERVER_ERROR,
+    )
+}
+
+pub async fn post_messages_json(
+    value: Value,
+    database: DbConnection,
+    rsa: Arc<RsaData>,
+    wbsocket: Arc<WebsocketManagerChannel>,
+    (user, channel, server): (User, Channel, Server),
+) -> FydiaResponse {
+    let event = match json_message(value, &user, &channel.id, &server.id).await {
+        Ok(v) => v,
+        Err(error) => return error,
+    };
+    let key = rsa.clone();
+    if let Ok(members) = server.get_user(&database).await {
+        if let EventContent::Message { ref content } = event.content {
+            if content.insert_message(&database).await.is_err() {
+                return FydiaResponse::new_error_custom_status(
+                    "Cannot send message",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            } else {
+                tokio::spawn(async move {
+                    if wbsocket
+                        .send(event, members.members.clone(), Some(&key), None)
+                        .await
+                        .is_err()
+                    {
+                        error!("Error");
+                    };
+                });
+            }
+        }
+        return FydiaResponse::new_ok("Message send");
+    }
+
+    return FydiaResponse::new_error_custom_status(
+        "Cannot get users of the server",
+        StatusCode::INTERNAL_SERVER_ERROR,
+    );
 }
 
 pub async fn multipart_to_event(
-    body: Vec<u8>,
-    headers: &HeaderMap,
+    mut multipart: Multipart<'static>,
     user: &User,
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse> {
-    if let Some(boundary) = headers.get(CONTENT_TYPE).and_then(|ct| {
-        let ct = ct.to_str().ok()?;
-        let idx = ct.find(BOUNDARY)?;
-        Some(ct[idx + BOUNDARY.len()..].to_string())
-    }) {
-        let a = once(async move {
-            Result::<Bytes, Infallible>::Ok(Bytes::copy_from_slice(body.as_slice()))
-        });
-        let mut multer = multer::Multipart::new(a, boundary.clone());
-        let name = generate_string(32);
-        if let Ok(mut file) = std::fs::File::create(&name) {
-            while let Ok(Some(mut field)) = multer.next_field().await {
-                if let Some(field_name) = field.name() {
-                    if field_name.eq("file") {
-                        if let Ok(mut info) = std::fs::File::create(format!("{}.json", name)) {
-                            if let Some(name) = field.file_name() {
-                                if let Err(error) =
-                                    info.write_all(format!(r#"{{"name":"{}"}}"#, name).as_bytes())
-                                {
-                                    error!(error.to_string());
-                                    return Err(FydiaResponse::new_error("File writing error"));
-                                }
-                            };
+    let file = File::new();
+    while let Ok(Some(field)) = multipart.next_field().await {
+        if let Some(field_name) = field.name() {
+            if field_name == "file" {
+                let file = File::new();
+                file.create_with_description(FileDescriptor::new_with_now(
+                    field.file_name().unwrap_or(file.get_name().as_str()),
+                ))
+                .map_err(|_| {
+                    FydiaResponse::new_error_custom_status(
+                        "File creation error",
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    )
+                })?;
 
-                            while let Ok(Some(chunck)) = field.chunk().await {
-                                if let Err(error) = file.write_all(&chunck) {
-                                    return Err(FydiaResponse::new_error(error.to_string()));
-                                }
-                            }
-                        }
-                    } else if field_name.eq("context") {
-                        info!(field.text().await.unwrap_or_default());
-                    }
-                }
+                let body = match field.bytes().await {
+                    Ok(v) => v.to_vec(),
+                    Err(_) => return Err(FydiaResponse::new_error("Body error")),
+                };
+
+                file.write(body).map_err(|_| {
+                    FydiaResponse::new_error_custom_status(
+                        "Can't write the file",
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    )
+                })?;
+
+                break;
+            } else if field_name.eq("context") {
+                info!(field.text().await.unwrap_or_default());
             }
         }
-
-        let event = Event::new(
-            server_id.clone(),
-            EventContent::Message {
-                content: Box::from(Message::new(
-                    name.clone(),
-                    MessageType::FILE,
-                    false,
-                    SqlDate::new(DateTime::from(SystemTime::now())),
-                    user.clone(),
-                    channelid.clone(),
-                )),
-            },
-        );
-        Ok(event)
-    } else {
-        Err(FydiaResponse::new_error(""))
     }
+
+    let event = Event::new(
+        server_id.clone(),
+        EventContent::Message {
+            content: Box::from(Message::new(
+                file.get_name(),
+                MessageType::FILE,
+                false,
+                SqlDate::new(DateTime::from(SystemTime::now())),
+                user.clone(),
+                channelid.clone(),
+            )),
+        },
+    );
+
+    Ok(event)
 }
 
-pub fn json_message(
-    body: String,
+pub async fn json_message(
+    value: Value,
     user: &User,
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse> {
     let message_type;
     let content;
-    if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
-        match (value.get("type"), value.get("content")) {
-            (Some(ctype), Some(mcontent)) => match (ctype.as_str(), mcontent.as_str()) {
-                (Some(ctype), Some(mcontent)) => {
-                    message_type = ctype.to_string();
-                    content = mcontent.to_string();
-                }
-                _ => {
-                    return Err(FydiaResponse::new_error("Json error"));
-                }
-            },
+    match (value.get("type"), value.get("content")) {
+        (Some(ctype), Some(mcontent)) => match (ctype.as_str(), mcontent.as_str()) {
+            (Some(ctype), Some(mcontent)) => {
+                message_type = ctype.to_string();
+                content = mcontent.to_string();
+            }
             _ => {
                 return Err(FydiaResponse::new_error("Json error"));
             }
+        },
+        _ => {
+            return Err(FydiaResponse::new_error("Json error"));
         }
-    } else {
-        return Err(FydiaResponse::new_error("Json error"));
     }
     if let Some(messagetype) = MessageType::from_string(message_type) {
         let event = Event::new(
@@ -236,22 +274,25 @@ pub fn json_message(
 pub fn get_mime_of_file(path: &str) -> Mime {
     let mut buf = [0; 16];
 
-    if let Ok(mut file) = std::fs::File::open(&path) {
-        if file.read(&mut buf).is_ok() {
-            if let Some(e) = infer::get(&buf) {
-                return mime::Mime::from_str(e.mime_type())
-                    .unwrap_or(mime::APPLICATION_OCTET_STREAM);
-            } else if let Ok(e) = std::fs::read_to_string(format!("{}.json", &path)) {
-                if let Ok(value) = serde_json::from_str::<Value>(&e) {
-                    if let Some(e) = value.get("name") {
-                        if let Some(string) = e.as_str() {
-                            return mime_guess::from_path(string).first_or_octet_stream();
-                        }
-                    }
-                }
-            }
-        }
-    };
+    let file = File::get(path);
+    if file.write_value(&mut buf).is_err() {
+        error!("Can't write on buf");
+    }
+    if let Some(e) = infer::get(&buf) {
+        return mime::Mime::from_str(e.mime_type()).unwrap_or(mime::APPLICATION_OCTET_STREAM);
+    }
+
+    if let Ok(file_desc) = file.get_description() {
+        return mime_guess::from_path(file_desc.name).first_or_octet_stream();
+    }
 
     mime::APPLICATION_OCTET_STREAM
+}
+
+pub fn get_boundary(headers: &HeaderMap) -> Option<String> {
+    headers.get(CONTENT_TYPE).and_then(|ct| {
+        let ct = ct.to_str().ok()?;
+        let idx = ct.find(BOUNDARY)?;
+        Some(ct[idx + BOUNDARY.len()..].to_string())
+    })
 }

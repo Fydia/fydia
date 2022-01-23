@@ -54,6 +54,11 @@ pub async fn get_database_connection(config: &DatabaseConfig) -> DbConnection {
 }
 
 pub async fn get_axum_router_from_config(config: Config) -> axum::Router {
+    info!(format!(
+        "Fydia - {}({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    ));
     get_axum_router(
         get_database_connection(&config.database).await,
         &config.instance,
@@ -69,12 +74,6 @@ pub async fn get_axum_router(
     formated_ip: &String,
     port: u16,
 ) -> axum::Router {
-    info!(format!(
-        "Fydia - {}({})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    ));
-
     #[cfg(not(test))]
     #[cfg(debug_assertions)]
     fydia_sql::samples::insert_samples(&database).await;
