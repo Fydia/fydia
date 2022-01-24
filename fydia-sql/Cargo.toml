@@ -22,5 +22,5 @@ futures = "0.3.19"
 logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 async-trait = "0.1.52"
 serde = "1.0.134"
-serde_json = "1.0.75"
+serde_json = "1.0.78"
 tokio = {version = "1.15.0", features=["rt", "macros"]}
