@@ -1,23 +1,21 @@
 use axum::Router;
 
 use crate::handlers::{
-    api::{
-        messages::{get::get_message, post::post_messages},
-        server::{
-            channels::{
-                create::create_channel,
-                delete::delete_channel,
-                info_channel,
-                typing::{start_typing, stop_typing},
-                update::{update_description, update_name},
-                vocal::join_channel,
-            },
-            create::create_server,
-            get_server,
-            info::get_server_of_user,
-            join::join,
-            picture::{get_picture_of_server, post_picture_of_server},
+    api::server::{
+        channels::{
+            create::create_channel,
+            delete::delete_channel,
+            info_channel,
+            messages::{get::get_message, post::post_messages},
+            typing::{start_typing, stop_typing},
+            update::{update_description, update_name},
+            vocal::join_channel,
         },
+        create::create_server,
+        get_server,
+        info::get_server_of_user,
+        join::join,
+        picture::{get_picture_of_server, post_picture_of_server},
     },
     default,
 };

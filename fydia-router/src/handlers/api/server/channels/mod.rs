@@ -1,5 +1,6 @@
 pub mod create;
 pub mod delete;
+pub mod messages;
 pub mod typing;
 pub mod update;
 pub mod vocal;
