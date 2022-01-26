@@ -14,7 +14,6 @@ pub mod tests;
 #[macro_use]
 extern crate logger;
 use crate::handlers::api::manager::typing::TypingManagerChannelTrait;
-use crate::handlers::api::manager::websockets::test_message;
 use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
@@ -132,7 +131,6 @@ pub fn get_router(
 ) -> Router {
     axum::Router::new()
         .route("/", axum::routing::get(client))
-        .route("/test", axum::routing::get(test_message))
         .nest(
             "/api",
             axum::Router::new()

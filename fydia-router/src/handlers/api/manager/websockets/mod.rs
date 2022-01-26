@@ -1,19 +1,9 @@
 use axum::async_trait;
-use axum::extract::Extension;
-use axum::response::IntoResponse;
-use fydia_struct::channel::ChannelId;
-use fydia_struct::event::EventContent;
 use fydia_struct::manager::ManagerReceiverTrait;
-use fydia_struct::messages::{Date, Message, MessageType};
-use fydia_struct::server::ServerId;
 use fydia_struct::{event::Event, user::User};
 use parking_lot::Mutex;
-use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::mpsc::{UnboundedReceiver as Receiver, UnboundedSender as Sender};
 use tokio::sync::oneshot::Sender as OSSender;
-
-use self::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
 
 pub mod manager;
 pub mod messages;
@@ -215,39 +205,4 @@ pub enum WbManagerMessage {
     GetWithIndex(User, usize, OSSender<Option<WbSender>>),
     Insert(User, OSSender<WbChannel>),
     Remove(User, WbSender, OSSender<Result<(), ()>>),
-}
-
-pub async fn test_message(
-    Extension(websocket_manager_channel): Extension<Arc<WebsocketManagerChannel>>,
-) -> impl IntoResponse {
-    let instant = Instant::now();
-    if let Ok(getted_websocket) = websocket_manager_channel
-        .get_channels_of_user(User::default())
-        .await
-    {
-        for i in &getted_websocket {
-            if let Err(e) = i.send(ChannelMessage::Message(Box::new(Event::new(
-                ServerId::new(String::new()),
-                EventContent::Message {
-                    content: Box::from(Message::new(
-                        String::new(),
-                        MessageType::TEXT,
-                        false,
-                        Date::now(),
-                        User::default(),
-                        ChannelId::default(),
-                    )),
-                },
-            )))) {
-                println!("{}", e)
-            };
-        }
-        format!(
-            "{}µs => {:?}",
-            instant.elapsed().as_micros(),
-            getted_websocket
-        )
-    } else {
-        format!("{}µs => Error", instant.elapsed().as_micros(),)
-    }
 }
