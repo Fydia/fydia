@@ -13,7 +13,7 @@ fydia-dispatcher = { path="../fydia-dispatcher" }
 tokio = { version="1.16", default-features=false }
 futures = "0.3.19"
 futures-util = "0.3.18"
-time = "0.3.6"
+time = "0.3.7"
 chrono = "0.4.19"
 axum = {version = "0.4.4",  features = ["ws", "headers"]}
 http = "0.2.6"
