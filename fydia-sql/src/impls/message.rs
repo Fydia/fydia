@@ -115,7 +115,6 @@ impl SqlMessage for Message {
                     }
                 },
                 Err(e) => {
-                    error!(e.to_string());
                     return Err(e.to_string());
                 }
             }
@@ -145,7 +144,6 @@ impl SqlMessage for Message {
         {
             Ok(_) => Ok(()),
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
         }
@@ -173,7 +171,6 @@ impl SqlMessage for Message {
                 return Ok(());
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
         }
@@ -192,13 +189,11 @@ impl SqlMessage for Message {
                 {
                     Ok(_) => return Ok(()),
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => return Err("Cannot get database error".to_string()),

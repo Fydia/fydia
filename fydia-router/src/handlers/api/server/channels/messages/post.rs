@@ -169,17 +169,17 @@ pub async fn post_messages_json(
                     "Cannot send message",
                     StatusCode::INTERNAL_SERVER_ERROR,
                 );
-            } else {
-                tokio::spawn(async move {
-                    if wbsocket
-                        .send(event, members.members.clone(), Some(&key), None)
-                        .await
-                        .is_err()
-                    {
-                        error!("Error");
-                    };
-                });
             }
+
+            tokio::spawn(async move {
+                if wbsocket
+                    .send(event, members.members.clone(), Some(&key), None)
+                    .await
+                    .is_err()
+                {
+                    error!(r#"Error"#);
+                };
+            });
         }
         return FydiaResponse::new_ok("Message send");
     }
@@ -258,6 +258,7 @@ pub async fn json_message(
 ) -> Result<Event, FydiaResponse> {
     let message_type;
     let content;
+
     match (value.get("type"), value.get("content")) {
         (Some(ctype), Some(mcontent)) => match (ctype.as_str(), mcontent.as_str()) {
             (Some(ctype), Some(mcontent)) => {
@@ -272,6 +273,7 @@ pub async fn json_message(
             return Err(FydiaResponse::new_error("Json error"));
         }
     }
+
     if let Some(messagetype) = MessageType::from_string(message_type) {
         let event = Event::new(
             server_id.clone(),
@@ -287,10 +289,10 @@ pub async fn json_message(
             },
         );
 
-        Ok(event)
-    } else {
-        Err(FydiaResponse::new_error("Bad Message Type"))
+        return Ok(event);
     }
+
+    Err(FydiaResponse::new_error("Bad Message Type"))
 }
 
 pub fn get_mime_of_file(path: &str) -> Mime {

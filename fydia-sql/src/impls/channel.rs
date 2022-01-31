@@ -99,7 +99,6 @@ impl SqlChannel for Channel {
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
         }
@@ -146,13 +145,11 @@ impl SqlChannel for Channel {
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error".to_string()),
@@ -182,13 +179,11 @@ impl SqlChannel for Channel {
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error".to_string()),
@@ -208,13 +203,11 @@ impl SqlChannel for Channel {
                 {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error".to_string()),

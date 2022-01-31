@@ -53,13 +53,11 @@ impl SqlServer for Server {
                 Ok(value) => return Ok(value),
                 Err(e) => {
                     {
-                        error!("Error");
                         return Err(e.to_string());
                     };
                 }
             },
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => return Err("".to_string()),
@@ -79,7 +77,6 @@ impl SqlServer for Server {
                 let members = match serde_json::from_str::<Members>(model.members.as_str()) {
                     Ok(e) => e,
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 };
@@ -177,13 +174,11 @@ impl SqlServer for Server {
                 {
                     Ok(_) => return Ok(()),
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 };
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => {}
@@ -219,11 +214,9 @@ impl SqlServer for Server {
         {
             Ok(Some(e)) => e,
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => {
-                error!("Error");
                 return Err("Cannot get server".to_string());
             }
         };
@@ -231,7 +224,6 @@ impl SqlServer for Server {
         let mut members = match self.get_user(executor).await {
             Ok(vec_users) => vec_users,
             Err(e) => {
-                error!("Error");
                 return Err(e);
             }
         };
@@ -250,7 +242,6 @@ impl SqlServer for Server {
         {
             Ok(_) => {}
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
         }

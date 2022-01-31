@@ -127,13 +127,11 @@ impl SqlUser for User {
                         Ok(token)
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error message".to_string()),
@@ -157,13 +155,11 @@ impl SqlUser for User {
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error message".to_string()),
@@ -188,13 +184,11 @@ impl SqlUser for User {
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error message".to_string()),
@@ -224,13 +218,11 @@ impl SqlUser for User {
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error message".to_string()),
@@ -279,13 +271,11 @@ impl SqlUser for User {
                 match UserEntity::delete(active_model).exec(executor).await {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        error!("Error");
                         return Err(e.to_string());
                     }
                 }
             }
             Err(e) => {
-                error!("Error");
                 return Err(e.to_string());
             }
             _ => Err("Cannot get error message".to_string()),
