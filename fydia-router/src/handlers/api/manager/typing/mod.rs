@@ -190,8 +190,6 @@ impl TypingInner {
             .send(
                 Event::new(serverid, EventContent::StartTyping { userid, channelid }),
                 channel_user,
-                None,
-                None,
             )
             .await
     }
@@ -208,8 +206,6 @@ impl TypingInner {
             .send(
                 Event::new(serverid, EventContent::StopTyping { userid, channelid }),
                 channel_user,
-                None,
-                None,
             )
             .await
     }

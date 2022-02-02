@@ -132,7 +132,7 @@ pub async fn post_messages_multipart(
             } else {
                 tokio::spawn(async move {
                     if wbsocket
-                        .send(event, members.members.clone(), Some(&key), None)
+                        .send_with_origin_and_key(event, members.members.clone(), Some(&key), None)
                         .await
                         .is_err()
                     {
@@ -173,7 +173,7 @@ pub async fn post_messages_json(
 
             tokio::spawn(async move {
                 if wbsocket
-                    .send(event, members.members.clone(), Some(&key), None)
+                    .send_with_origin_and_key(event, members.members.clone(), Some(&key), None)
                     .await
                     .is_err()
                 {

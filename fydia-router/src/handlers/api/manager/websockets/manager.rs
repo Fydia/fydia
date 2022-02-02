@@ -19,7 +19,8 @@ pub trait WbManagerChannelTrait {
     async fn get_channels_of_user(&self, user: User) -> Result<Vec<WbSender>, String>;
     async fn get_new_channel(&self, user: User) -> Option<WbChannel>;
     async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()>;
-    async fn send(
+    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), ()>;
+    async fn send_with_origin_and_key(
         &self,
         msg: Event,
         user: Vec<User>,
@@ -74,7 +75,24 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         Err(())
     }
 
-    async fn send(
+    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), ()> {
+        for mut i in user {
+            i.drop_password();
+            if let Ok(wbstruct) = self.get_channels_of_user(i).await {
+                for i in wbstruct {
+                    if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
+                        error!(e.to_string());
+                    };
+                }
+            } else {
+                return Err(());
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn send_with_origin_and_key(
         &self,
         msg: Event,
         user: Vec<User>,
