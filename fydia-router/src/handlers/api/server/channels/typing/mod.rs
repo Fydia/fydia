@@ -6,6 +6,7 @@ use axum::{
 };
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::DbConnection;
+use fydia_struct::response::FydiaResponse;
 use http::{HeaderMap, StatusCode};
 
 use crate::handlers::{
@@ -19,20 +20,28 @@ pub async fn start_typing(
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    if let Ok((user, server, channel)) =
-        BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-            &headers, serverid, channelid, &database,
-        )
-        .await
+    match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+        &headers, serverid, channelid, &database,
+    )
+    .await
     {
-        if let Ok(users) = channel.get_user_of_channel(&database).await {
-            if let Err(error) = typingmanager.start_typing(user.id, channel.id, server.id, users) {
-                error!(error);
+        Ok((user, server, channel)) => {
+            if let Ok(users) = channel.get_user_of_channel(&database).await {
+                if let Err(error) =
+                    typingmanager.start_typing(user.id, channel.id, server.id, users)
+                {
+                    error!(error);
+                    return FydiaResponse::new_error_custom_status(
+                        "Can't start typing",
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    );
+                }
             }
-        }
-    }
 
-    (StatusCode::OK, "")
+            FydiaResponse::new_ok("")
+        }
+        Err(v) => v,
+    }
 }
 pub async fn stop_typing(
     Extension(database): Extension<DbConnection>,
@@ -40,18 +49,25 @@ pub async fn stop_typing(
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    if let Ok((user, server, channel)) =
-        BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-            &headers, serverid, channelid, &database,
-        )
-        .await
+    match BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+        &headers, serverid, channelid, &database,
+    )
+    .await
     {
-        if let Ok(users) = channel.get_user_of_channel(&database).await {
-            if let Err(error) = typingmanager.stop_typing(user.id, channel.id, server.id, users) {
-                error!(error);
+        Ok((user, server, channel)) => {
+            if let Ok(users) = channel.get_user_of_channel(&database).await {
+                if let Err(error) = typingmanager.stop_typing(user.id, channel.id, server.id, users)
+                {
+                    error!(error);
+                    return FydiaResponse::new_error_custom_status(
+                        "Can't start typing",
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    );
+                }
             }
-        }
-    }
 
-    (StatusCode::OK, "")
+            FydiaResponse::new_ok("")
+        }
+        Err(v) => v,
+    }
 }
