@@ -29,11 +29,10 @@ pub struct Model {
 
 impl Model {
     pub fn to_user(&self) -> Option<User> {
-        let servers = if let Some(server) = &self.server {
-            Servers(serde_json::from_str(server.as_str()).unwrap_or_default())
-        } else {
-            return None;
-        };
+        let servers = self
+            .server
+            .as_ref()
+            .map(|server| Servers(serde_json::from_str(server.as_str()).unwrap_or_default()))?;
 
         Some(User {
             id: UserId::new(self.id),

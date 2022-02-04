@@ -104,22 +104,17 @@ impl SqlRoles for Role {
     }
 
     async fn delete_role(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        match entity::roles::Entity::find_by_id(self.id)
+        let model = entity::roles::Entity::find_by_id(self.id)
             .one(executor)
             .await
-        {
-            Ok(Some(model)) => {
-                let active_model: entity::roles::ActiveModel = model.into();
-                match entity::roles::Entity::delete(active_model)
-                    .exec(executor)
-                    .await
-                {
-                    Ok(_) => return Ok(()),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err(String::from("This role not exists")),
-        }
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "Can't the role")?;
+
+        let active_model: entity::roles::ActiveModel = model.into();
+        entity::roles::Entity::delete(active_model)
+            .exec(executor)
+            .await
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
 }

@@ -14,31 +14,37 @@ pub async fn user_login(
     if body.is_empty() {
         return FydiaResponse::new_error("Bad Body");
     }
-    if let Ok(stringed_body) = String::from_utf8(body) {
-        if let Ok(json) = serde_json::from_str::<value::Value>(stringed_body.as_str()) {
-            match (json.get("email"), json.get("password")) {
-                (Some(email), Some(password)) => match (email.as_str(), password.as_str()) {
-                    (Some(email), Some(password)) => {
-                        let user =
-                            User::get_user_by_email_and_password(email, password, &database).await;
+    let body_string = if let Ok(value) = String::from_utf8(body) {
+        value
+    } else {
+        return FydiaResponse::new_error("Body error");
+    };
+    let json = if let Ok(value) = serde_json::from_str::<value::Value>(body_string.as_str()) {
+        value
+    } else {
+        return FydiaResponse::new_error("Json error");
+    };
 
-                        match user {
-                            Some(mut user) => {
-                                if let Ok(token) = user.update_token(&database).await {
-                                    return FydiaResponse::new_ok(token);
-                                } else {
-                                    return FydiaResponse::new_error("Token error");
-                                }
+    match (json.get("email"), json.get("password")) {
+        (Some(email), Some(password)) => match (email.as_str(), password.as_str()) {
+            (Some(email), Some(password)) => {
+                let user = User::get_user_by_email_and_password(email, password, &database).await;
+                match user {
+                    Some(mut user) => match user.update_token(&database).await {
+                        Ok(_) => {
+                            if let Some(token) = user.token {
+                                FydiaResponse::new_ok(token)
+                            } else {
+                                FydiaResponse::new_error("Token error")
                             }
-                            None => return FydiaResponse::new_error("User not exists"),
                         }
-                    }
-                    _ => return FydiaResponse::new_error("Json error"),
-                },
-                _ => return FydiaResponse::new_error("Json error"),
+                        Err(error) => FydiaResponse::new_error(error),
+                    },
+                    None => FydiaResponse::new_error("User not exists"),
+                }
             }
-        }
+            _ => FydiaResponse::new_error("Json error"),
+        },
+        _ => FydiaResponse::new_error("Json error"),
     }
-
-    FydiaResponse::new_error("Body error")
 }

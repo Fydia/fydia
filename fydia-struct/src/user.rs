@@ -77,10 +77,7 @@ impl UserId {
         Self { id }
     }
     pub fn to_string(&self) -> Result<String, String> {
-        match serde_json::to_string(&self) {
-            Ok(r) => Ok(r),
-            Err(err) => Err(err.to_string()),
-        }
+        serde_json::to_string(&self).map_err(|f| f.to_string())
     }
 }
 
@@ -90,12 +87,9 @@ pub struct Token(pub String);
 
 impl Token {
     pub fn from_headervalue(headers: &HeaderMap) -> Option<Token> {
-        if let Some(token) = headers.get(HEADERNAME) {
-            if let Ok(e) = token.to_str() {
-                return Some(Token(e.to_string()));
-            }
-        };
-        None
+        let token = headers.get(HEADERNAME)?;
+
+        Some(Token(token.to_str().ok()?.to_string()))
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

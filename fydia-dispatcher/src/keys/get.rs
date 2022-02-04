@@ -8,12 +8,6 @@ pub async fn get_public_key(instance: Instance) -> Option<PublicKey> {
     ))
     .await
     .unwrap();
-
-    if let Ok(text) = response.text().await {
-        if let Some(key) = fydia_crypto::pem::get_key_from_string(text) {
-            return Some(key);
-        }
-    }
-
-    None
+    let res = response.text().await.ok()?;
+    Some(fydia_crypto::pem::get_key_from_string(res)?)
 }

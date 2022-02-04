@@ -57,11 +57,7 @@ impl ServerId {
     }
 
     pub fn eq<T: Into<String>>(&mut self, id: T) -> bool {
-        if self.id == id.into() {
-            return true;
-        }
-
-        false
+        self.id == id.into()
     }
 }
 
@@ -79,6 +75,7 @@ impl Servers {
                 return true;
             }
         }
+
         false
     }
 
@@ -89,6 +86,7 @@ impl Servers {
                 return Some(i.clone());
             }
         }
+
         None
     }
 
@@ -160,6 +158,7 @@ impl Channels {
                 return true;
             }
         }
+
         false
     }
 

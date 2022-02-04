@@ -45,15 +45,12 @@ impl SqlMessage for Message {
             .paginate(executor, 50);
         while let Ok(Some(e)) = query.fetch_and_next().await {
             for i in e {
-                let author_id = match User::get_user_by_id(i.author_id, executor).await {
-                    Some(author_id) => author_id,
-                    None => return Err("Error Author_id".to_string()),
-                };
+                let author_id = User::get_user_by_id(i.author_id, executor)
+                    .await
+                    .ok_or_else(|| "Error Author_id".to_string())?;
 
-                let message_type = match MessageType::from_string(i.message_type) {
-                    Some(e) => e,
-                    None => return Err("Error Message_type".to_string()),
-                };
+                let message_type = MessageType::from_string(i.message_type)
+                    .ok_or_else(|| "Error Message_type".to_string())?;
 
                 messages.push(Message {
                     id: i.id,
@@ -75,53 +72,33 @@ impl SqlMessage for Message {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
-        let mut query = crate::entity::messages::Entity::find()
+        let query = crate::entity::messages::Entity::find()
             .filter(crate::entity::messages::Column::ChannelId.eq(channel_id.id))
             .order_by(
                 crate::entity::messages::Column::Timestamp,
                 sea_orm::Order::Asc,
             )
             .paginate(executor, 50);
-        let mut n = 0;
-        while let e = query.fetch_and_next().await {
-            match e {
-                Ok(e) => match e {
-                    Some(vec) => {
-                        for i in vec {
-                            let author_id = match User::get_user_by_id(i.author_id, executor).await
-                            {
-                                Some(author_id) => author_id,
-                                None => return Err("Error Author_id".to_string()),
-                            };
 
-                            let message_type = match MessageType::from_string(i.message_type) {
-                                Some(e) => e,
-                                None => return Err("Error Message_type".to_string()),
-                            };
+        if let Ok(models) = query.fetch().await {
+            for i in models {
+                let author_id = User::get_user_by_id(i.author_id, executor)
+                    .await
+                    .ok_or_else(|| "Error Author_id".to_string())?;
 
-                            messages.push(Message {
-                                id: i.id,
-                                content: i.content.unwrap_or_default(),
-                                message_type,
-                                edited: i.edited != 0,
-                                timestamp: Date::parse_from_naivetime(i.timestamp),
-                                channel_id: ChannelId::new(i.channel_id),
-                                author_id,
-                            })
-                        }
-                    }
-                    None => {
-                        return Ok(messages);
-                    }
-                },
-                Err(e) => {
-                    return Err(e.to_string());
-                }
+                let message_type = MessageType::from_string(i.message_type)
+                    .ok_or_else(|| "Error Message_type".to_string())?;
+
+                messages.push(Message {
+                    id: i.id,
+                    content: i.content.unwrap_or_default(),
+                    message_type,
+                    edited: i.edited != 0,
+                    timestamp: Date::parse_from_naivetime(i.timestamp),
+                    channel_id: ChannelId::new(i.channel_id),
+                    author_id,
+                })
             }
-            if n == 50 {
-                break;
-            }
-            n += 1;
         }
 
         Ok(messages)
@@ -138,13 +115,11 @@ impl SqlMessage for Message {
             author_id: Set(self.author_id.id.id),
         };
 
-        match crate::entity::messages::Entity::insert(active_model)
+        crate::entity::messages::Entity::insert(active_model)
             .exec(executor)
             .await
-        {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
 
     async fn update_message<T: Into<String> + Send>(
@@ -159,40 +134,28 @@ impl SqlMessage for Message {
             ..Default::default()
         };
 
-        match crate::entity::messages::Entity::update(active_model)
+        crate::entity::messages::Entity::update(active_model)
             .filter(crate::entity::messages::Column::Id.eq(self.id.as_str()))
             .exec(executor)
             .await
-        {
-            Ok(_) => {
-                self.content = content;
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        }
+            .map_err(|f| f.to_string())?;
+
+        self.content = content;
+        Ok(())
     }
 
     async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        match crate::entity::messages::Entity::find_by_id(self.id.clone())
+        let model = crate::entity::messages::Entity::find_by_id(self.id.clone())
             .one(executor)
             .await
-        {
-            Ok(Some(model)) => {
-                let active_model: crate::entity::messages::ActiveModel = model.into();
-                match crate::entity::messages::Entity::delete(active_model)
-                    .exec(executor)
-                    .await
-                {
-                    Ok(_) => return Ok(()),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                }
-            }
-            Err(e) => {
-                return Err(e.to_string());
-            }
-            _ => return Err("Cannot get database error".to_string()),
-        }
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "Can't delete the message")?;
+
+        let active_model: crate::entity::messages::ActiveModel = model.into();
+        crate::entity::messages::Entity::delete(active_model)
+            .exec(executor)
+            .await
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
 }

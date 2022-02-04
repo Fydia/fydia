@@ -192,6 +192,7 @@ impl TypingInner {
                 channel_user,
             )
             .await
+            .map_err(|_| ())
     }
 
     pub async fn send_stop_typing(
@@ -208,6 +209,7 @@ impl TypingInner {
                 channel_user,
             )
             .await
+            .map_err(|_| ())
     }
 
     pub fn remove_channel(&mut self, channelid: &ChannelId) {
@@ -220,11 +222,10 @@ impl TypingInner {
         channelid: &ChannelId,
     ) -> Option<usize> {
         let mut locked = self.0.lock();
-        if let Some(uservec) = locked.get_mut(channelid) {
-            for (n, usertyping) in uservec.iter().enumerate() {
-                if &usertyping.0 == user {
-                    return Some(n);
-                }
+        let uservec = locked.get_mut(channelid)?;
+        for (n, usertyping) in uservec.iter().enumerate() {
+            if &usertyping.0 == user {
+                return Some(n);
             }
         }
 
@@ -232,21 +233,21 @@ impl TypingInner {
     }
 
     pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), String> {
-        if let Some(n) = self.get_index_of_user_of_channelid(user, channelid) {
-            self.kill_task(channelid, n);
-            self.remove_task_with_index(channelid, n);
-            return Ok(());
-        }
-        Err("No user for this index".to_string())
+        let n = self
+            .get_index_of_user_of_channelid(user, channelid)
+            .ok_or_else(|| "No user for this index".to_string())?;
+        self.kill_task(channelid, n);
+        self.remove_task_with_index(channelid, n);
+        Ok(())
     }
 
     pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> bool {
         if let Some(index) = self.get_index_of_user_of_channelid(user, channelid) {
             self.remove_task_with_index(channelid, index);
-            return true;
+            true
+        } else {
+            false
         }
-
-        false
     }
 
     pub fn remove_task_with_index(&mut self, channelid: &ChannelId, index: usize) {
@@ -376,19 +377,15 @@ pub trait TypingManagerChannelTrait {
 
 impl TypingManagerChannelTrait for TypingManagerChannel {
     fn set_websocketmanager(&self, wbsocket: Arc<WebsocketManagerChannel>) -> Result<(), String> {
-        if let Err(error) = self.0.send(TypingMessage::SetWebSocketManager(wbsocket)) {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        self.0
+            .send(TypingMessage::SetWebSocketManager(wbsocket))
+            .map_err(|f| f.to_string())
     }
 
     fn set_selfmanager(&self, selfmanager: Arc<TypingManagerChannel>) -> Result<(), String> {
-        if let Err(error) = self.0.send(TypingMessage::SetTypingManager(selfmanager)) {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        self.0
+            .send(TypingMessage::SetTypingManager(selfmanager))
+            .map_err(|f| f.to_string())
     }
 
     fn start_typing(
@@ -398,16 +395,14 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         serverid: ServerId,
         user_of_channel: Vec<User>,
     ) -> Result<(), String> {
-        if let Err(error) = self.0.send(TypingMessage::StartTyping(
-            userid,
-            channelid,
-            serverid,
-            user_of_channel,
-        )) {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        self.0
+            .send(TypingMessage::StartTyping(
+                userid,
+                channelid,
+                serverid,
+                user_of_channel,
+            ))
+            .map_err(|f| f.to_string())
     }
 
     fn stop_typing(
@@ -417,16 +412,14 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         serverid: ServerId,
         user_of_channel: Vec<User>,
     ) -> Result<(), String> {
-        if let Err(error) = self.0.send(TypingMessage::StopTyping(
-            userid,
-            channelid,
-            serverid,
-            user_of_channel,
-        )) {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        self.0
+            .send(TypingMessage::StopTyping(
+                userid,
+                channelid,
+                serverid,
+                user_of_channel,
+            ))
+            .map_err(|error| error.to_string())
     }
 
     fn remove_task(
@@ -436,15 +429,13 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         serverid: ServerId,
         users_of_channel: Vec<User>,
     ) -> Result<(), String> {
-        if let Err(error) = self.0.send(TypingMessage::RemoveTask(
-            userid,
-            channelid,
-            serverid,
-            users_of_channel,
-        )) {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        self.0
+            .send(TypingMessage::RemoveTask(
+                userid,
+                channelid,
+                serverid,
+                users_of_channel,
+            ))
+            .map_err(|error| error.to_string())
     }
 }

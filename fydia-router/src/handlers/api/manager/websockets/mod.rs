@@ -149,11 +149,7 @@ impl WebsocketInner {
     }
 
     pub fn get_channel(&mut self, user: &User, index: usize) -> Option<WbSender> {
-        if let Some(sender) = self.get_user(user).1.get(index) {
-            return Some(sender.clone());
-        }
-
-        None
+        self.get_user(user).1.get(index).cloned()
     }
 
     pub fn insert_channel(&mut self, user: &User, channel: WbSender) {
@@ -173,22 +169,21 @@ impl WebsocketInner {
         let mut user = user.clone();
         user.password = None;
 
-        if let Some((index_channel, index_user)) =
-            self.get_sender_index_and_user_index(&user, wbsender)
-        {
-            let mut wblist = self.wb_channel.lock();
-            let wbuser = &mut wblist[index_user].1;
-            wbuser.swap_remove(index_channel);
+        let (index_channel, index_user) = self
+            .get_sender_index_and_user_index(&user, wbsender)
+            .ok_or_else(|| ())?;
 
-            if wbuser.is_empty() {
-                wblist.swap_remove(index_user);
-            }
+        let mut wblist = self.wb_channel.lock();
+        let wbuser = &mut wblist[index_user].1;
+        wbuser.swap_remove(index_channel);
 
-            wblist.shrink_to_fit();
-
-            return Ok(());
+        if wbuser.is_empty() {
+            wblist.swap_remove(index_user);
         }
-        Err(())
+
+        wblist.shrink_to_fit();
+
+        Ok(())
     }
 }
 

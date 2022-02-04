@@ -24,18 +24,18 @@ pub async fn create_direct_message(
 
     if let Some(user) = UserFormat::from_string(&target_user) {
         println!("{:?}", user);
-        return FydiaResponse::new_error_custom_status("Soon may be", StatusCode::NOT_IMPLEMENTED);
+        FydiaResponse::new_error_custom_status("Soon may be", StatusCode::NOT_IMPLEMENTED)
     } else if let Ok(id) = target_user.parse::<i32>() {
         let target = UserId::new(id).get_user(&database).await;
         println!("{:?}", target);
         if let Some(target) = target {
             let dm = DirectMessage::new(vec![user.id, target.id]);
             println!("{:?}", dm.insert(&database).await);
-            return FydiaResponse::new_ok("");
+            FydiaResponse::new_ok("")
+        } else {
+            FydiaResponse::new_error("Bad user id")
         }
+    } else {
+        FydiaResponse::new_error("Bad user id")
     }
-
-    info!(&target_user.to_string());
-
-    FydiaResponse::new_error("Bad user id")
 }

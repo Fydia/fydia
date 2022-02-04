@@ -122,35 +122,14 @@ impl ChannelFormat {
 
         let (servername, domain) = part.split_at(n);
         let domain = domain.trim_start_matches('$');
-        match reqwest::Url::parse(format!("http://{}", domain).as_str()) {
-            Ok(url) => match url.domain() {
-                Some(domain) => match url.port() {
-                    Some(port) => {
-                        return Some(Self {
-                            channel: channelname.to_string(),
-                            server: servername.trim_start_matches('#').to_string(),
-                            domain: domain.to_string(),
-                            port: Some(port),
-                        });
-                    }
-                    None => {
-                        return Some(Self {
-                            channel: channelname.to_string(),
-                            server: servername.trim_start_matches('#').to_string(),
-                            domain: domain.to_string(),
-                            port: None,
-                        });
-                    }
-                },
-                None => {
-                    println!("No domain");
-                    None
-                }
-            },
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        }
+        let url = reqwest::Url::parse(format!("http://{}", domain).as_str()).ok()?;
+        let domain = url.domain()?;
+
+        Some(Self {
+            channel: channelname.to_string(),
+            server: servername.trim_start_matches('#').to_string(),
+            domain: domain.to_string(),
+            port: url.port(),
+        })
     }
 }

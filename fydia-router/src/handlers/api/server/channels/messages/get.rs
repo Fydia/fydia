@@ -21,8 +21,8 @@ pub async fn get_message(
     };
 
     if let Ok(message) = &channel.get_messages(&database).await {
-        return FydiaResponse::new_ok_json(&message);
+        FydiaResponse::new_ok_json(&message)
+    } else {
+        FydiaResponse::new_error("Cannot get message")
     }
-
-    FydiaResponse::new_error("Cannot get message")
 }

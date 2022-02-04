@@ -24,8 +24,8 @@ pub async fn delete_channel(
 
     if let Err(error) = channel.delete_channel(&database).await {
         error!(error);
-        return FydiaResponse::new_error(error);
+        FydiaResponse::new_error(error)
+    } else {
+        FydiaResponse::new_ok("Channel deleted")
     }
-
-    FydiaResponse::new_ok("Channel deleted")
 }

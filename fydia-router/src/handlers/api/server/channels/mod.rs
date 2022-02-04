@@ -21,8 +21,8 @@ pub async fn info_channel(
     if let Some(channel) =
         Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database).await
     {
-        return FydiaResponse::new_ok_json(&channel);
+        FydiaResponse::new_ok_json(&channel)
+    } else {
+        FydiaResponse::new_error("Error")
     }
-
-    FydiaResponse::new_error("Error")
 }

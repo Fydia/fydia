@@ -54,30 +54,26 @@ impl SqlChannel for Channel {
         // TODO: Check Permission
         match &self.parent_id {
             ParentId::DirectMessage(directmessage) => match &directmessage.users {
-                DirectMessageValue::Users(users) => {
-                    return Ok(users.clone());
-                }
+                DirectMessageValue::Users(users) => Ok(users.clone()),
                 DirectMessageValue::UsersId(usersid) => {
                     let mut vec = Vec::new();
+
                     for i in usersid {
                         if let Some(user) = i.get_user(executor).await {
                             vec.push(user);
                         }
                     }
 
-                    return Ok(vec);
+                    Ok(vec)
                 }
             },
             ParentId::ServerId(serverid) => {
-                if let Ok(server) = serverid.get_server(executor).await {
-                    if let Ok(members) = server.get_user(executor).await {
-                        return Ok(members.members);
-                    }
-                }
-            }
-        };
+                let server = serverid.get_server(executor).await?;
+                let members = server.get_user(executor).await?;
 
-        Ok(Vec::new())
+                Ok(members.members)
+            }
+        }
     }
 
     async fn get_channels_by_server_id(
@@ -86,22 +82,18 @@ impl SqlChannel for Channel {
     ) -> Result<Channels, String> {
         let parentid = ParentId::ServerId(server_id).to_string()?;
         let mut channels: Vec<Channel> = Vec::new();
-        match crate::entity::channels::Entity::find()
+
+        let models = crate::entity::channels::Entity::find()
             .filter(crate::entity::channels::Column::ParentId.eq(parentid))
             .all(executor)
             .await
-        {
-            Ok(models) => {
-                for model in models {
-                    if let Some(channel) = model.to_channel() {
-                        channels.push(channel);
-                    }
-                }
+            .map_err(|f| f.to_string())?;
 
-                Ok(())
+        for model in models {
+            if let Some(channel) = model.to_channel() {
+                channels.push(channel);
             }
-            Err(e) => Err(e.to_string()),
-        }?;
+        }
 
         Ok(Channels(channels))
     }
@@ -115,42 +107,37 @@ impl SqlChannel for Channel {
             description: Set(Some(self.description.clone())),
             channel_type: Set(Some(self.channel_type.to_string())),
         };
-        match crate::entity::channels::Entity::insert(active_channel)
+
+        crate::entity::channels::Entity::insert(active_channel)
             .exec(executor)
             .await
-        {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
+
     async fn update_name<T: Into<String> + Send>(
         &mut self,
         name: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let name = name.into();
-        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
+        let model = crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
-        {
-            Ok(Some(e)) => {
-                let mut active_model: crate::entity::channels::ActiveModel = e.into();
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "Can't update name")?;
 
-                active_model.name = Set(name.clone());
-                match crate::entity::channels::Entity::update(active_model)
-                    .exec(executor)
-                    .await
-                {
-                    Ok(_) => {
-                        self.name = name;
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error".to_string()),
-        }
+        let mut active_model: crate::entity::channels::ActiveModel = model.into();
+        active_model.name = Set(name.clone());
+
+        crate::entity::channels::Entity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+
+        self.name = name;
+
+        Ok(())
     }
 
     async fn update_description<T: Into<String> + Send>(
@@ -159,48 +146,38 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let description = description.into();
-        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
+        let model = crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
-        {
-            Ok(Some(e)) => {
-                let mut active_model: crate::entity::channels::ActiveModel = e.into();
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "Can't update name")?;
 
-                active_model.description = Set(Some(description.clone()));
-                match crate::entity::channels::Entity::update(active_model)
-                    .exec(executor)
-                    .await
-                {
-                    Ok(_) => {
-                        self.description = description;
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error".to_string()),
-        }
+        let mut active_model: crate::entity::channels::ActiveModel = model.into();
+
+        active_model.description = Set(Some(description.clone()));
+        crate::entity::channels::Entity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+
+        self.description = description;
+        Ok(())
     }
 
     async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        match crate::entity::channels::Entity::find_by_id(self.id.id.clone())
+        let model = crate::entity::channels::Entity::find_by_id(self.id.id.clone())
             .one(executor)
             .await
-        {
-            Ok(Some(e)) => {
-                let active_model: crate::entity::channels::ActiveModel = e.into();
-                match crate::entity::channels::Entity::delete(active_model)
-                    .exec(executor)
-                    .await
-                {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error".to_string()),
-        }
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "Can't update name")?;
+
+        let active_model: crate::entity::channels::ActiveModel = model.into();
+
+        crate::entity::channels::Entity::delete(active_model)
+            .exec(executor)
+            .await
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
 
     async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
@@ -237,25 +214,23 @@ impl SqlDirectMessages for DirectMessage {
         userid: UserId,
     ) -> Result<Vec<Channel>, String> {
         let user = userid.to_string()?;
-        let one = crate::entity::channels::Entity::find()
+        let vec_model = crate::entity::channels::Entity::find()
             .filter(crate::entity::channels::Column::ParentId.contains(&user))
             .all(executor)
-            .await;
-        match one {
-            Ok(result) => {
-                let mut r = Vec::new();
+            .await
+            .map_err(|f| f.to_string())?;
 
-                for i in result {
-                    if let Some(e) = i.to_channel() {
-                        r.push(e);
-                    }
-                }
+        let mut result = Vec::new();
 
-                Ok(r)
+        for model in vec_model {
+            if let Some(channel) = model.to_channel() {
+                result.push(channel);
             }
-            Err(e) => Err(e.to_string()),
         }
+
+        Ok(result)
     }
+
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let channel = Channel::new_with_parentid(
             "",
@@ -267,17 +242,17 @@ impl SqlDirectMessages for DirectMessage {
     }
     async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let mut users = Vec::new();
+
         match &mut self.users {
             DirectMessageValue::Users(_) => {}
             DirectMessageValue::UsersId(userids) => {
                 for userid in userids {
-                    match userid.get_user(executor).await {
-                        Some(userid) => {
-                            users.push(userid);
-                            Ok(())
-                        }
-                        None => Err("User not exists".to_string()),
-                    }?
+                    let user = userid
+                        .get_user(executor)
+                        .await
+                        .ok_or_else(|| "User not exists".to_string())?;
+
+                    users.push(user);
                 }
 
                 self.users = DirectMessageValue::Users(users);

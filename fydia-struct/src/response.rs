@@ -114,20 +114,16 @@ impl IntoResponse for FydiaResponse {
         response = response.status(self.statuscode);
 
         match serde_json::to_string(&self) {
-            Ok(response_str) => {
-                response
-                    .body(body::boxed(body::Full::from(response_str)))
-                    .unwrap()
-            }
-            Err(e) => {
-                response
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(body::boxed(body::Full::from(format!(
-                        r#"{{"status":"Error", "content":{}}}"#,
-                        e
-                    ))))
-                    .unwrap()
-            }
+            Ok(response_str) => response
+                .body(body::boxed(body::Full::from(response_str)))
+                .unwrap(),
+            Err(e) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(body::boxed(body::Full::from(format!(
+                    r#"{{"status":"Error", "content":{}}}"#,
+                    e
+                ))))
+                .unwrap(),
         }
     }
 }

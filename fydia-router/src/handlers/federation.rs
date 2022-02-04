@@ -29,14 +29,13 @@ pub async fn event_handler(
     if let Some(msg) = receive_message(&headers, body, rsa).await {
         if let Ok(event) = serde_json::from_str::<Event>(msg.as_str()) {
             crate::handlers::event::event_handler(event, &database, &wbsockets).await;
+            FydiaResponse::new_ok("");
         } else {
-            return FydiaResponse::new_error("Bad Body");
+            FydiaResponse::new_error("Bad Body");
         }
     } else {
-        return FydiaResponse::new_error("Decryption Error");
+        FydiaResponse::new_error("Decryption Error");
     }
-
-    FydiaResponse::new_error("Error: No message received")
 }
 
 pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> impl IntoResponse {

@@ -32,15 +32,17 @@ pub fn empty_response<'a>() -> (StatusCode, &'a str) {
     (StatusCode::BAD_REQUEST, "")
 }
 
-async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, user: Option<User>) {
-    let user = if let Some(user) = user { user } else { return };
-    let channel = if let Some(channels) = wbmanager.get_new_channel(user.clone()).await {
-        channels
-    } else {
-        return;
-    };
+async fn connected(
+    socket: WebSocket,
+    wbmanager: Arc<WebsocketManagerChannel>,
+    user: Option<User>,
+) -> Result<(), String> {
+    let user = user.ok_or_else(|| "No user".to_string())?;
+    let (sender, mut receiver) = wbmanager
+        .get_new_channel(user.clone())
+        .await
+        .ok_or_else(|| "No Channel".to_string())?;
     let (mut sink, mut stream) = socket.split();
-    let (sender, mut receiver) = channel;
     let thread_sender = sender.clone();
 
     tokio::spawn(async move {
@@ -89,6 +91,8 @@ async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, u
             }
         }
     });
+
+    Ok(())
 }
 
 pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>

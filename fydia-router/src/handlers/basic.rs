@@ -19,7 +19,8 @@ impl BasicValues {
         headers: &HeaderMap,
         executor: &DbConnection,
     ) -> Result<User, FydiaResponse> {
-        let token = Token::from_headervalue(headers).ok_or_else(|| FydiaResponse::new_error("No token"))?;
+        let token =
+            Token::from_headervalue(headers).ok_or_else(|| FydiaResponse::new_error("No token"))?;
         token
             .get_user(executor)
             .await

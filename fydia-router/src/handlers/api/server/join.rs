@@ -18,12 +18,12 @@ pub async fn join(
             Err(error) => return error,
         };
 
-    return if user.servers.is_join(&server.id) {
+    if user.servers.is_join(&server.id) {
         FydiaResponse::new_error("Already join")
     } else if let Err(error) = server.join(&mut user, &database).await {
         error!(error);
         FydiaResponse::new_error("Cannot join")
     } else {
         FydiaResponse::new_ok("Server joined")
-    };
+    }
 }

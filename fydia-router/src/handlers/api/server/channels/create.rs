@@ -31,20 +31,19 @@ pub async fn create_channel(
             let name = value.get("name");
             let ctype = value.get("type");
 
-            if let (Some(name), Some(ctype)) = (name, ctype) { if let (Some(name), Some(ctype)) = (name.as_str(), ctype.as_str()) {
-                        let channel = Channel::new_with_parentid(
-                            name,
-                            "",
-                            ParentId::ServerId(server.id.clone()),
-                            ChannelType::from_string(ctype),
-                        );
-                        if let Err(error) = server.insert_channel(channel.clone(), &database).await
-                        {
-                            error!(error);
-                            return FydiaResponse::new_error("Cannot create the channel");
-                        } else {
-                            return FydiaResponse::new_ok(channel.id.id);
-                        }
+            if let (Some(name), Some(ctype)) = (name, ctype) {
+                if let (Some(name), Some(ctype)) = (name.as_str(), ctype.as_str()) {
+                    let channel = Channel::new_with_parentid(
+                        name,
+                        "",
+                        ParentId::ServerId(server.id.clone()),
+                        ChannelType::from_string(ctype),
+                    );
+
+                    return match server.insert_channel(channel.clone(), &database).await {
+                        Ok(_) => FydiaResponse::new_ok(channel.id.id),
+                        Err(_) => FydiaResponse::new_error("Cannot create the channel"),
+                    };
                 }
             }
 

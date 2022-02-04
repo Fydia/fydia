@@ -138,23 +138,25 @@ impl File {
     }
 
     pub fn get_value_of_description(&self) -> Result<Vec<u8>, String> {
-        if let Some(desc) = &self.description {
-            let file = std::fs::File::open(desc).map_err(|f| f.to_string())?;
-            let buf = BufReader::new(file);
-            return Ok(buf.buffer().to_vec());
-        }
+        let desc = self
+            .description
+            .as_ref()
+            .ok_or_else(|| "No file".to_string())?;
 
-        Err(String::from("No file"))
+        let file = std::fs::File::open(desc).map_err(|f| f.to_string())?;
+        let buf = BufReader::new(file);
+        Ok(buf.buffer().to_vec())
     }
 
     pub fn async_get_value_of_description(
         &self,
     ) -> Result<impl Stream<Item = Result<u8, io::Error>>, String> {
-        if let Some(desc) = &self.description {
-            let file = std::fs::File::open(&desc).map_err(|f| f.to_string())?;
-            let buf = BufReader::new(file);
-            return Ok(stream::iter(buf.bytes()));
-        }
-        Err(String::from("No file"))
+        let desc = self
+            .description
+            .as_ref()
+            .ok_or_else(|| "No file".to_string())?;
+        let file = std::fs::File::open(&desc).map_err(|f| f.to_string())?;
+        let buf = BufReader::new(file);
+        Ok(stream::iter(buf.bytes()))
     }
 }

@@ -19,10 +19,8 @@ pub struct Model {
 
 impl Model {
     pub fn from_channel(channel: Channel) -> Result<Self, String> {
-        let parent_id = match serde_json::to_string(&channel) {
-            Ok(e) => e,
-            Err(e) => return Err(e.to_string()),
-        };
+        let parent_id = serde_json::to_string(&channel).map_err(|f| f.to_string())?;
+
         Ok(Self {
             id: channel.id.id,
             parent_id,
@@ -32,17 +30,9 @@ impl Model {
         })
     }
     pub fn to_channel(&self) -> Option<Channel> {
-        let channel_type = match self.channel_type.clone() {
-            Some(e) => ChannelType::from_string(e),
-            None => return None,
-        };
-        let parent_id = match serde_json::from_str::<ParentId>(&self.parent_id) {
-            Ok(e) => e,
-            Err(e) => {
-                error!(e.to_string());
-                return None;
-            }
-        };
+        let channel_type = self.channel_type.clone().map(ChannelType::from_string)?;
+        let parent_id = serde_json::from_str::<ParentId>(&self.parent_id).ok()?;
+
         Some(Channel {
             id: ChannelId::new(self.id.clone()),
             name: self.name.clone(),

@@ -229,16 +229,15 @@ impl SqlServer for Server {
             description: Set(Some(channel.description.clone())),
             channel_type: Set(Some(channel.channel_type.to_string())),
         };
-        match crate::entity::channels::Entity::insert(active_channel)
+
+        crate::entity::channels::Entity::insert(active_channel)
             .exec(executor)
             .await
-        {
-            Ok(_) => {
-                self.channel.0.push(channel);
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        }
+            .map_err(|f| f.to_string())?;
+
+        self.channel.0.push(channel);
+
+        Ok(())
     }
 }
 

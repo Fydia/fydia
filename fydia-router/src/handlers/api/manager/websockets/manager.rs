@@ -19,14 +19,14 @@ pub trait WbManagerChannelTrait {
     async fn get_channels_of_user(&self, user: User) -> Result<Vec<WbSender>, String>;
     async fn get_new_channel(&self, user: User) -> Option<WbChannel>;
     async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()>;
-    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), ()>;
+    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), String>;
     async fn send_with_origin_and_key(
         &self,
         msg: Event,
         user: Vec<User>,
         _keys: Option<&RsaData>,
         _origin: Option<Instance>,
-    ) -> Result<(), ()>;
+    ) -> Result<(), String>;
 }
 
 #[async_trait]
@@ -49,47 +49,23 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
             error!(e.to_string());
         }
 
-        match receiver.await {
-            Ok(e) => return Some(e),
-            Err(e) => {
-                error!(e.to_string());
-            }
-        };
-
-        None
+        receiver.await.ok()
     }
 
     async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()> {
         let (sender, receiver) = oneshot::channel::<Result<(), ()>>();
-        if let Err(e) = self
+        if let Err(error) = self
             .0
             .send(WbManagerMessage::Remove(user, wbsender.clone(), sender))
         {
-            error!(e.to_string());
+            error!(error.to_string());
         }
 
-        if let Ok(res) = receiver.await {
-            return res;
-        }
-
-        Err(())
+        receiver.await.unwrap_or_else(|_| Err(()))
     }
 
-    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), ()> {
-        for mut i in user {
-            i.drop_password();
-            if let Ok(wbstruct) = self.get_channels_of_user(i).await {
-                for i in wbstruct {
-                    if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                        error!(e.to_string());
-                    };
-                }
-            } else {
-                return Err(());
-            }
-        }
-
-        Ok(())
+    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), String> {
+        self.send_with_origin_and_key(msg, user, None, None).await
     }
 
     async fn send_with_origin_and_key(
@@ -98,17 +74,14 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         user: Vec<User>,
         _keys: Option<&RsaData>,
         _origin: Option<Instance>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), String> {
         for mut i in user {
             i.drop_password();
-            if let Ok(wbstruct) = self.get_channels_of_user(i).await {
-                for i in wbstruct {
-                    if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                        error!(e.to_string());
-                    };
+            let channel = self.get_channels_of_user(i).await?;
+            for i in channel {
+                if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
+                    error!(e.to_string());
                 }
-            } else {
-                return Err(());
             }
         }
 

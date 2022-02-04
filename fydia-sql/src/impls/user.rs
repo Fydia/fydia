@@ -63,76 +63,69 @@ impl SqlUser for User {
         password: T,
         executor: &DatabaseConnection,
     ) -> Option<Self> {
-        match UserEntity::find()
+        let model = UserEntity::find()
             .filter(crate::entity::user::Column::Email.contains(email.into().as_str()))
             .one(executor)
             .await
-        {
-            Ok(Some(model)) => {
-                if verify_password(password.into(), model.password.clone()) {
-                    return model.to_user();
-                }
+            .ok()??;
 
-                None
-            }
-            _ => None,
+        if verify_password(password.into(), model.password.clone()) {
+            model.to_user()
+        } else {
+            None
         }
     }
 
     async fn get_user_by_id(id: i32, executor: &DatabaseConnection) -> Option<Self> {
-        match UserEntity::find_by_id(id).one(executor).await {
-            Ok(Some(user_from_db)) => user_from_db.to_user(),
-            Err(_) => None,
-            _ => None,
-        }
+        UserEntity::find_by_id(id)
+            .one(executor)
+            .await
+            .ok()??
+            .to_user()
     }
 
     async fn get_user_by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self> {
-        match UserEntity::find()
+        UserEntity::find()
             .filter(crate::entity::user::Column::Token.contains(token.0.as_str()))
             .one(executor)
             .await
-        {
-            Ok(Some(user_from_db)) => user_from_db.to_user(),
-            Err(_) => None,
-            _ => None,
-        }
+            .ok()??
+            .to_user()
     }
 
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(user) => {
-                if let Some(user) = user {
-                    if let Some(db_user) = user.to_user() {
-                        self.take_value_of(db_user);
-                        return Ok(());
-                    }
-                }
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User".to_string())?;
 
-                Err("No User".to_string())
-            }
-            Err(error) => Err(error.to_string()),
-        }
+        let user_of_db = model
+            .to_user()
+            .ok_or_else(|| "Can't convert it to user".to_string())?;
+
+        self.take_value_of(user_of_db);
+        Ok(())
     }
 
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let token = generate_string(30);
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(Some(model)) => {
-                let mut active_model: UserActiveModel = model.into();
-                active_model.token = Set(token.clone());
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User".to_string())?;
 
-                match UserEntity::update(active_model).exec(executor).await {
-                    Ok(_) => {
-                        self.token = Some(token.clone());
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error message".to_string()),
-        }
+        let mut active_model: UserActiveModel = model.into();
+        active_model.token = Set(token.clone());
+
+        UserEntity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+
+        self.token = Some(token.clone());
+        Ok(())
     }
 
     async fn update_name<T: Into<String> + Send>(
@@ -141,22 +134,22 @@ impl SqlUser for User {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let name = name.into();
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(Some(model)) => {
-                let mut active_model: UserActiveModel = model.into();
-                active_model.name = Set(name.clone());
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User".to_string())?;
 
-                match UserEntity::update(active_model).exec(executor).await {
-                    Ok(_) => {
-                        self.name = name;
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error message".to_string()),
-        }
+        let mut active_model: UserActiveModel = model.into();
+        active_model.name = Set(name.clone());
+
+        UserEntity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+
+        self.name = name;
+        Ok(())
     }
 
     async fn update_password<T: Into<String> + Send>(
@@ -166,23 +159,22 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         let clear_password = clear_password.into();
 
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(Some(model)) => {
-                let password = hash(clear_password)?;
-                let mut active_model: UserActiveModel = model.into();
-                active_model.password = Set(password.clone());
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User".to_string())?;
 
-                match UserEntity::update(active_model).exec(executor).await {
-                    Ok(_) => {
-                        self.password = Some(password);
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error message".to_string()),
-        }
+        let password = hash(clear_password)?;
+        let mut active_model: UserActiveModel = model.into();
+        active_model.password = Set(password.clone());
+
+        UserEntity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+        self.password = Some(password);
+        Ok(())
     }
 
     async fn insert_server(
@@ -190,57 +182,53 @@ impl SqlUser for User {
         server_short_id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(Some(model)) => {
-                let mut current_server = self.servers.clone().0;
-                current_server.push(server_short_id.clone());
-                let json = match serde_json::to_string(&current_server) {
-                    Ok(json) => json,
-                    Err(error) => error.to_string(),
-                };
-                let mut active_model: UserActiveModel = model.into();
-                active_model.server = Set(Some(json));
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User".to_string())?;
 
-                match UserEntity::update(active_model).exec(executor).await {
-                    Ok(_) => {
-                        self.servers.0.push(server_short_id.clone());
+        let mut current_server = self.servers.clone().0;
+        current_server.push(server_short_id.clone());
 
-                        Ok(())
-                    }
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error message".to_string()),
-        }
+        let json = serde_json::to_string(&current_server).map_err(|f| f.to_string())?;
+
+        let mut active_model: UserActiveModel = model.into();
+        active_model.server = Set(Some(json));
+        UserEntity::update(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
+
+        self.servers.0.push(server_short_id.clone());
+
+        Ok(())
     }
 
     async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let json = match serde_json::to_string(&Servers(Vec::new())) {
-            Ok(json) => json,
-            Err(error) => return Err(error.to_string()),
+        let json = serde_json::to_string(&Servers(Vec::new())).map_err(|f| f.to_string())?;
+        let password = self
+            .password
+            .clone()
+            .ok_or_else(|| "Password is empty".to_string())?;
+
+        let active_model = UserActiveModel {
+            name: Set(self.name.clone()),
+            token: Set("".to_string()),
+            email: Set(self.email.clone()),
+            password: Set(password),
+            server: Set(Some(json)),
+            ..Default::default()
         };
 
-        if let Some(password) = self.password.clone() {
-            let active_model = UserActiveModel {
-                name: Set(self.name.clone()),
-                token: Set("".to_string()),
-                email: Set(self.email.clone()),
-                password: Set(password),
-                server: Set(Some(json)),
-                ..Default::default()
-            };
+        let db = UserEntity::insert(active_model)
+            .exec(executor)
+            .await
+            .map_err(|f| f.to_string())?;
 
-            return match UserEntity::insert(active_model).exec(executor).await {
-                Ok(result) => {
-                    self.id = UserId::new(result.last_insert_id);
-                    Ok(())
-                }
-                Err(e) => Err(e.to_string()),
-            };
-        }
+        self.id = UserId::new(db.last_insert_id);
 
-        return Err(String::from("Password is empty"));
+        Ok(())
     }
 
     async fn insert_user_and_update(
@@ -252,17 +240,19 @@ impl SqlUser for User {
     }
 
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        match UserEntity::find_by_id(self.id.id).one(executor).await {
-            Ok(Some(model)) => {
-                let active_model: UserActiveModel = model.into();
-                match UserEntity::delete(active_model).exec(executor).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-            _ => Err("Cannot get error message".to_string()),
-        }
+        let model = UserEntity::find_by_id(self.id.id)
+            .one(executor)
+            .await
+            .map_err(|f| f.to_string())?
+            .ok_or_else(|| "No User")?;
+
+        let active_model: UserActiveModel = model.into();
+
+        UserEntity::delete(active_model)
+            .exec(executor)
+            .await
+            .map(|_| ())
+            .map_err(|f| f.to_string())
     }
 
     async fn get_user_message() -> Vec<String> {
@@ -288,10 +278,6 @@ pub trait UserInfoSql {
 #[async_trait]
 impl UserInfoSql for UserId {
     async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo> {
-        if let Some(user) = self.get_user(&executor).await {
-            return Some(user.to_userinfo());
-        }
-
-        None
+        self.get_user(&executor).await.map(|f| f.to_userinfo())
     }
 }

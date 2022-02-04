@@ -35,10 +35,10 @@ pub async fn get_picture_of_server(
                         HeaderValue::from_str(&mime_str).unwrap(),
                     );
                     res.2 = value;
-
-                    return res;
                 }
             }
+
+            res
         }
         Err(error) => {
             if let Ok(error) = error.get_body() {
@@ -46,10 +46,10 @@ pub async fn get_picture_of_server(
             } else {
                 res.2 = "No error message".as_bytes().to_vec();
             }
+
+            res
         }
     }
-
-    res
 }
 
 const MAX_CONTENT_LENGHT: usize = 8_000_000;
@@ -71,44 +71,37 @@ pub async fn post_picture_of_server(
     if vec_body.len() > MAX_CONTENT_LENGHT {
         return FydiaResponse::new_error_custom_status("", StatusCode::PAYLOAD_TOO_LARGE);
     }
-    if let Some(mimetype) = infer::get(&vec_body) {
-        let mimetype_str = mimetype.extension();
-        if mimetype_str == "png" || mimetype_str == "jpg" || mimetype_str == "gif" {
-            let file = File::new();
-            if let Err(error) = file.create() {
-                error!(error);
-                return FydiaResponse::new_error_custom_status(
-                    "",
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
-            };
+    let mimetype = if let Some(get) = infer::get(&vec_body) {
+        get
+    } else {
+        return FydiaResponse::new_error("No body");
+    };
 
-            println!("{} / ({})", file.get_name(), vec_body.len());
-            if let Err(error) = file.write(vec_body) {
-                error!(error);
-                return FydiaResponse::new_error_custom_status(
-                    "",
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
-            };
-
-            server.icon = file.get_name();
-            if let Err(error) = server.update(&database).await {
-                error!(error);
-                return FydiaResponse::new_error_custom_status(
-                    "",
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
-            }
-
-            return FydiaResponse::new_ok("Icon have been update");
-        }
-
+    let mimetype_str = mimetype.extension();
+    if mimetype_str != "png" || mimetype_str != "jpg" || mimetype_str != "gif" {
         return FydiaResponse::new_error_custom_status(
             "Bad Image type retry with png / jpg / gif",
             StatusCode::BAD_REQUEST,
         );
     }
 
-    FydiaResponse::new_error("No body")
+    let file = File::new();
+    if let Err(error) = file.create() {
+        error!(error);
+        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
+    };
+
+    println!("{} / ({})", file.get_name(), vec_body.len());
+    if let Err(error) = file.write(vec_body) {
+        error!(error);
+        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
+    };
+
+    server.icon = file.get_name();
+    if let Err(error) = server.update(&database).await {
+        error!(error);
+        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    FydiaResponse::new_ok("Icon have been update")
 }

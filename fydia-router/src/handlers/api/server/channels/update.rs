@@ -30,12 +30,12 @@ pub async fn update_name(
         if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
             if let Some(name) = value.get("name") {
                 if let Some(name_str) = name.as_str() {
-                    if let Err(error) = channel.update_name(name_str, &database).await {
+                    return if let Err(error) = channel.update_name(name_str, &database).await {
                         error!(error);
-                        return FydiaResponse::new_error("Cannot update description");
-                    }
-
-                    return FydiaResponse::new_ok("Channel name updated");
+                        FydiaResponse::new_error("Cannot update description")
+                    } else {
+                        FydiaResponse::new_ok("Channel name updated")
+                    };
                 }
             };
         }
@@ -64,13 +64,14 @@ pub async fn update_description(
         if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
             if let Some(description) = value.get("description") {
                 if let Some(description_str) = description.as_str() {
-                    if let Err(error) = channel.update_description(description_str, &database).await
+                    return if let Err(error) =
+                        channel.update_description(description_str, &database).await
                     {
                         error!(error);
-                        return FydiaResponse::new_error("Cannot update description");
-                    }
-
-                    return FydiaResponse::new_ok("Channel description updated");
+                        FydiaResponse::new_error("Cannot update description")
+                    } else {
+                        FydiaResponse::new_ok("Channel description updated")
+                    };
                 }
             }
         }

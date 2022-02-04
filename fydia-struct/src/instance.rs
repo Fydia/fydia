@@ -42,18 +42,17 @@ impl Instance {
     }
 
     pub fn from<T: Into<String>>(string: T) -> Option<Self> {
-        if let Ok(e) = url::Url::parse(string.into().as_str()) {
-            let protocol = Protocol::parse(e.scheme());
-            if let (Some(domain), Some(port)) = (e.domain(), e.port()) {
-                return Some(Self {
-                    protocol,
-                    domain: domain.to_string(),
-                    port,
-                });
-            }
+        let url = url::Url::parse(string.into().as_str()).ok()?;
+        let protocol = Protocol::parse(url.scheme());
+        if let (Some(domain), Some(port)) = (url.domain(), url.port()) {
+            Some(Self {
+                protocol,
+                domain: domain.to_string(),
+                port,
+            })
+        } else {
+            None
         }
-
-        None
     }
 
     pub fn format(&self) -> String {
@@ -61,16 +60,13 @@ impl Instance {
     }
 
     pub fn get_public_key(&self) -> Result<PublicKey, String> {
-        match reqwest::blocking::get(format!("{}/api/instance/public_key", self.format())) {
-            Ok(res) => match res.text() {
-                Ok(string) => match fydia_crypto::pem::get_key_from_string(string) {
-                    Some(key) => Ok(key),
-                    None => Err("Key error".to_string()),
-                },
-                Err(e) => Err(e.to_string()),
-            },
-            Err(e) => Err(e.to_string()),
-        }
+        let request = reqwest::blocking::get(format!("{}/api/instance/public_key", self.format()))
+            .map_err(|f| f.to_string())?;
+        let text = request.text().map_err(|f| f.to_string())?;
+        let key = fydia_crypto::pem::get_key_from_string(text)
+            .ok_or_else(|| "Can't read the key".to_string())?;
+
+        Ok(key)
     }
 }
 
