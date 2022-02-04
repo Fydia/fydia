@@ -78,7 +78,7 @@ pub async fn post_picture_of_server(
     };
 
     let mimetype_str = mimetype.extension();
-    if mimetype_str != "png" || mimetype_str != "jpg" || mimetype_str != "gif" {
+    if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {
         return FydiaResponse::new_error_custom_status(
             "Bad Image type retry with png / jpg / gif",
             StatusCode::BAD_REQUEST,
