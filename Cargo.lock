@@ -36,9 +36,9 @@ checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
 name = "argon2"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1574351abf0e4ef0de867b083a9f8e2f13618efcad6d3253c53554e4a887ed5"
+checksum = "a0a21e93ce9e91fcd0e01744e4f205fb9192f82915646a7e880dfef0ab4a38d8"
 dependencies = [
  "base64ct",
  "blake2",
