@@ -97,14 +97,15 @@ impl SqlChannel for Channel {
                         channels.push(channel);
                     }
                 }
+
+                Ok(())
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
-        }
+            Err(e) => Err(e.to_string()),
+        }?;
 
         Ok(Channels(channels))
     }
+
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let parent_id = self.parent_id.to_string()?;
         let active_channel = crate::entity::channels::ActiveModel {
@@ -144,14 +145,10 @@ impl SqlChannel for Channel {
                         self.name = name;
                         Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error".to_string()),
         }
     }
@@ -178,14 +175,10 @@ impl SqlChannel for Channel {
                         self.description = description;
                         Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error".to_string()),
         }
     }
@@ -202,14 +195,10 @@ impl SqlChannel for Channel {
                     .await
                 {
                     Ok(_) => Ok(()),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error".to_string()),
         }
     }
@@ -252,20 +241,20 @@ impl SqlDirectMessages for DirectMessage {
             .filter(crate::entity::channels::Column::ParentId.contains(&user))
             .all(executor)
             .await;
-        let mut r = Vec::new();
         match one {
             Ok(result) => {
+                let mut r = Vec::new();
+
                 for i in result {
                     if let Some(e) = i.to_channel() {
                         r.push(e);
-                    } else {
-                        return Err("Not Exists".to_string());
                     }
                 }
+
+                Ok(r)
             }
-            Err(e) => return Err(e.to_string()),
-        };
-        Ok(r)
+            Err(e) => Err(e.to_string()),
+        }
     }
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let channel = Channel::new_with_parentid(
@@ -280,12 +269,15 @@ impl SqlDirectMessages for DirectMessage {
         let mut users = Vec::new();
         match &mut self.users {
             DirectMessageValue::Users(_) => {}
-            DirectMessageValue::UsersId(e) => {
-                for i in e {
-                    match i.get_user(executor).await {
-                        Some(e) => users.push(e),
-                        None => return Err("User not exists".to_string()),
-                    };
+            DirectMessageValue::UsersId(userids) => {
+                for userid in userids {
+                    match userid.get_user(executor).await {
+                        Some(userid) => {
+                            users.push(userid);
+                            Ok(())
+                        }
+                        None => Err("User not exists".to_string()),
+                    }?
                 }
 
                 self.users = DirectMessageValue::Users(users);

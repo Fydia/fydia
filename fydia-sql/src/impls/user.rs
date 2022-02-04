@@ -32,7 +32,7 @@ pub trait SqlUser {
     where
         Self: Sized;
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String>;
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
         &mut self,
         name: T,
@@ -70,10 +70,10 @@ impl SqlUser for User {
         {
             Ok(Some(model)) => {
                 if verify_password(password.into(), model.password.clone()) {
-                    model.to_user()
-                } else {
-                    None
+                    return model.to_user();
                 }
+
+                None
             }
             _ => None,
         }
@@ -81,7 +81,7 @@ impl SqlUser for User {
 
     async fn get_user_by_id(id: i32, executor: &DatabaseConnection) -> Option<Self> {
         match UserEntity::find_by_id(id).one(executor).await {
-            Ok(Some(e)) => e.to_user(),
+            Ok(Some(user_from_db)) => user_from_db.to_user(),
             Err(_) => None,
             _ => None,
         }
@@ -93,7 +93,7 @@ impl SqlUser for User {
             .one(executor)
             .await
         {
-            Ok(Some(e)) => e.to_user(),
+            Ok(Some(user_from_db)) => user_from_db.to_user(),
             Err(_) => None,
             _ => None,
         }
@@ -109,13 +109,13 @@ impl SqlUser for User {
                     }
                 }
 
-                return Err("No User".to_string());
+                Err("No User".to_string())
             }
-            Err(error) => return Err(error.to_string()),
+            Err(error) => Err(error.to_string()),
         }
     }
 
-    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<String, String> {
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let token = generate_string(30);
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
@@ -125,16 +125,12 @@ impl SqlUser for User {
                 match UserEntity::update(active_model).exec(executor).await {
                     Ok(_) => {
                         self.token = Some(token.clone());
-                        Ok(token)
+                        Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error message".to_string()),
         }
     }
@@ -155,14 +151,10 @@ impl SqlUser for User {
                         self.name = name;
                         Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error message".to_string()),
         }
     }
@@ -173,6 +165,7 @@ impl SqlUser for User {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let clear_password = clear_password.into();
+
         match UserEntity::find_by_id(self.id.id).one(executor).await {
             Ok(Some(model)) => {
                 let password = hash(clear_password)?;
@@ -184,14 +177,10 @@ impl SqlUser for User {
                         self.password = Some(password);
                         Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error message".to_string()),
         }
     }
@@ -218,14 +207,10 @@ impl SqlUser for User {
 
                         Ok(())
                     }
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error message".to_string()),
         }
     }
@@ -235,6 +220,7 @@ impl SqlUser for User {
             Ok(json) => json,
             Err(error) => return Err(error.to_string()),
         };
+
         if let Some(password) = self.password.clone() {
             let active_model = UserActiveModel {
                 name: Set(self.name.clone()),
@@ -244,18 +230,17 @@ impl SqlUser for User {
                 server: Set(Some(json)),
                 ..Default::default()
             };
-            match UserEntity::insert(active_model).exec(executor).await {
+
+            return match UserEntity::insert(active_model).exec(executor).await {
                 Ok(result) => {
                     self.id = UserId::new(result.last_insert_id);
-                    return Ok(());
+                    Ok(())
                 }
-                Err(e) => {
-                    return Err(e.to_string());
-                }
-            }
-        } else {
-            Err(String::from("Password is empty"))
+                Err(e) => Err(e.to_string()),
+            };
         }
+
+        return Err(String::from("Password is empty"));
     }
 
     async fn insert_user_and_update(
@@ -272,14 +257,10 @@ impl SqlUser for User {
                 let active_model: UserActiveModel = model.into();
                 match UserEntity::delete(active_model).exec(executor).await {
                     Ok(_) => Ok(()),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
             _ => Err("Cannot get error message".to_string()),
         }
     }

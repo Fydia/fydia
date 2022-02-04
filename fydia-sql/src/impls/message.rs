@@ -143,9 +143,7 @@ impl SqlMessage for Message {
             .await
         {
             Ok(_) => Ok(()),
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
         }
     }
 
@@ -168,11 +166,9 @@ impl SqlMessage for Message {
         {
             Ok(_) => {
                 self.content = content;
-                return Ok(());
+                Ok(())
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
+            Err(e) => Err(e.to_string()),
         }
     }
 

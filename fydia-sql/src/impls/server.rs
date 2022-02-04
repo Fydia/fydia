@@ -50,17 +50,11 @@ impl SqlServer for Server {
             .await
         {
             Ok(Some(e)) => match serde_json::from_str::<Members>(&e.members) {
-                Ok(value) => return Ok(value),
-                Err(e) => {
-                    {
-                        return Err(e.to_string());
-                    };
-                }
+                Ok(value) => Ok(value),
+                Err(e) => Err(e.to_string()),
             },
-            Err(e) => {
-                return Err(e.to_string());
-            }
-            _ => return Err("".to_string()),
+            Err(e) => Err(e.to_string()),
+            _ => Err("".to_string()),
         }
     }
 
@@ -74,22 +68,12 @@ impl SqlServer for Server {
             .await
         {
             Ok(Some(model)) => {
-                let members = match serde_json::from_str::<Members>(model.members.as_str()) {
-                    Ok(e) => e,
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                };
+                let members = serde_json::from_str::<Members>(model.members.as_str())
+                    .map_err(|f| f.to_string())?;
 
-                let roles = match Role::get_roles_by_server_id(model.id.clone(), executor).await {
-                    Ok(e) => e,
-                    Err(e) => return Err(e),
-                };
+                let roles = Role::get_roles_by_server_id(model.id.clone(), executor).await?;
 
-                let channel = match Channel::get_channels_by_server_id(id, executor).await {
-                    Ok(e) => e,
-                    Err(e) => return Err(e),
-                };
+                let channel = Channel::get_channels_by_server_id(id, executor).await?;
 
                 Ok(Server {
                     id: ServerId::new(model.id),
@@ -102,19 +86,13 @@ impl SqlServer for Server {
                     ..Default::default()
                 })
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
-            _ => {
-                return Err("Cannot get server".to_string());
-            }
+            Err(e) => Err(e.to_string()),
+            _ => Err("Cannot get server".to_string()),
         }
     }
     async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let members_json = match serde_json::to_string(&Members::new()) {
-            Ok(e) => e,
-            Err(e) => return Err(e.to_string()),
-        };
+        let members_json = serde_json::to_string(&Members::new()).map_err(|f| f.to_string())?;
+
         let active_channel = crate::entity::server::ActiveModel {
             id: Set(self.id.id.clone()),
             name: Set(self.name.clone()),
@@ -167,22 +145,18 @@ impl SqlServer for Server {
         {
             Ok(Some(e)) => {
                 let mut active_model: crate::entity::server::ActiveModel = e.into();
-                active_model.name = Set(name);
+                active_model.name = Set(name.clone());
                 match crate::entity::server::Entity::update(active_model)
                     .exec(executor)
                     .await
                 {
-                    Ok(_) => return Ok(()),
-                    Err(e) => {
-                        return Err(e.to_string());
-                    }
-                };
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e.to_string()),
+                }
             }
-            Err(e) => {
-                return Err(e.to_string());
-            }
-            _ => {}
-        };
+            Err(e) => Err(e.to_string()),
+            _ => Err("Can't update name".to_string()),
+        }?;
 
         self.name = name;
 
@@ -212,21 +186,12 @@ impl SqlServer for Server {
             .one(executor)
             .await
         {
-            Ok(Some(e)) => e,
-            Err(e) => {
-                return Err(e.to_string());
-            }
-            _ => {
-                return Err("Cannot get server".to_string());
-            }
-        };
+            Ok(Some(e)) => Ok(e),
+            Err(e) => Err(e.to_string()),
+            _ => Err("Cannot get server".to_string()),
+        }?;
 
-        let mut members = match self.get_user(executor).await {
-            Ok(vec_users) => vec_users,
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        let mut members = self.get_user(executor).await?;
 
         members.push(user.clone());
 
@@ -236,19 +201,12 @@ impl SqlServer for Server {
 
         active_model.members = Set(json);
 
-        match crate::entity::server::Entity::update(active_model)
+        crate::entity::server::Entity::update(active_model)
             .exec(executor)
             .await
-        {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(e.to_string());
-            }
-        }
+            .map_err(|f| f.to_string())?;
 
-        if let Err(error) = user.insert_server(self.id.clone(), executor).await {
-            return Err(error);
-        }
+        user.insert_server(self.id.clone(), executor).await?;
 
         self.members = members;
 

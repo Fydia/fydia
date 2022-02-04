@@ -14,18 +14,14 @@ pub async fn get_connection(configdatabase: &DatabaseConfig) -> DatabaseConnecti
                 .format_url()
                 .strip_prefix("sqlite://")
                 .map(|v| v.to_string())
-                .unwrap_or_else(|| format!("{}.db", configdatabase.ip))
+                .unwrap_or_else(|| format!("{}.db", configdatabase.ip)),
         )
         .expect("Error");
     }
     match Database::connect(configdatabase.format_url().as_str()).await {
         Ok(e) => e,
         Err(e) => {
-            error!(format!(
-                "{} => {}",
-                configdatabase.format_url().as_str(),
-                e
-            ));
+            error!(format!("{} => {}", configdatabase.format_url().as_str(), e));
             exit(0);
         }
     }
