@@ -23,4 +23,4 @@ logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 async-trait = "0.1.52"
 serde = "1.0.136"
 serde_json = "1.0.78"
-tokio = {version = "1.16.0", features=["rt", "macros"]}
+tokio = {version = "1.16.1", features=["rt", "macros"]}
