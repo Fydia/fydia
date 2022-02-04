@@ -49,7 +49,7 @@ pub trait SqlUser {
         server_short_id: ServerId,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn insert_user_and_update(&mut self, executor: &DatabaseConnection)
         -> Result<(), String>;
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -105,6 +105,7 @@ impl SqlUser for User {
                 if let Some(user) = user {
                     if let Some(db_user) = user.to_user() {
                         self.take_value_of(db_user);
+                        return Ok(());
                     }
                 }
 
@@ -229,7 +230,7 @@ impl SqlUser for User {
         }
     }
 
-    async fn insert_user(&self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let json = match serde_json::to_string(&Servers(Vec::new())) {
             Ok(json) => json,
             Err(error) => return Err(error.to_string()),
@@ -244,7 +245,8 @@ impl SqlUser for User {
                 ..Default::default()
             };
             match UserEntity::insert(active_model).exec(executor).await {
-                Ok(_) => {
+                Ok(result) => {
+                    self.id = UserId::new(result.last_insert_id);
                     return Ok(());
                 }
                 Err(e) => {
