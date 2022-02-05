@@ -253,29 +253,6 @@ impl TypingInner {
     }
 
     pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), String> {
-<<<<<<< HEAD
-        let n = self
-            .get_index_of_user_of_channelid(user, channelid)
-            .ok_or_else(|| "No user for this index".to_string())?;
-        self.kill_task(channelid, n);
-        self.remove_task_with_index(channelid, n);
-        Ok(())
-    }
-
-    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> bool {
-        if let Some(index) = self.get_index_of_user_of_channelid(user, channelid) {
-            self.remove_task_with_index(channelid, index);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn remove_task_with_index(&mut self, channelid: &ChannelId, index: usize) {
-        if let Some(value) = self.0.lock().get_mut(channelid) {
-            value.remove(index);
-        }
-=======
         self.remove_task(user, channelid)
             .map_err(|_| "No user exists in channel".to_string())
     }
@@ -292,7 +269,6 @@ impl TypingInner {
         }
 
         Err(())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 
     pub fn kill_task(&mut self, channelid: &ChannelId, index: usize) {
@@ -426,20 +402,14 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
     fn set_websocketmanager(&self, wbsocket: Arc<WebsocketManagerChannel>) -> Result<(), String> {
         self.0
             .send(TypingMessage::SetWebSocketManager(wbsocket))
-<<<<<<< HEAD
-=======
             .map(|_| ())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
     fn set_selfmanager(&self, selfmanager: Arc<TypingManagerChannel>) -> Result<(), String> {
         self.0
             .send(TypingMessage::SetTypingManager(selfmanager))
-<<<<<<< HEAD
-=======
             .map(|_| ())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
@@ -457,10 +427,7 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 user_of_channel,
             ))
-<<<<<<< HEAD
-=======
             .map(|_| ())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
@@ -478,12 +445,8 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 user_of_channel,
             ))
-<<<<<<< HEAD
-            .map_err(|error| error.to_string())
-=======
             .map(|_| ())
             .map_err(|f| f.to_string())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 
     fn remove_task(
@@ -500,11 +463,7 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 users_of_channel,
             ))
-<<<<<<< HEAD
-            .map_err(|error| error.to_string())
-=======
             .map(|_| ())
             .map_err(|f| f.to_string())
->>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 }
