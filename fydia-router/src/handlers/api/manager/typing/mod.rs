@@ -14,6 +14,7 @@ use fydia_struct::user::User;
 use fydia_struct::{channel::ChannelId, user::UserId};
 use parking_lot::Mutex;
 use tokio::spawn;
+use tokio::task::JoinError;
 
 pub type TypingManager = Manager<TypingStruct>;
 
@@ -91,7 +92,7 @@ impl ManagerReceiverTrait for TypingStruct {
             }
 
             TypingMessage::RemoveTask(user, channelid, serverid, users_of_channel) => {
-                if self.inner.remove_task(&user, &channelid) {
+                if self.inner.remove_task(&user, &channelid).is_ok() {
                     if let Some(wb) = &self.wbsocketmanager {
                         if self
                             .inner
@@ -126,6 +127,7 @@ impl TypingInner {
         if let Some(channel) = self.0.lock().get(channelid) {
             for i in channel {
                 if &i.0 == userid {
+                    println!("{}, {}", i.0.id, userid.id);
                     return true;
                 }
             }
@@ -156,25 +158,43 @@ impl TypingInner {
             channelid.clone(),
             serverid.clone(),
         );
-        task.spawn().await;
+
+        if let Err(error) = task.spawn().await {
+            error!(error);
+            return;
+        }
+
         self.insert_channel(channelid.clone());
-        if (!self.user_exists_in_channel(&channelid, &userid)
-            || self.stop_typing(&userid, &channelid).is_err())
-            && self
-                .send_start_typing(
-                    serverid,
-                    userid.clone(),
-                    channelid.clone(),
-                    channel_user,
-                    websocket,
-                )
-                .await
-                .is_err()
+
+        if self.user_exists_in_channel(&channelid, &userid) {
+            error!("User already exists in channel");
+            return;
+        }
+
+        if let Err(error) = self.stop_typing(&userid, &channelid) {
+            error!(error);
+        }
+
+        if self
+            .send_start_typing(
+                serverid,
+                userid.clone(),
+                channelid.clone(),
+                channel_user,
+                websocket,
+            )
+            .await
+            .is_err()
         {
             error!("Can't Send Message");
         }
+
+        self.insert_new_user_typing(&channelid, UserTyping::new(userid, task));
+    }
+
+    pub fn insert_new_user_typing(&self, channelid: &ChannelId, usertyping: UserTyping) {
         if let Some(value) = self.0.lock().get_mut(&channelid) {
-            value.push(UserTyping::new(userid, task));
+            value.push(usertyping);
         }
     }
 
@@ -233,6 +253,7 @@ impl TypingInner {
     }
 
     pub fn stop_typing(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), String> {
+<<<<<<< HEAD
         let n = self
             .get_index_of_user_of_channelid(user, channelid)
             .ok_or_else(|| "No user for this index".to_string())?;
@@ -254,6 +275,24 @@ impl TypingInner {
         if let Some(value) = self.0.lock().get_mut(channelid) {
             value.remove(index);
         }
+=======
+        self.remove_task(user, channelid)
+            .map_err(|_| "No user exists in channel".to_string())
+    }
+
+    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
+        if let Some(index) = self.get_index_of_user_of_channelid(user, channelid) {
+            self.kill_task(channelid, index);
+
+            if let Some(usertypings) = self.0.lock().get_mut(channelid) {
+                usertypings.remove(index);
+            }
+
+            return Ok(());
+        }
+
+        Err(())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 
     pub fn kill_task(&mut self, channelid: &ChannelId, index: usize) {
@@ -303,23 +342,20 @@ impl Task {
         )
     }
 
-    pub async fn spawn(&mut self) {
+    pub async fn spawn(&mut self) -> Result<(), String> {
         let task = self.clone();
         let (thread_sender, thread_receiver) = flume::bounded::<flume::Sender<bool>>(1);
-        let _ = tokio::task::spawn(async move {
-            let instant = Instant::now();
+        let _: Result<Result<(), String>, JoinError> = tokio::task::spawn(async move {
             let (sender, receiver) = flume::bounded::<bool>(1);
-            if let Err(error) = thread_sender.send(sender) {
-                error!(error.to_string());
-                return;
-            }
+            // Will send the sender of thread for keep it alive
+            thread_sender.send(sender).map_err(|f| f.to_string())?;
             let value = task.1;
+
+            let instant = Instant::now();
+            let need_to_kill = |instant: Instant| instant.elapsed().as_secs() == 10;
             spawn(async move {
                 loop {
-                    if receiver.recv_timeout(Duration::from_micros(10)).is_ok() {
-                        return;
-                    }
-                    if instant.elapsed().as_secs() == 10 {
+                    if need_to_kill(instant) {
                         if let Err(error) = value.0.remove_task(value.2, value.3, value.4, value.1)
                         {
                             error!(error);
@@ -327,13 +363,23 @@ impl Task {
 
                         return;
                     }
+                    if let Ok(value) = receiver.recv_timeout(Duration::from_millis(10)) {
+                        if value {
+                            println!("Kill my self");
+                            return;
+                        }
+                    }
                 }
             });
+
+            Ok(())
         })
         .await;
-        if let Ok(value) = thread_receiver.recv() {
-            self.0 = Some(Arc::new(value));
-        }
+
+        let value = thread_receiver.recv().map_err(|f| f.to_string())?;
+        self.0 = Some(Arc::new(value));
+
+        Ok(())
     }
 
     pub fn kill(&mut self) {
@@ -342,6 +388,7 @@ impl Task {
             if sender.send(true).is_err() {
                 error!("Error");
             }
+
             self.0 = None;
         }
     }
@@ -379,12 +426,20 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
     fn set_websocketmanager(&self, wbsocket: Arc<WebsocketManagerChannel>) -> Result<(), String> {
         self.0
             .send(TypingMessage::SetWebSocketManager(wbsocket))
+<<<<<<< HEAD
+=======
+            .map(|_| ())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
     fn set_selfmanager(&self, selfmanager: Arc<TypingManagerChannel>) -> Result<(), String> {
         self.0
             .send(TypingMessage::SetTypingManager(selfmanager))
+<<<<<<< HEAD
+=======
+            .map(|_| ())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
@@ -402,6 +457,10 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 user_of_channel,
             ))
+<<<<<<< HEAD
+=======
+            .map(|_| ())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
             .map_err(|f| f.to_string())
     }
 
@@ -419,7 +478,12 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 user_of_channel,
             ))
+<<<<<<< HEAD
             .map_err(|error| error.to_string())
+=======
+            .map(|_| ())
+            .map_err(|f| f.to_string())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 
     fn remove_task(
@@ -436,6 +500,11 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
                 serverid,
                 users_of_channel,
             ))
+<<<<<<< HEAD
             .map_err(|error| error.to_string())
+=======
+            .map(|_| ())
+            .map_err(|f| f.to_string())
+>>>>>>> 4f62870 (fydia-router: Fix TypingManager)
     }
 }
