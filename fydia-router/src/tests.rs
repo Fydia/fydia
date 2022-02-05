@@ -115,7 +115,7 @@ mod tests {
         let body = response.text().await.unwrap();
 
         if status == StatusCode::BAD_REQUEST {
-            if body == r#"{"status":"Error","content":"Json error"}"#.to_string() {
+            if body == r#"{"status":"Error","content":"No `email` in JSON"}"#.to_string() {
                 return Ok(());
             }
         }

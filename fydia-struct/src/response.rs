@@ -26,6 +26,7 @@ impl Default for FydiaStatus {
 pub enum FydiaResponseBody {
     String(String),
     Json(Value),
+    Bytes(Vec<u8>),
 }
 
 impl Default for FydiaResponseBody {
@@ -46,10 +47,10 @@ pub struct FydiaResponse {
 }
 
 impl FydiaResponse {
-    pub fn new<T: Into<String>>(status: FydiaStatus, body: T, statuscode: StatusCode) -> Self {
+    fn new(status: FydiaStatus, body: FydiaResponseBody, statuscode: StatusCode) -> Self {
         Self {
             status,
-            body: FydiaResponseBody::String(body.into()),
+            body,
             statuscode,
             ..Default::default()
         }
@@ -59,19 +60,56 @@ impl FydiaResponse {
         match &self.body {
             FydiaResponseBody::String(string) => Ok(string.clone()),
             FydiaResponseBody::Json(_) => Err(String::from("Error body is not a string")),
+            FydiaResponseBody::Bytes(_) => Err(String::from("Error body is not a string")),
         }
     }
 
+    pub fn new_bytes_ok(body: Vec<u8>) -> Self {
+        Self::new(
+            FydiaStatus::OK,
+            FydiaResponseBody::Bytes(body),
+            StatusCode::OK,
+        )
+    }
+
+    pub fn new_bytes_error(body: Vec<u8>) -> Self {
+        Self::new(
+            FydiaStatus::Error,
+            FydiaResponseBody::Bytes(body),
+            StatusCode::BAD_REQUEST,
+        )
+    }
+
+    pub fn new_bytes_error_custom_status(body: Vec<u8>, status_code: StatusCode) -> Self {
+        Self::new(
+            FydiaStatus::Error,
+            FydiaResponseBody::Bytes(body),
+            status_code,
+        )
+    }
+
     pub fn new_error<T: Into<String>>(body: T) -> Self {
-        Self::new(FydiaStatus::Error, body, StatusCode::BAD_REQUEST)
+        Self::new(
+            FydiaStatus::Error,
+            FydiaResponseBody::String(body.into()),
+            StatusCode::BAD_REQUEST,
+        )
     }
 
     pub fn new_error_custom_status<T: Into<String>>(body: T, status_code: StatusCode) -> Self {
-        Self::new(FydiaStatus::Error, body, status_code)
+        Self::new(
+            FydiaStatus::Error,
+            FydiaResponseBody::String(body.into()),
+            status_code,
+        )
     }
 
     pub fn new_ok<T: Into<String>>(body: T) -> Self {
-        Self::new(FydiaStatus::OK, body, StatusCode::OK)
+        Self::new(
+            FydiaStatus::OK,
+            FydiaResponseBody::String(body.into()),
+            StatusCode::OK,
+        )
     }
     pub fn new_ok_json<S: Serialize>(body: S) -> Self
     where
@@ -101,31 +139,39 @@ impl IntoResponse for FydiaResponse {
     fn into_response(self) -> axum::response::Response {
         let mut response = Response::builder();
         let headers = response.headers_mut();
-        if let Some(headers) = headers {
-            if let Some(header) = headers.get_mut(CONTENT_TYPE) {
-                if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
-                    if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
-                        *header = content_type;
+
+        match self.body {
+            FydiaResponseBody::String(_) | FydiaResponseBody::Json(_) => {
+                if let Some(headers) = headers {
+                    if let Some(header) = headers.get_mut(CONTENT_TYPE) {
+                        if header.to_str().unwrap_or_default() != mime::APPLICATION_JSON {
+                            if let Ok(content_type) = mime::APPLICATION_JSON.to_string().parse() {
+                                *header = content_type;
+                            }
+                        }
+                    } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
+                        headers.insert(CONTENT_TYPE, e);
                     }
                 }
-            } else if let Ok(e) = mime::APPLICATION_JSON.to_string().parse() {
-                headers.insert(CONTENT_TYPE, e);
+
+                response = response.status(self.statuscode);
+
+                match serde_json::to_string(&self) {
+                    Ok(response_str) => response
+                        .body(body::boxed(body::Full::from(response_str)))
+                        .unwrap(),
+                    Err(e) => response
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(body::boxed(body::Full::from(format!(
+                            r#"{{"status":"Error", "content":{}}}"#,
+                            e
+                        ))))
+                        .unwrap(),
+                }
             }
-        }
-
-        response = response.status(self.statuscode);
-
-        match serde_json::to_string(&self) {
-            Ok(response_str) => response
-                .body(body::boxed(body::Full::from(response_str)))
-                .unwrap(),
-            Err(e) => response
-                .status(StatusCode::BAD_REQUEST)
-                .body(body::boxed(body::Full::from(format!(
-                    r#"{{"status":"Error", "content":{}}}"#,
-                    e
-                ))))
-                .unwrap(),
+            FydiaResponseBody::Bytes(body) => {
+                response.body(body::boxed(body::Full::from(body))).unwrap()
+            }
         }
     }
 }

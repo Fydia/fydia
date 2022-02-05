@@ -3,12 +3,13 @@
 use axum::{
     body::Bytes,
     extract::{Extension, Path},
-    headers::HeaderName,
-    response::IntoResponse,
 };
 use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
-use fydia_struct::{file::File, response::FydiaResponse};
-use http::{HeaderMap, HeaderValue, StatusCode};
+use fydia_struct::{
+    file::File,
+    response::{FydiaResponse, FydiaResult},
+};
+use http::{HeaderMap, StatusCode};
 
 use crate::handlers::basic::BasicValues;
 
@@ -16,40 +17,22 @@ pub async fn get_picture_of_server(
     Path(server_id): Path<String>,
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> impl IntoResponse {
-    let mut res = (
-        StatusCode::OK,
-        HeaderMap::new(),
-        include_bytes!("test.png").to_vec(),
-    );
+) -> FydiaResult {
+    let (_, server) =
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
+            .await?;
 
-    match BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database).await
-    {
-        Ok((_, server)) => {
-            if let Ok(value) = File::get(server.icon).get_value() {
-                if let Some(mimetype) = infer::get(&value) {
-                    let mime_str = mimetype.to_string();
-                    res.0 = StatusCode::OK;
-                    res.1.insert(
-                        HeaderName::from_static("Content-Type"),
-                        HeaderValue::from_str(&mime_str).unwrap(),
-                    );
-                    res.2 = value;
-                }
-            }
+    let value = File::get(server.icon)
+        .get_value()
+        .map_err(|_| FydiaResponse::new_error("Cannot create file"))?;
+    let mime_str = infer::get(&value)
+        .ok_or_else(|| FydiaResponse::new_error("Cannot get the mimetype"))?
+        .to_string();
 
-            res
-        }
-        Err(error) => {
-            if let Ok(error) = error.get_body() {
-                res.2 = error.as_bytes().to_vec();
-            } else {
-                res.2 = "No error message".as_bytes().to_vec();
-            }
+    let mut result = FydiaResponse::new_bytes_ok(value);
+    result.add_headers("Content-Type", &mime_str);
 
-            res
-        }
-    }
+    return Ok(result);
 }
 
 const MAX_CONTENT_LENGHT: usize = 8_000_000;
@@ -59,49 +42,51 @@ pub async fn post_picture_of_server(
     body: Bytes,
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> impl IntoResponse {
+) -> FydiaResult {
     let (_, mut server) =
-        match BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
-            .await
-        {
-            Ok(v) => v,
-            Err(error) => return error,
-        };
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
+            .await?;
     let vec_body = body.to_vec();
+
     if vec_body.len() > MAX_CONTENT_LENGHT {
-        return FydiaResponse::new_error_custom_status("", StatusCode::PAYLOAD_TOO_LARGE);
+        return Err(FydiaResponse::new_error_custom_status(
+            "",
+            StatusCode::PAYLOAD_TOO_LARGE,
+        ));
     }
-    let mimetype = if let Some(get) = infer::get(&vec_body) {
-        get
-    } else {
+
+    let mimetype = infer::get(&vec_body).ok_or_else(|| {
         return FydiaResponse::new_error("No body");
-    };
+    })?;
 
     let mimetype_str = mimetype.extension();
     if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {
-        return FydiaResponse::new_error_custom_status(
+        return Err(FydiaResponse::new_error_custom_status(
             "Bad Image type retry with png / jpg / gif",
             StatusCode::BAD_REQUEST,
-        );
+        ));
     }
 
     let file = File::new();
-    if let Err(error) = file.create() {
+    file.create().map_err(|error| {
         error!(error);
         return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
-    };
+    })?;
 
     println!("{} / ({})", file.get_name(), vec_body.len());
-    if let Err(error) = file.write(vec_body) {
+
+    file.write(vec_body).map_err(|error| {
         error!(error);
-        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
-    };
+        FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR)
+    })?;
 
     server.icon = file.get_name();
-    if let Err(error) = server.update(&database).await {
-        error!(error);
-        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    FydiaResponse::new_ok("Icon have been update")
+    server
+        .update(&database)
+        .await
+        .map(|_| FydiaResponse::new_ok("Icon have been update"))
+        .map_err(|error| {
+            error!(error);
+            FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR)
+        })
 }

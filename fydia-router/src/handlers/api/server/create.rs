@@ -9,6 +9,7 @@ use http::HeaderMap;
 use serde_json::Value;
 
 use crate::handlers::basic::BasicValues;
+use crate::handlers::get_json;
 
 pub async fn create_server(
     headers: HeaderMap,
@@ -23,13 +24,10 @@ pub async fn create_server(
     let value = serde_json::from_str::<Value>(body.as_str())
         .map_err(|_| FydiaResponse::new_error("Bad Body"))?;
 
-    let name = value
-        .get("name")
-        .ok_or_else(|| FydiaResponse::new_error("No name in JSON"))?
-        .as_str()
-        .ok_or_else(|| FydiaResponse::new_error("`name` cannot be convert as str"))?;
+    let name = get_json("name", &value)?;
 
     let mut server = Server::new(name, user.id.clone());
+
     server
         .insert_server(&database)
         .await

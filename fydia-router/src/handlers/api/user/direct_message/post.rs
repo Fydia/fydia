@@ -1,7 +1,7 @@
 use axum::extract::{Extension, Path};
-use axum::response::IntoResponse;
 use fydia_sql::impls::{channel::SqlDirectMessages, user::UserIdSql};
 use fydia_sql::sqlpool::DbConnection;
+use fydia_struct::response::FydiaResult;
 use fydia_struct::{
     channel::DirectMessage, format::UserFormat, response::FydiaResponse, user::UserId,
 };
@@ -14,28 +14,31 @@ pub async fn create_direct_message(
     headers: HeaderMap,
     Path(target_user): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> impl IntoResponse {
-    let user = match BasicValues::get_user(&headers, &database).await {
-        Ok(v) => v,
-        Err(error) => {
-            return error;
-        }
-    };
-
-    if let Some(user) = UserFormat::from_string(&target_user) {
-        println!("{:?}", user);
-        FydiaResponse::new_error_custom_status("Soon may be", StatusCode::NOT_IMPLEMENTED)
-    } else if let Ok(id) = target_user.parse::<i32>() {
-        let target = UserId::new(id).get_user(&database).await;
-        println!("{:?}", target);
-        if let Some(target) = target {
-            let dm = DirectMessage::new(vec![user.id, target.id]);
-            println!("{:?}", dm.insert(&database).await);
-            FydiaResponse::new_ok("")
-        } else {
-            FydiaResponse::new_error("Bad user id")
-        }
-    } else {
-        FydiaResponse::new_error("Bad user id")
+) -> FydiaResult {
+    let user = BasicValues::get_user(&headers, &database).await?;
+    if UserFormat::from_string(&target_user).is_some() {
+        return Err(FydiaResponse::new_error_custom_status(
+            "Soon may be",
+            StatusCode::NOT_IMPLEMENTED,
+        ));
     }
+
+    let id = target_user
+        .parse::<i32>()
+        .map_err(|_| FydiaResponse::new_error("Bad user id"))?;
+
+    let target = UserId::new(id)
+        .get_user(&database)
+        .await
+        .ok_or_else(|| FydiaResponse::new_error("Bad user id"))?;
+
+    let dm = DirectMessage::new(vec![user.id, target.id]);
+    dm.insert(&database).await.map_err(|_| {
+        FydiaResponse::new_error_custom_status(
+            "Cannot insert in database",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )
+    })?;
+
+    Ok(FydiaResponse::new_ok(""))
 }

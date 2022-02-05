@@ -9,6 +9,8 @@ use fydia_struct::{
 use http::StatusCode;
 use serde_json::value;
 
+use crate::handlers::get_json;
+
 pub async fn user_login(body: Bytes, Extension(database): Extension<DbConnection>) -> FydiaResult {
     let body = body.to_vec();
     if body.is_empty() {
@@ -20,17 +22,8 @@ pub async fn user_login(body: Bytes, Extension(database): Extension<DbConnection
     let json = serde_json::from_str::<value::Value>(body_string.as_str())
         .map_err(|_| FydiaResponse::new_error("Json error"))?;
 
-    let email = json
-        .get("email")
-        .ok_or_else(|| FydiaResponse::new_error("No `email` in JSON"))?
-        .as_str()
-        .ok_or_else(|| FydiaResponse::new_error("`email` cannot be convert as str"))?;
-
-    let password = json
-        .get("password")
-        .ok_or_else(|| FydiaResponse::new_error("No `email` in JSON"))?
-        .as_str()
-        .ok_or_else(|| FydiaResponse::new_error("`email` cannot be convert as str"))?;
+    let email = get_json("email", &json)?;
+    let password = get_json("password", &json)?;
 
     let mut user = User::get_user_by_email_and_password(email, password, &database)
         .await
