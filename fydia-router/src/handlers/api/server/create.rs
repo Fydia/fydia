@@ -1,9 +1,8 @@
 use axum::body::Bytes;
 use axum::extract::Extension;
-use axum::response::IntoResponse;
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::FydiaResponse;
+use fydia_struct::response::{FydiaResponse, FydiaResult};
 use fydia_struct::server::Server;
 
 use http::HeaderMap;
@@ -15,28 +14,25 @@ pub async fn create_server(
     headers: HeaderMap,
     body: Bytes,
     Extension(database): Extension<DbConnection>,
-) -> impl IntoResponse {
-    let mut user = match BasicValues::get_user(&headers, &database).await {
-        Ok(v) => v,
-        Err(error) => return error,
-    };
+) -> FydiaResult {
+    let user = BasicValues::get_user(&headers, &database).await?;
 
-    if let Ok(body) = String::from_utf8(body.to_vec()) {
-        if let Ok(value) = serde_json::from_str::<Value>(body.as_str()) {
-            if let Some(name) = value.get("name") {
-                if let Some(name_str) = name.as_str() {
-                    let mut server = Server::new(name_str, user.id.clone());
-                    match server.insert_server(&database).await {
-                        Ok(_) => return FydiaResponse::new_ok(server.id.id),
-                        Err(e) => {
-                            error!(e);
-                            FydiaResponse::new_error("Cannot join the server")
-                        }
-                    };
-                }
-            }
-        }
-    }
+    let body =
+        String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::new_error("Bad Body"))?;
 
-    FydiaResponse::new_error("Json Error")
+    let value = serde_json::from_str::<Value>(body.as_str())
+        .map_err(|_| FydiaResponse::new_error("Bad Body"))?;
+
+    let name = value
+        .get("name")
+        .ok_or_else(|| FydiaResponse::new_error("No name in JSON"))?
+        .as_str()
+        .ok_or_else(|| FydiaResponse::new_error("`name` cannot be convert as str"))?;
+
+    let mut server = Server::new(name, user.id.clone());
+    server
+        .insert_server(&database)
+        .await
+        .map(|_| FydiaResponse::new_ok(server.id.id))
+        .map_err(|_| FydiaResponse::new_error("Cannot join the server"))
 }

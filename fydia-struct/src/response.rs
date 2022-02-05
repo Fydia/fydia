@@ -7,6 +7,8 @@ use hyper::{header::CONTENT_TYPE, HeaderMap, StatusCode};
 use serde::Serialize;
 use serde_json::Value;
 
+pub type FydiaResult = Result<FydiaResponse, FydiaResponse>;
+
 #[derive(Serialize)]
 pub enum FydiaStatus {
     OK,
