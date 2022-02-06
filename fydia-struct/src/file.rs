@@ -3,7 +3,7 @@ use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::OpenOptions,
-    io::{self, BufReader, Read, Write},
+    io::{self, BufRead, BufReader, Read, Write},
 };
 
 use crate::messages::Date;
@@ -120,8 +120,8 @@ impl File {
 
     pub fn get_value(&self) -> Result<Vec<u8>, String> {
         let file = std::fs::File::open(&self.path).map_err(|f| f.to_string())?;
-        let buf = BufReader::new(file);
-        Ok(buf.buffer().to_vec())
+        let mut buf = BufReader::new(file);
+        Ok(buf.fill_buf().map_err(|f| f.to_string())?.to_vec())
     }
 
     pub fn async_get_value(&self) -> Result<impl Stream<Item = Result<u8, io::Error>>, String> {
@@ -144,8 +144,8 @@ impl File {
             .ok_or_else(|| "No file".to_string())?;
 
         let file = std::fs::File::open(desc).map_err(|f| f.to_string())?;
-        let buf = BufReader::new(file);
-        Ok(buf.buffer().to_vec())
+        let mut buf = BufReader::new(file);
+        Ok(buf.fill_buf().map_err(|f| f.to_string())?.to_vec())
     }
 
     pub fn async_get_value_of_description(

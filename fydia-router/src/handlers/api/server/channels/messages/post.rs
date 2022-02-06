@@ -218,7 +218,7 @@ pub async fn json_message(
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse> {
-    let messagetype = MessageType::from_string(get_json("ctype", &value)?.to_string())
+    let messagetype = MessageType::from_string(get_json("type", &value)?.to_string())
         .ok_or_else(|| FydiaResponse::new_error("Bad Message Type"))?;
     let content = get_json("content", &value)?.to_string();
 

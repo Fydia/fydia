@@ -282,15 +282,26 @@ mod tests {
             .unwrap();
 
         let status = response.status();
-        let body = response.bytes().await.unwrap();
 
         if status == StatusCode::OK {
-            if body.to_vec() == include_bytes!("image.png").to_vec() {
-                return Ok(());
+            let body = response.bytes().await.unwrap().to_vec();
+            let image = include_bytes!("image.png").to_vec();
+            if image.is_empty() {
+                return Err("Image is empty".to_string());
             }
-        }
+            for (n, i) in body.clone().iter().enumerate() {
+                if let Some(e) = image.get(n) {
+                    if e != i {
+                        println!("At {} : {} != {}", n, e, i);
+                        return Err("Not good image".to_string());
+                    }
+                }
+            }
 
-        Err(String::from("No Message on get_server_picture"))
+            return Ok(());
+        } else {
+            Err(response.text().await.unwrap())
+        }
     }
 
     async fn post_server_picture(token: &String, server_id: &String) -> Result<(), String> {

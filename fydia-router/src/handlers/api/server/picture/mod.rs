@@ -24,7 +24,8 @@ pub async fn get_picture_of_server(
 
     let value = File::get(server.icon)
         .get_value()
-        .map_err(|_| FydiaResponse::new_error("Cannot create file"))?;
+        .map_err(|_| FydiaResponse::new_error("Cannot get file"))?;
+
     let mime_str = infer::get(&value)
         .ok_or_else(|| FydiaResponse::new_error("Cannot get the mimetype"))?
         .to_string();
@@ -68,16 +69,12 @@ pub async fn post_picture_of_server(
     }
 
     let file = File::new();
-    file.create().map_err(|error| {
-        error!(error);
-        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
-    })?;
 
     println!("{} / ({})", file.get_name(), vec_body.len());
 
-    file.write(vec_body).map_err(|error| {
+    file.create_and_write(vec_body).map_err(|error| {
         error!(error);
-        FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR)
+        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
     })?;
 
     server.icon = file.get_name();
