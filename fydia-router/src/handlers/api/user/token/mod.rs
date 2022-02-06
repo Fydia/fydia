@@ -1,6 +1,6 @@
-use axum::{extract::Extension, response::IntoResponse};
+use axum::extract::Extension;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::FydiaResponse;
+use fydia_struct::response::{FydiaResponse, FydiaResult};
 use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
@@ -8,10 +8,9 @@ use crate::handlers::basic::BasicValues;
 pub async fn verify(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> impl IntoResponse {
-    if BasicValues::get_user(&headers, &database).await.is_ok() {
-        FydiaResponse::new_ok("")
-    } else {
-        FydiaResponse::new_error("")
-    }
+) -> FydiaResult {
+    BasicValues::get_user(&headers, &database)
+        .await
+        .map(|_| FydiaResponse::new_ok(""))
+        .map_err(|_| FydiaResponse::new_error(""))
 }

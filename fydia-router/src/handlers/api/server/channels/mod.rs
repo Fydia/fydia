@@ -6,9 +6,9 @@ pub mod update;
 pub mod vocal;
 
 use axum::extract::{Extension, Path};
-use axum::response::IntoResponse;
 use fydia_sql::{impls::channel::SqlChannel, sqlpool::DbConnection};
 
+use fydia_struct::response::FydiaResult;
 use fydia_struct::{
     channel::{Channel, ChannelId},
     response::FydiaResponse,
@@ -17,12 +17,10 @@ use fydia_struct::{
 pub async fn info_channel(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
-) -> impl IntoResponse {
-    if let Some(channel) =
-        Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database).await
-    {
-        FydiaResponse::new_ok_json(&channel)
-    } else {
-        FydiaResponse::new_error("Error")
-    }
+) -> FydiaResult {
+    let channel = Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database)
+        .await
+        .ok_or_else(|| FydiaResponse::new_error("Error"))?;
+
+    Ok(FydiaResponse::new_ok_json(&channel))
 }
