@@ -17,12 +17,17 @@ pub async fn insert_samples(db: &DbConnection) {
     let mut user = match User::get_user_by_email_and_password("user@sample.com", "user", db).await {
         Some(user) => user,
         None => {
-            let mut user = User::new("user", "user@sample.com", "user", Instance::default());
-            if let Err(error) = user.insert_user_and_update(db).await {
-                error!(error);
-            }
+            if let Ok(mut user) = User::new("user", "user@sample.com", "user", Instance::default())
+            {
+                if let Err(error) = user.insert_user_and_update(db).await {
+                    error!(error);
+                }
 
-            user
+                user
+            } else {
+                error!("Error with user");
+                return;
+            }
         }
     };
 

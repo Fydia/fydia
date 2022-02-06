@@ -21,17 +21,37 @@ pub struct User {
 }
 
 impl User {
-    pub fn new<T: Into<String>>(name: T, email: T, password: T, instance: Instance) -> User {
-        User {
-            id: UserId::new(0),
+    pub fn new<T: Into<String>>(
+        name: T,
+        email: T,
+        password: T,
+        instance: Instance,
+    ) -> Result<User, String> {
+        let name = name.into();
+        let email = email.into();
+        let password = password.into();
+        if name.is_empty() {
+            return Err("Name is empty".to_string());
+        }
+
+        if email.is_empty() {
+            return Err("Email is empty".to_string());
+        }
+
+        if password.is_empty() {
+            return Err("Password is empty".to_string());
+        }
+
+        Ok(User {
+            id: UserId::new(-1),
             name: name.into(),
             instance,
             token: None,
             description: None,
-            password: hash(password.into()).ok(),
+            password: hash(password).ok(),
             servers: Servers::new(),
             email: email.into(),
-        }
+        })
     }
     pub fn drop_token(&mut self) {
         self.token = None;
