@@ -75,7 +75,9 @@ pub async fn get_axum_router(
 ) -> axum::Router {
     #[cfg(not(test))]
     #[cfg(debug_assertions)]
-    fydia_sql::samples::insert_samples(&database).await;
+    if let Err(error) = fydia_sql::samples::insert_samples(&database).await {
+        error!(error);
+    }
 
     info!("Try to generate RSA keys");
     let privatekey = match fydia_crypto::key::generate::generate_key() {

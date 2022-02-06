@@ -103,13 +103,24 @@ pub struct Channel {
 }
 
 impl Channel {
-    pub fn new<T: Into<String>>(name: T, description: T, channel_type: ChannelType) -> Self {
-        Self {
-            name: name.into(),
-            description: description.into(),
+    pub fn new<T: Into<String>>(
+        name: T,
+        description: T,
+        channel_type: ChannelType,
+    ) -> Result<Self, String> {
+        let name = name.into();
+        let description = description.into();
+
+        if name.is_empty() {
+            return Err(String::from("Name is empty"));
+        }
+
+        Ok(Self {
+            name,
+            description,
             channel_type,
             ..Default::default()
-        }
+        })
     }
 
     pub fn new_with_parentid<T: Into<String>>(
@@ -117,14 +128,12 @@ impl Channel {
         description: T,
         parent_id: ParentId,
         channel_type: ChannelType,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            description: description.into(),
-            channel_type,
-            parent_id,
-            ..Default::default()
-        }
+    ) -> Result<Self, String> {
+        let mut channel = Self::new(name, description, channel_type)?;
+
+        channel.parent_id = parent_id;
+
+        Ok(channel)
     }
 }
 

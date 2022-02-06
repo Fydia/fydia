@@ -19,12 +19,22 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new<T: Into<String>>(name: T, owner: UserId) -> Self {
-        Self {
-            name: name.into(),
+    pub fn new<T: Into<String>>(name: T, owner: UserId) -> Result<Self, String> {
+        let name = name.into();
+
+        if name.is_empty() {
+            return Err(String::from("Name server is empty"));
+        }
+
+        if owner.id.is_negative() {
+            return Err(String::from("UserId is negative"));
+        }
+
+        Ok(Self {
+            name,
             owner,
             ..Default::default()
-        }
+        })
     }
 }
 

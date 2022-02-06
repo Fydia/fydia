@@ -33,7 +33,8 @@ pub async fn create_channel(
         "".to_string(),
         ParentId::ServerId(server.id.clone()),
         channeltype,
-    );
+    )
+    .map_err(|error| FydiaResponse::new_error(error))?;
 
     server
         .insert_channel(channel.clone(), &database)

@@ -232,12 +232,27 @@ impl SqlDirectMessages for DirectMessage {
     }
 
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
+        let mut dm = self.clone();
+        dm.userid_to_user(executor).await?;
+
+        // Name of participant with a coma
+        let mut name_of_dm = String::new();
+        if let DirectMessageValue::Users(users) = dm.users {
+            for (n, i) in users.iter().enumerate() {
+                if n == 0 {
+                    name_of_dm.push_str(format!("{}", i.name).as_str());
+                }
+
+                name_of_dm.push_str(format!(", {}", i.name).as_str());
+            }
+        }
+
         let channel = Channel::new_with_parentid(
-            "",
-            "",
+            name_of_dm,
+            String::new(),
             ParentId::DirectMessage(self.clone()),
             ChannelType::DirectMessage,
-        );
+        )?;
         channel.insert(executor).await
     }
     async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {

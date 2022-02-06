@@ -40,14 +40,17 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
     let event = Event::new(
         ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD"),
         EventContent::Message {
-            content: Box::from(Message::new(
-                String::from("This is a new message"),
-                MessageType::TEXT,
-                false,
-                Date::now(),
-                User::default(),
-                ChannelId::new("CkFg9d9IVf7Shht"),
-            )),
+            content: Box::from(
+                Message::new(
+                    String::from("This is a new message"),
+                    MessageType::TEXT,
+                    false,
+                    Date::now(),
+                    User::default(),
+                    ChannelId::new("CkFg9d9IVf7Shht"),
+                )
+                .map_err(FydiaResponse::new_error)?,
+            ),
         },
     );
 

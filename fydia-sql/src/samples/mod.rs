@@ -11,23 +11,18 @@ use crate::{
     sqlpool::DbConnection,
 };
 
-pub async fn insert_samples(db: &DbConnection) {
+pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 
     let mut user = match User::get_user_by_email_and_password("user@sample.com", "user", db).await {
         Some(user) => user,
         None => {
-            if let Ok(mut user) = User::new("user", "user@sample.com", "user", Instance::default())
-            {
-                if let Err(error) = user.insert_user_and_update(db).await {
-                    error!(error);
-                }
-
-                user
-            } else {
-                error!("Error with user");
-                return;
+            let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
+            if let Err(error) = user.insert_user_and_update(db).await {
+                error!(error);
             }
+
+            user
         }
     };
 
@@ -37,7 +32,8 @@ pub async fn insert_samples(db: &DbConnection) {
         info!("Server already exists");
         server
     } else {
-        let mut server = Server::new("server_default", user.id.clone());
+        let mut server = Server::new("server_default", user.id.clone())?;
+
         server.id = ServerId::new("server_default_id");
 
         if let Err(error) = server.insert_server(db).await {
@@ -61,28 +57,30 @@ pub async fn insert_samples(db: &DbConnection) {
             "channel_default",
             "channel_default",
             fydia_struct::channel::ChannelType::Text,
-        );
+        )?;
+
         channel.id = ChannelId::new("channel_default_id");
+
         if let Err(error) = server.insert_channel(channel.clone(), db).await {
             error!(error);
         }
     }
+
     if let Ok(message) =
         Message::get_messages_by_channel(ChannelId::new("channel_default_id"), db).await
     {
         if message.len() < 5 {
             for _ in 0..=5 {
-                if let Err(error) = Message::new(
+                let message = Message::new(
                     "Message",
                     fydia_struct::messages::MessageType::TEXT,
                     false,
                     Date::now(),
                     user.clone(),
                     ChannelId::new("channel_default_id"),
-                )
-                .insert_message(db)
-                .await
-                {
+                )?;
+
+                if let Err(error) = message.insert_message(db).await {
                     error!(error);
                 }
             }
@@ -90,4 +88,5 @@ pub async fn insert_samples(db: &DbConnection) {
     }
 
     success!("Sample are insert in database");
+    Ok(())
 }

@@ -65,8 +65,14 @@ impl Message {
         timestamp: Date,
         author_id: User,
         channel_id: ChannelId,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, String> {
+        let content = content.into();
+
+        if content.is_empty() {
+            return Err(String::from("Content is empty"));
+        }
+
+        Ok(Self {
             id: generate_string(32),
             content: content.into(),
             message_type,
@@ -74,7 +80,7 @@ impl Message {
             timestamp,
             author_id,
             channel_id,
-        }
+        })
     }
 }
 
@@ -159,7 +165,6 @@ impl<'de> Visitor<'de> for Date {
 }
 
 pub fn datetime_to_sqltime(date: DateTime<Utc>) -> String {
-    // F T
     format!(
         "{:0>#4}-{:0>#2}-{:0>#2} {:0>#2}:{:0>#2}:{:0>#2}",
         date.date().year(),

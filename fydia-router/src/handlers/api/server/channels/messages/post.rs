@@ -198,14 +198,17 @@ pub async fn multipart_to_event(
     let event = Event::new(
         server_id.clone(),
         EventContent::Message {
-            content: Box::from(Message::new(
-                file.get_name(),
-                MessageType::FILE,
-                false,
-                Date::new(DateTime::from(SystemTime::now())),
-                user.clone(),
-                channelid.clone(),
-            )),
+            content: Box::from(
+                Message::new(
+                    file.get_name(),
+                    MessageType::FILE,
+                    false,
+                    Date::new(DateTime::from(SystemTime::now())),
+                    user.clone(),
+                    channelid.clone(),
+                )
+                .map_err(|error| FydiaResponse::new_error(error))?,
+            ),
         },
     );
 
@@ -225,14 +228,17 @@ pub async fn json_message(
     Ok(Event::new(
         server_id.clone(),
         EventContent::Message {
-            content: Box::from(Message::new(
-                content,
-                messagetype,
-                false,
-                Date::new(DateTime::from(SystemTime::now())),
-                user.clone(),
-                channelid.clone(),
-            )),
+            content: Box::from(
+                Message::new(
+                    content,
+                    messagetype,
+                    false,
+                    Date::new(DateTime::from(SystemTime::now())),
+                    user.clone(),
+                    channelid.clone(),
+                )
+                .map_err(|error| FydiaResponse::new_error(error))?,
+            ),
         },
     ))
 }

@@ -43,14 +43,11 @@ impl User {
         }
 
         Ok(User {
-            id: UserId::new(-1),
-            name: name.into(),
+            name,
             instance,
-            token: None,
-            description: None,
             password: hash(password).ok(),
-            servers: Servers::new(),
-            email: email.into(),
+            email,
+            ..Default::default()
         })
     }
     pub fn drop_token(&mut self) {
@@ -87,9 +84,15 @@ impl User {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, PartialOrd)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct UserId {
     pub id: i32,
+}
+
+impl Default for UserId {
+    fn default() -> Self {
+        Self { id: -1 }
+    }
 }
 
 impl UserId {
