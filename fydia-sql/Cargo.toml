@@ -18,7 +18,7 @@ sqlx = { version="0.5.10", default-features=false, features=[
 ] }
 
 sea-orm =  {version = "0.6.0", features = [ "sqlx-all", "runtime-tokio-rustls", "macros" ]}
-futures = "0.3.19"
+futures = "0.3.21"
 logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 async-trait = "0.1.52"
 serde = "1.0.136"
