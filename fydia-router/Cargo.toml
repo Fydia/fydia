@@ -12,7 +12,7 @@ fydia-crypto = { path="../fydia-crypto" }
 fydia-dispatcher = { path="../fydia-dispatcher" }
 tokio = { version="1.16", default-features=false }
 futures = "0.3.19"
-futures-util = "0.3.18"
+futures-util = "0.3.21"
 time = "0.3.7"
 chrono = "0.4.19"
 axum = {version = "0.4.5",  features = ["ws", "headers"]}
