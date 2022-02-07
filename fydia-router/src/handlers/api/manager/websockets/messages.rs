@@ -72,7 +72,7 @@ async fn connected(
                         match sink.send(axum::extract::ws::Message::Text(msg)).await {
                             Ok(_) => {}
                             Err(e) => {
-                                println!("{}", e);
+                                println!("{e}");
                             }
                         }
                     }

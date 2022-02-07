@@ -78,7 +78,9 @@ impl Servers {
     pub fn is_join(&self, server_id: &ServerId) -> bool {
         for i in self.0.clone().iter_mut() {
             if cfg!(debug_assertion) {
-                println!("`{}`/`{}`", i.id, server_id.id);
+                let serverid_id = &i.id;
+                let cmp_serverid_id = &server_id.id;
+                println!("`{serverid_id}`/`{cmp_serverid_id}`");
             }
 
             if i.id == server_id.id {

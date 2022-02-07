@@ -99,14 +99,14 @@ impl File {
 
     pub fn get<T: Into<String>>(path_to_file: T) -> Self {
         Self {
-            path: format!("{}{}", PREFIX, &path_to_file.into()),
+            path: format!("{PREFIX}{}", &path_to_file.into()),
             description: None,
         }
     }
 
     pub fn get_with_description<T: Into<String>>(path_to_file: T) -> Self {
-        let path = format!("{}{}", PREFIX, &path_to_file.into());
-        let description = Some(format!("{}.json", &path));
+        let path = format!("{PREFIX}{}", &path_to_file.into());
+        let description = Some(format!("{path}.json",));
 
         Self { path, description }
     }

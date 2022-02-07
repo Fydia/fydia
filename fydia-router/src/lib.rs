@@ -166,7 +166,7 @@ impl<B> OnResponse<B> for Log {
     fn on_response(self, response: &Response<B>, latency: Duration, _: &Span) {
         logger::info!(format!(
             "({}ms) => {}",
-            latency.as_micros(),
+            latency.as_millis(),
             response.status(),
         ));
     }

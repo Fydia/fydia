@@ -123,7 +123,7 @@ impl FydiaResponse {
                 ),
                 ..Default::default()
             },
-            Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{}}}"#, e)),
+            Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{e}}}"#,)),
         }
     }
 
@@ -163,8 +163,7 @@ impl IntoResponse for FydiaResponse {
                     Err(e) => response
                         .status(StatusCode::BAD_REQUEST)
                         .body(body::boxed(body::Full::from(format!(
-                            r#"{{"status":"Error", "content":{}}}"#,
-                            e
+                            r#"{{"status":"Error", "content":{e}}}"#,
                         ))))
                         .unwrap(),
                 }

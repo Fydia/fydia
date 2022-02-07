@@ -17,7 +17,7 @@ pub async fn default() -> FydiaResult {
 pub fn get_json<T: Into<String>>(string: T, json: &Value) -> Result<&str, FydiaResponse> {
     let string = string.into();
     json.get(&string)
-        .ok_or_else(|| FydiaResponse::new_error(format!("No `{}` in JSON", string)))?
+        .ok_or_else(|| FydiaResponse::new_error(format!("No `{string}` in JSON")))?
         .as_str()
-        .ok_or_else(|| FydiaResponse::new_error(format!("`{}` cannot be convert as str", string)))
+        .ok_or_else(|| FydiaResponse::new_error(format!("`{string}` cannot be convert as str")))
 }

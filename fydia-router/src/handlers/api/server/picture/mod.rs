@@ -69,8 +69,9 @@ pub async fn post_picture_of_server(
     }
 
     let file = File::new();
-
-    println!("{} / ({})", file.get_name(), vec_body.len());
+    let name = file.get_name();
+    let len_of_boy = vec_body.len();
+    println!("{name} / ({len_of_boy})");
 
     file.create_and_write(vec_body).map_err(|error| {
         error!(error);
