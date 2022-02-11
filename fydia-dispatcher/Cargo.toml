@@ -16,4 +16,4 @@ reqwest = "0.11.9"
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
-hyper = "0.14.16"
+hyper = "0.14.17"
