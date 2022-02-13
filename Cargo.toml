@@ -8,10 +8,17 @@ members = [
     "fydia-config",
     "fydia-crypto",
     "fydia-dispatcher",
+    "fydia-webrtc"
 ]
 
 [profile.release]
-codegen-units = 1
+codegen-units = 256
 panic = 'abort'
-lto = true
+lto = "thin"
 opt-level = 3
+
+[profile.dev]
+incremental = true
+lto = false
+codegen-units = 256
+debug = 1
