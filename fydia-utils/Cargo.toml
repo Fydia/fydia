@@ -7,4 +7,4 @@ edition = "2018"
 
 [dependencies]
 rand_core = { version="0.6", features=["std"] }
-rand = "0.8.3"
+rand = "0.8.5"
