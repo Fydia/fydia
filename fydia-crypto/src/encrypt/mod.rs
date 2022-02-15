@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::structs::{AesKeyEncrypt, EncryptedBody, Iv};
 use crate::PublicKey;
 use fydia_utils::generate_string;
@@ -5,7 +7,7 @@ use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
 use openssl::symm::Cipher;
 
-pub fn encrypt<T: Into<String>>(rsa: Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
+pub fn encrypt<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
     match rsa.public_encrypt(string.into().as_bytes(), &mut buf, Padding::PKCS1) {
@@ -14,7 +16,10 @@ pub fn encrypt<T: Into<String>>(rsa: Rsa<Public>, string: T) -> Result<Vec<u8>, 
     }
 }
 
-pub fn private_encrypt<T: Into<String>>(rsa: Rsa<Private>, string: T) -> Result<Vec<u8>, String> {
+pub fn private_encrypt<'a, T: Into<Cow<'a, str>>>(
+    rsa: &Rsa<Private>,
+    string: T,
+) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
     match rsa.private_encrypt(string.into().as_bytes(), &mut buf, Padding::PKCS1) {
@@ -35,7 +40,7 @@ pub fn private_encrypt<T: Into<String>>(rsa: Rsa<Private>, string: T) -> Result<
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// ```
 pub fn aes_encrypt<T: Into<String>>(
-    rsa: PublicKey,
+    rsa: &PublicKey,
     string: T,
 ) -> Result<(Iv, AesKeyEncrypt, EncryptedBody), String> {
     let key = generate_string(32);

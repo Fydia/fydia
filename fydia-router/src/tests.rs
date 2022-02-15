@@ -289,7 +289,7 @@ mod tests {
             if image.is_empty() {
                 return Err("Image is empty".to_string());
             }
-            for (n, i) in body.clone().iter().enumerate() {
+            for (n, i) in body.iter().enumerate() {
                 if let Some(e) = image.get(n) {
                     if e != i {
                         println!("At {n} : {e} != {i}");

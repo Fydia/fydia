@@ -27,7 +27,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     };
 
     let mut server = if let Ok(server) =
-        Server::get_server_by_id(ServerId::new("server_default_id"), db).await
+        Server::get_server_by_id(&ServerId::new("server_default_id"), db).await
     {
         info!("Server already exists");
         server
@@ -51,7 +51,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
 
     if !server
         .channel
-        .is_exists(ChannelId::new("channel_default_id"))
+        .is_exists(&ChannelId::new("channel_default_id"))
     {
         let mut channel = Channel::new(
             "channel_default",
@@ -61,7 +61,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
 
         channel.id = ChannelId::new("channel_default_id");
 
-        if let Err(error) = server.insert_channel(channel.clone(), db).await {
+        if let Err(error) = server.insert_channel(&channel, db).await {
             error!(error);
         }
     }

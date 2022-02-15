@@ -16,14 +16,14 @@ pub type WebsocketManagerChannel = ManagerChannel<WbManagerMessage>;
 
 #[async_trait]
 pub trait WbManagerChannelTrait {
-    async fn get_channels_of_user(&self, user: User) -> Result<Vec<WbSender>, String>;
-    async fn get_new_channel(&self, user: User) -> Option<WbChannel>;
-    async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()>;
-    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), String>;
+    async fn get_channels_of_user(&self, user: &User) -> Result<Vec<WbSender>, String>;
+    async fn get_new_channel(&self, user: &User) -> Option<WbChannel>;
+    async fn remove(&self, user: &User, wbsender: &WbSender) -> Result<(), ()>;
+    async fn send(&self, msg: &Event, user: &[User]) -> Result<(), String>;
     async fn send_with_origin_and_key(
         &self,
-        msg: Event,
-        user: Vec<User>,
+        msg: &Event,
+        user: &[User],
         _keys: Option<&RsaData>,
         _origin: Option<Instance>,
     ) -> Result<(), String>;
@@ -31,9 +31,9 @@ pub trait WbManagerChannelTrait {
 
 #[async_trait]
 impl WbManagerChannelTrait for WebsocketManagerChannel {
-    async fn get_channels_of_user(&self, user: User) -> Result<Vec<WbSender>, String> {
+    async fn get_channels_of_user(&self, user: &User) -> Result<Vec<WbSender>, String> {
         let (sender, receiver) = oneshot::channel::<Vec<WbSender>>();
-        if let Err(e) = self.0.send(WbManagerMessage::Get(user, sender)) {
+        if let Err(e) = self.0.send(WbManagerMessage::Get(user.clone(), sender)) {
             error!(e.to_string());
         }
 
@@ -43,40 +43,40 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         }
     }
 
-    async fn get_new_channel(&self, user: User) -> Option<WbChannel> {
+    async fn get_new_channel(&self, user: &User) -> Option<WbChannel> {
         let (sender, receiver) = oneshot::channel::<WbChannel>();
-        if let Err(e) = self.0.send(WbManagerMessage::Insert(user, sender)) {
+        if let Err(e) = self.0.send(WbManagerMessage::Insert(user.clone(), sender)) {
             error!(e.to_string());
         }
 
         receiver.await.ok()
     }
 
-    async fn remove(&self, user: User, wbsender: &WbSender) -> Result<(), ()> {
+    async fn remove(&self, user: &User, wbsender: &WbSender) -> Result<(), ()> {
         let (sender, receiver) = oneshot::channel::<Result<(), ()>>();
-        if let Err(error) = self
-            .0
-            .send(WbManagerMessage::Remove(user, wbsender.clone(), sender))
-        {
+        if let Err(error) = self.0.send(WbManagerMessage::Remove(
+            user.clone(),
+            wbsender.clone(),
+            sender,
+        )) {
             error!(error.to_string());
         }
 
-        receiver.await.unwrap_or_else(|_| Err(()))
+        receiver.await.unwrap_or(Err(()))
     }
 
-    async fn send(&self, msg: Event, user: Vec<User>) -> Result<(), String> {
+    async fn send(&self, msg: &Event, user: &[User]) -> Result<(), String> {
         self.send_with_origin_and_key(msg, user, None, None).await
     }
 
     async fn send_with_origin_and_key(
         &self,
-        msg: Event,
-        user: Vec<User>,
+        msg: &Event,
+        user: &[User],
         _keys: Option<&RsaData>,
         _origin: Option<Instance>,
     ) -> Result<(), String> {
-        for mut i in user {
-            i.drop_password();
+        for i in user {
             let channel = self.get_channels_of_user(i).await?;
             for i in channel {
                 if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {

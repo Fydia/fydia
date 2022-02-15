@@ -11,7 +11,6 @@ members = [
 ]
 
 [profile.release]
-codegen-units = 256
 panic = 'abort'
 lto = "thin"
 opt-level = 3
@@ -19,5 +18,4 @@ opt-level = 3
 [profile.dev]
 incremental = true
 lto = false
-codegen-units = 256
 debug = 1

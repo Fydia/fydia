@@ -80,20 +80,20 @@ impl File {
             .map_err(|error| error.to_string())
     }
 
-    pub fn create_and_write(&self, bytes: Vec<u8>) -> Result<(), String> {
+    pub fn create_and_write(&self, bytes: &[u8]) -> Result<(), String> {
         self.create()?;
         self.write(bytes)?;
         Ok(())
     }
 
-    pub fn write(&self, bytes: Vec<u8>) -> Result<(), String> {
+    pub fn write(&self, bytes: &[u8]) -> Result<(), String> {
         let mut file = OpenOptions::new()
             .write(true)
             .read(true)
             .open(&self.path)
             .map_err(|f| f.to_string())?;
 
-        file.write(&bytes).map_err(|f| f.to_string())?;
+        file.write_all(&bytes).map_err(|f| f.to_string())?;
         Ok(())
     }
 

@@ -22,9 +22,8 @@ pub async fn event_handler(
     Extension(database): Extension<DbConnection>,
     Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
 ) -> FydiaResult {
-    let rsa = &rsa;
     let body = body.to_vec();
-    let msg = receive_message(&headers, body, rsa)
+    let msg = receive_message(&headers, &body, &rsa)
         .await
         .ok_or_else(|| FydiaResponse::new_error("Decryption Error"))?;
 
@@ -64,10 +63,10 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
 
     fydia_dispatcher::message::send::send_message(
         &keys,
-        Instance::new(fydia_struct::instance::Protocol::HTTP, "localhost", 8080),
-        publickey,
-        event,
-        vec![Instance::new(
+        &Instance::new(fydia_struct::instance::Protocol::HTTP, "localhost", 8080),
+        &publickey,
+        &event,
+        &[Instance::new(
             fydia_struct::instance::Protocol::HTTP,
             "localhost",
             8080,

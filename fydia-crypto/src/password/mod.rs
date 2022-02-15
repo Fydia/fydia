@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -16,12 +18,15 @@ pub fn hash<T: Into<String>>(to_hash: T) -> Result<String, String> {
         .to_string())
 }
 
-pub fn verify_password<T: Into<String>>(clear_password: T, hashed_password: T) -> bool {
-    let hashed_password = hashed_password.into();
+pub fn verify_password<'a>(clear_password: Cow<'a, str>, hashed_password: Cow<'a, str>) -> bool {
+    let hashed_password = hashed_password;
+    let clear_password = clear_password;
 
-    if let Ok(hash) = PasswordHash::new(&hashed_password) {
+    let password = PasswordHash::new(&hashed_password);
+
+    if let Ok(hash) = password {
         Argon2::default()
-            .verify_password(clear_password.into().as_ref(), &hash)
+            .verify_password(clear_password.as_bytes(), &hash)
             .is_ok()
     } else {
         false

@@ -46,7 +46,7 @@ pub trait SqlUser {
     /// Prefere use [SqlServer::join()](`crate::impls::server::SqlServer::join()`)
     async fn insert_server(
         &mut self,
-        server_short_id: ServerId,
+        server_short_id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -68,8 +68,12 @@ impl SqlUser for User {
             .one(executor)
             .await
             .ok()??;
+        let password_is_good = verify_password(
+            password.into().into(),
+            std::borrow::Cow::Borrowed(&model.password),
+        );
 
-        if verify_password(password.into(), model.password.clone()) {
+        if password_is_good {
             model.to_user()
         } else {
             None
@@ -179,7 +183,7 @@ impl SqlUser for User {
 
     async fn insert_server(
         &mut self,
-        server_short_id: ServerId,
+        server_short_id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let model = UserEntity::find_by_id(self.id.id)
@@ -244,7 +248,7 @@ impl SqlUser for User {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "No User")?;
+            .ok_or("No User")?;
 
         let active_model: UserActiveModel = model.into();
 

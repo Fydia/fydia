@@ -13,11 +13,11 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
-    async fn get_channel_by_id(id: ChannelId, executor: &DatabaseConnection) -> Option<Channel>;
+    async fn get_channel_by_id(id: &ChannelId, executor: &DatabaseConnection) -> Option<Channel>;
     async fn get_user_of_channel(&self, executor: &DatabaseConnection)
         -> Result<Vec<User>, String>;
     async fn get_channels_by_server_id(
-        server_id: ServerId,
+        server_id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -37,8 +37,8 @@ pub trait SqlChannel {
 
 #[async_trait::async_trait]
 impl SqlChannel for Channel {
-    async fn get_channel_by_id(id: ChannelId, executor: &DatabaseConnection) -> Option<Channel> {
-        match crate::entity::channels::Entity::find_by_id(id.id)
+    async fn get_channel_by_id(id: &ChannelId, executor: &DatabaseConnection) -> Option<Channel> {
+        match crate::entity::channels::Entity::find_by_id(id.id.clone())
             .one(executor)
             .await
         {
@@ -77,10 +77,10 @@ impl SqlChannel for Channel {
     }
 
     async fn get_channels_by_server_id(
-        server_id: ServerId,
+        server_id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
-        let parentid = ParentId::ServerId(server_id).to_string()?;
+        let parentid = ParentId::ServerId(server_id.clone()).to_string()?;
         let mut channels: Vec<Channel> = Vec::new();
 
         let models = crate::entity::channels::Entity::find()
@@ -125,7 +125,7 @@ impl SqlChannel for Channel {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "Can't update name")?;
+            .ok_or("Can't update name")?;
 
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
         active_model.name = Set(name.clone());
@@ -150,7 +150,7 @@ impl SqlChannel for Channel {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "Can't update name")?;
+            .ok_or("Can't update name")?;
 
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
 
@@ -169,7 +169,7 @@ impl SqlChannel for Channel {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "Can't update name")?;
+            .ok_or("Can't update name")?;
 
         let active_model: crate::entity::channels::ActiveModel = model.into();
 
@@ -193,7 +193,7 @@ pub trait SqlChannelId {
 #[async_trait::async_trait]
 impl SqlChannelId for ChannelId {
     async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel> {
-        Channel::get_channel_by_id(self.clone(), executor).await
+        Channel::get_channel_by_id(self, executor).await
     }
 }
 
@@ -240,7 +240,7 @@ impl SqlDirectMessages for DirectMessage {
         if let DirectMessageValue::Users(users) = dm.users {
             for (n, i) in users.iter().enumerate() {
                 if n == 0 {
-                    name_of_dm.push_str(format!("{}", i.name).as_str());
+                    name_of_dm.push_str(&i.name);
                 }
 
                 name_of_dm.push_str(format!(", {}", i.name).as_str());

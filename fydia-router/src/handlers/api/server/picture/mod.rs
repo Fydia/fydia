@@ -33,7 +33,7 @@ pub async fn get_picture_of_server(
     let mut result = FydiaResponse::new_bytes_ok(value);
     result.add_headers("Content-Type", &mime_str);
 
-    return Ok(result);
+    Ok(result)
 }
 
 const MAX_CONTENT_LENGHT: usize = 8_000_000;
@@ -47,18 +47,15 @@ pub async fn post_picture_of_server(
     let (_, mut server) =
         BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
             .await?;
-    let vec_body = body.to_vec();
 
-    if vec_body.len() > MAX_CONTENT_LENGHT {
+    if body.len() > MAX_CONTENT_LENGHT {
         return Err(FydiaResponse::new_error_custom_status(
             "",
             StatusCode::PAYLOAD_TOO_LARGE,
         ));
     }
 
-    let mimetype = infer::get(&vec_body).ok_or_else(|| {
-        return FydiaResponse::new_error("No body");
-    })?;
+    let mimetype = infer::get(&body).ok_or_else(|| FydiaResponse::new_error("No body"))?;
 
     let mimetype_str = mimetype.extension();
     if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {
@@ -70,12 +67,12 @@ pub async fn post_picture_of_server(
 
     let file = File::new();
     let name = file.get_name();
-    let len_of_boy = vec_body.len();
+    let len_of_boy = body.len();
     println!("{name} / ({len_of_boy})");
 
-    file.create_and_write(vec_body).map_err(|error| {
+    file.create_and_write(&body).map_err(|error| {
         error!(error);
-        return FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR);
+        FydiaResponse::new_error_custom_status("", StatusCode::INTERNAL_SERVER_ERROR)
     })?;
 
     server.icon = file.get_name();

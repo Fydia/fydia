@@ -34,10 +34,10 @@ pub async fn create_channel(
         ParentId::ServerId(server.id.clone()),
         channeltype,
     )
-    .map_err(|error| FydiaResponse::new_error(error))?;
+    .map_err(FydiaResponse::new_error)?;
 
     server
-        .insert_channel(channel.clone(), &database)
+        .insert_channel(&channel, &database)
         .await
         .map(|_| FydiaResponse::new_ok(channel.id.id))
         .map_err(|_| FydiaResponse::new_error("Cannot create the channel"))

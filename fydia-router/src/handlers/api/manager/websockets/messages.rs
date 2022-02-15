@@ -39,7 +39,7 @@ async fn connected(
 ) -> Result<(), String> {
     let user = user.ok_or_else(|| "No user".to_string())?;
     let (sender, mut receiver) = wbmanager
-        .get_new_channel(user.clone())
+        .get_new_channel(&user)
         .await
         .ok_or_else(|| "No Channel".to_string())?;
     let (mut sink, mut stream) = socket.split();
@@ -49,10 +49,10 @@ async fn connected(
         let sender = thread_sender;
         while let Some(Ok(e)) = stream.next().await {
             if std::mem::discriminant(&e) == std::mem::discriminant(&Message::Close(None)) {
-                if let Err(e) = sender.clone().send(ChannelMessage::Kill) {
+                if let Err(e) = sender.send(ChannelMessage::Kill) {
                     error!(e.to_string());
                 };
-            } else if let Err(e) = sender.clone().send(ChannelMessage::WebsocketMessage(e)) {
+            } else if let Err(e) = sender.send(ChannelMessage::WebsocketMessage(e)) {
                 error!(e.to_string());
             };
         }
@@ -61,29 +61,20 @@ async fn connected(
     tokio::spawn(async move {
         while let Some(channelmessage) = receiver.recv().await {
             match channelmessage {
-                ChannelMessage::WebsocketMessage(e) => match sink.send(e).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!(e.to_string());
+                ChannelMessage::WebsocketMessage(e) => {
+                    if let Err(error) = sink.send(e).await {
+                        error!(error.to_string());
                     }
-                },
+                }
                 ChannelMessage::Message(e) => {
                     if let Ok(msg) = serde_json::to_string(&e) {
-                        match sink.send(axum::extract::ws::Message::Text(msg)).await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("{e}");
-                            }
+                        if let Err(error) = sink.send(Message::Text(msg)).await {
+                            error!(error);
                         }
                     }
                 }
                 ChannelMessage::Kill => {
-                    if wbmanager
-                        .clone()
-                        .remove(user.clone(), &sender)
-                        .await
-                        .is_err()
-                    {
+                    if wbmanager.remove(&user, &sender).await.is_err() {
                         error!("Can't remove");
                     };
                     break;

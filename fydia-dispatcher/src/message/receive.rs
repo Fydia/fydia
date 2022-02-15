@@ -3,14 +3,14 @@ use fydia_crypto::structs::{AesKeyEncrypt, EncryptedBody, Iv};
 use fydia_struct::instance::{Instance, RsaData};
 use hyper::HeaderMap;
 
-pub async fn receive_message(headers: &HeaderMap, body: Vec<u8>, rsa: &RsaData) -> Option<String> {
+pub async fn receive_message(headers: &HeaderMap, body: &[u8], rsa: &RsaData) -> Option<String> {
     let origin = headers.get("origin")?.to_str().ok()?.to_string();
     let authenticity = headers.get("Authenticity")?.to_str().ok()?.to_string();
 
     let public_key = crate::keys::get::get_public_key(Instance::from(origin)?).await?;
 
     let verification_bytes = &body[0..256];
-    if public_decrypt(&public_key, verification_bytes.to_vec())
+    if public_decrypt(&public_key, verification_bytes)
         .ok()?
         .split_at(4)
         .0
@@ -21,7 +21,7 @@ pub async fn receive_message(headers: &HeaderMap, body: Vec<u8>, rsa: &RsaData) 
         let aeskey = &body[272..528];
         let body = &body[528..];
         let decrypted = fydia_crypto::decrypt::aes_decrypt(
-            rsa.0.clone(),
+            &rsa.0,
             (
                 Iv(iv_string),
                 AesKeyEncrypt(aeskey.to_vec()),

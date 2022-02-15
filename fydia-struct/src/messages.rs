@@ -74,7 +74,7 @@ impl Message {
 
         Ok(Self {
             id: generate_string(32),
-            content: content.into(),
+            content,
             message_type,
             edited,
             timestamp,

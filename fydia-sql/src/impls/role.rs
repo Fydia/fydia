@@ -108,7 +108,7 @@ impl SqlRoles for Role {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "Can't the role")?;
+            .ok_or("Can't the role")?;
 
         let active_model: entity::roles::ActiveModel = model.into();
         entity::roles::Entity::delete(active_model)

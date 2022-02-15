@@ -18,7 +18,7 @@ use super::{
 pub trait SqlServer {
     async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String>;
     async fn get_server_by_id(
-        id: ServerId,
+        id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Server, String>;
     async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -36,7 +36,7 @@ pub trait SqlServer {
     ) -> Result<(), String>;
     async fn insert_channel(
         &mut self,
-        channel: Channel,
+        channel: &Channel,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
 }
@@ -59,7 +59,7 @@ impl SqlServer for Server {
     }
 
     async fn get_server_by_id(
-        id: ServerId,
+        id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Server, String> {
         match crate::entity::server::Entity::find()
@@ -206,7 +206,7 @@ impl SqlServer for Server {
             .await
             .map_err(|f| f.to_string())?;
 
-        user.insert_server(self.id.clone(), executor).await?;
+        user.insert_server(&self.id, executor).await?;
 
         self.members = members;
 
@@ -215,13 +215,14 @@ impl SqlServer for Server {
 
     async fn insert_channel(
         &mut self,
-        channel: Channel,
+        channel: &Channel,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let parent_id = match channel.parent_id.clone() {
+        let parent_id = match &channel.parent_id {
             ParentId::DirectMessage(_) => return Err(String::from("Bad type of Channel")),
             ParentId::ServerId(_) => ParentId::ServerId(self.id.clone()).to_string()?,
         };
+
         let active_channel = crate::entity::channels::ActiveModel {
             id: Set(channel.id.id.clone()),
             parent_id: Set(parent_id),
@@ -235,7 +236,7 @@ impl SqlServer for Server {
             .await
             .map_err(|f| f.to_string())?;
 
-        self.channel.0.push(channel);
+        self.channel.0.push(channel.clone());
 
         Ok(())
     }
@@ -249,6 +250,6 @@ pub trait SqlServerId {
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
     async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        Server::get_server_by_id(ServerId::new(self.id.clone()), executor).await
+        Server::get_server_by_id(&ServerId::new(self.id.clone()), executor).await
     }
 }

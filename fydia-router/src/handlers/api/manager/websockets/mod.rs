@@ -40,12 +40,13 @@ impl WbStruct {
     }
 
     pub fn is_same_user(&self, user: &User) -> bool {
-        self.0
-            == User {
-                id: user.id.clone(),
-                name: user.name.clone(),
-                ..Default::default()
-            }
+        let cmp_user = User {
+            id: user.id.clone(),
+            name: user.name.clone(),
+            ..Default::default()
+        };
+
+        self.0 == cmp_user
     }
 }
 
@@ -171,7 +172,7 @@ impl WebsocketInner {
 
         let (index_channel, index_user) = self
             .get_sender_index_and_user_index(&user, wbsender)
-            .ok_or_else(|| ())?;
+            .ok_or(())?;
 
         let mut wblist = self.wb_channel.lock();
         let wbuser = &mut wblist[index_user].1;

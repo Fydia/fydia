@@ -69,7 +69,7 @@ impl BasicValues {
         let (user, server) =
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
         let channel_id = ChannelId::new(channelid);
-        if !server.channel.is_exists(channel_id.clone()) {
+        if !server.channel.is_exists(&channel_id) {
             return Err(FydiaResponse::new_error("Channel is not exists"));
         }
         let channel = channel_id

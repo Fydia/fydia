@@ -92,7 +92,7 @@ pub async fn get_axum_router(
     };
     success!(format!("Ip is : {}", instance.domain));
     info!(format!("Listen on: http://{}", formated_ip));
-    let public_key = if let Some(public_key) = private_to_public(privatekey.clone()) {
+    let public_key = if let Some(public_key) = private_to_public(&privatekey) {
         public_key
     } else {
         panic!("Public key error");
@@ -102,11 +102,11 @@ pub async fn get_axum_router(
         Arc::new(crate::handlers::api::manager::websockets::manager::WbManager::spawn().await);
     let typing_manager =
         Arc::new(crate::handlers::api::manager::typing::TypingManager::spawn().await);
-    if let Err(error) = typing_manager.set_websocketmanager(websocket_manager.clone()) {
+    if let Err(error) = typing_manager.set_websocketmanager(&websocket_manager) {
         error!(error);
         exit(1);
     };
-    if let Err(error) = typing_manager.set_selfmanager(typing_manager.clone()) {
+    if let Err(error) = typing_manager.set_selfmanager(&typing_manager) {
         error!(error);
         exit(1)
     }

@@ -63,7 +63,7 @@ pub async fn post_messages(
         let json =
             serde_json::from_str(&body).map_err(|_| FydiaResponse::new_error("JSON error"))?;
 
-        post_messages_json(json, database, rsa, wbsocket, (user, channel, server)).await
+        post_messages_json(json, database, &rsa, wbsocket, (user, channel, server)).await
     } else if mime_type == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
         let boundary =
@@ -71,7 +71,7 @@ pub async fn post_messages(
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
-        post_messages_multipart(multer, database, rsa, wbsocket, (user, channel, server)).await
+        post_messages_multipart(multer, database, &rsa, wbsocket, (user, channel, server)).await
     } else {
         Err(FydiaResponse::new_error("Content-Type error"))
     }
@@ -80,12 +80,11 @@ pub async fn post_messages(
 pub async fn post_messages_multipart(
     multipart: Multipart<'static>,
     database: DbConnection,
-    rsa: Arc<RsaData>,
+    rsa: &Arc<RsaData>,
     wbsocket: Arc<WebsocketManagerChannel>,
     (user, channel, server): (User, Channel, Server),
 ) -> FydiaResult {
     let event = multipart_to_event(multipart, &user.clone(), &channel.id, &server.id).await?;
-    let key = rsa.clone();
     let members = server.get_user(&database).await.map_err(|_| {
         FydiaResponse::new_error_custom_status(
             "Cannot get users of the server",
@@ -100,10 +99,10 @@ pub async fn post_messages_multipart(
                 StatusCode::INTERNAL_SERVER_ERROR,
             )
         })?;
-
+        let key = rsa.clone();
         tokio::spawn(async move {
             if wbsocket
-                .send_with_origin_and_key(event, members.members.clone(), Some(&key), None)
+                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
                 .await
                 .is_err()
             {
@@ -118,12 +117,12 @@ pub async fn post_messages_multipart(
 pub async fn post_messages_json(
     value: Value,
     database: DbConnection,
-    rsa: Arc<RsaData>,
+    rsa: &Arc<RsaData>,
     wbsocket: Arc<WebsocketManagerChannel>,
     (user, channel, server): (User, Channel, Server),
 ) -> FydiaResult {
     let event = json_message(value, &user, &channel.id, &server.id).await?;
-    let key = rsa.clone();
+
     let members = server.get_user(&database).await.map_err(|_| {
         FydiaResponse::new_error_custom_status(
             "Cannot get users of the server",
@@ -138,9 +137,10 @@ pub async fn post_messages_json(
             )
         })?;
 
+        let key = rsa.clone();
         tokio::spawn(async move {
             if wbsocket
-                .send_with_origin_and_key(event, members.members.clone(), Some(&key), None)
+                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
                 .await
                 .is_err()
             {
@@ -181,7 +181,7 @@ pub async fn multipart_to_event(
                     .map_err(|_| FydiaResponse::new_error("Body error"))?
                     .to_vec();
 
-                file.write(body).map_err(|_| {
+                file.write(&body).map_err(|_| {
                     FydiaResponse::new_error_custom_status(
                         "Can't write the file",
                         StatusCode::INTERNAL_SERVER_ERROR,
@@ -207,7 +207,7 @@ pub async fn multipart_to_event(
                     user.clone(),
                     channelid.clone(),
                 )
-                .map_err(|error| FydiaResponse::new_error(error))?,
+                .map_err(FydiaResponse::new_error)?,
             ),
         },
     );
@@ -237,7 +237,7 @@ pub async fn json_message(
                     user.clone(),
                     channelid.clone(),
                 )
-                .map_err(|error| FydiaResponse::new_error(error))?,
+                .map_err(FydiaResponse::new_error)?,
             ),
         },
     ))

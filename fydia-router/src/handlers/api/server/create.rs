@@ -26,8 +26,7 @@ pub async fn create_server(
 
     let name = get_json("name", &value)?;
 
-    let mut server =
-        Server::new(name, user.id.clone()).map_err(|error| FydiaResponse::new_error(error))?;
+    let mut server = Server::new(name, user.id.clone()).map_err(FydiaResponse::new_error)?;
 
     server
         .insert_server(&database)

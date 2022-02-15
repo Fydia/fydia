@@ -76,7 +76,7 @@ pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
     pub fn is_join(&self, server_id: &ServerId) -> bool {
-        for i in self.0.clone().iter_mut() {
+        for i in self.0.iter() {
             if cfg!(debug_assertion) {
                 let serverid_id = &i.id;
                 let cmp_serverid_id = &server_id.id;
@@ -93,7 +93,7 @@ impl Servers {
 
     pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
         let server_id = server_id.into();
-        for i in self.0.clone().iter_mut() {
+        for i in self.0.iter() {
             if i.id == server_id {
                 return Some(i.clone());
             }
@@ -164,9 +164,9 @@ impl Channels {
         Self(Vec::new())
     }
 
-    pub fn is_exists(&self, channel_id: ChannelId) -> bool {
+    pub fn is_exists(&self, channel_id: &ChannelId) -> bool {
         for i in &self.0 {
-            if i.id == channel_id {
+            if &i.id == channel_id {
                 return true;
             }
         }
@@ -174,9 +174,9 @@ impl Channels {
         false
     }
 
-    pub fn get_channel(&self, channel_id: ChannelId) -> Option<Channel> {
+    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Channel> {
         for i in &self.0 {
-            if i.id == channel_id {
+            if &i.id == channel_id {
                 return Some(i.clone());
             }
         }

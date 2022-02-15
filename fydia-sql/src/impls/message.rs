@@ -149,7 +149,7 @@ impl SqlMessage for Message {
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
-            .ok_or_else(|| "Can't delete the message")?;
+            .ok_or("Can't delete the message")?;
 
         let active_model: crate::entity::messages::ActiveModel = model.into();
         crate::entity::messages::Entity::delete(active_model)

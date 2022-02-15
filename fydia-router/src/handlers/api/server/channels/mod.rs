@@ -18,7 +18,7 @@ pub async fn info_channel(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult {
-    let channel = Channel::get_channel_by_id(ChannelId::new(channelid.clone()), &database)
+    let channel = Channel::get_channel_by_id(&ChannelId::new(channelid), &database)
         .await
         .ok_or_else(|| FydiaResponse::new_error("Error"))?;
 

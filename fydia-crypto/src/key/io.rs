@@ -9,11 +9,11 @@ pub fn write(rsa: Rsa<Private>) -> std::io::Result<()> {
 
             let mut publickeyfile = std::fs::File::create("keys/public.key")?;
 
-            publickeyfile.write(&publickey)?;
+            publickeyfile.write_all(&publickey)?;
 
             let mut privatekeyfile = std::fs::File::create("keys/private.key")?;
 
-            privatekeyfile.write(&privatekey)?;
+            privatekeyfile.write_all(&privatekey)?;
 
             Ok(())
         }
@@ -30,5 +30,5 @@ pub fn read() -> Option<Rsa<Private>> {
 
     file.read_to_end(&mut buf).ok()?;
 
-    Some(Rsa::private_key_from_pem(&buf).ok()?)
+    Rsa::private_key_from_pem(&buf).ok()
 }

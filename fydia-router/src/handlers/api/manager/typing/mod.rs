@@ -59,14 +59,7 @@ impl ManagerReceiverTrait for TypingStruct {
             TypingMessage::StartTyping(user, channelid, serverid, channel_user) => {
                 if let (Some(wb), Some(typing)) = (&self.wbsocketmanager, &self.selfmanager) {
                     self.inner
-                        .insert(
-                            user,
-                            channelid,
-                            serverid,
-                            channel_user,
-                            wb.clone(),
-                            typing.clone(),
-                        )
+                        .insert(user, channelid, serverid, channel_user, wb, typing)
                         .await
                 }
             }
@@ -75,13 +68,7 @@ impl ManagerReceiverTrait for TypingStruct {
                     if let Some(wb) = &self.wbsocketmanager {
                         if self
                             .inner
-                            .send_stop_typing(
-                                serverid,
-                                user,
-                                channelid,
-                                users_of_channel,
-                                wb.clone(),
-                            )
+                            .send_stop_typing(serverid, user, channelid, users_of_channel, wb)
                             .await
                             .is_err()
                         {
@@ -96,13 +83,7 @@ impl ManagerReceiverTrait for TypingStruct {
                     if let Some(wb) = &self.wbsocketmanager {
                         if self
                             .inner
-                            .send_stop_typing(
-                                serverid,
-                                user,
-                                channelid,
-                                users_of_channel,
-                                wb.clone(),
-                            )
+                            .send_stop_typing(serverid, user, channelid, users_of_channel, wb)
                             .await
                             .is_err()
                         {
@@ -150,11 +131,11 @@ impl TypingInner {
         channelid: ChannelId,
         serverid: ServerId,
         channel_user: Vec<User>,
-        websocket: Arc<WebsocketManagerChannel>,
-        selfmanager: Arc<TypingManagerChannel>,
+        websocket: &Arc<WebsocketManagerChannel>,
+        selfmanager: &Arc<TypingManagerChannel>,
     ) {
         let mut task = Task::new(
-            selfmanager,
+            selfmanager.clone(),
             channel_user.clone(),
             userid.clone(),
             channelid.clone(),
@@ -191,11 +172,11 @@ impl TypingInner {
             error!("Can't Send Message");
         }
 
-        self.insert_new_user_typing(&channelid, UserTyping::new(userid, task));
+        self.insert_new_typing(&channelid, UserTyping::new(userid, task));
     }
 
-    pub fn insert_new_user_typing(&self, channelid: &ChannelId, usertyping: UserTyping) {
-        if let Some(value) = self.0.lock().get_mut(&channelid) {
+    pub fn insert_new_typing(&self, channelid: &ChannelId, usertyping: UserTyping) {
+        if let Some(value) = self.0.lock().get_mut(channelid) {
             value.push(usertyping);
         }
     }
@@ -206,12 +187,12 @@ impl TypingInner {
         userid: UserId,
         channelid: ChannelId,
         channel_user: Vec<User>,
-        websocket: Arc<WebsocketManagerChannel>,
+        websocket: &Arc<WebsocketManagerChannel>,
     ) -> Result<(), ()> {
         websocket
             .send(
-                Event::new(serverid, EventContent::StartTyping { userid, channelid }),
-                channel_user,
+                &Event::new(serverid, EventContent::StartTyping { userid, channelid }),
+                &channel_user,
             )
             .await
             .map_err(|_| ())
@@ -223,12 +204,12 @@ impl TypingInner {
         userid: UserId,
         channelid: ChannelId,
         channel_user: Vec<User>,
-        websocket: Arc<WebsocketManagerChannel>,
+        websocket: &Arc<WebsocketManagerChannel>,
     ) -> Result<(), ()> {
         websocket
             .send(
-                Event::new(serverid, EventContent::StopTyping { userid, channelid }),
-                channel_user,
+                &Event::new(serverid, EventContent::StopTyping { userid, channelid }),
+                &channel_user,
             )
             .await
             .map_err(|_| ())
@@ -361,8 +342,7 @@ impl Task {
     }
 
     pub fn kill(&mut self) {
-        let clone_self = self.clone();
-        if let Some(sender) = &clone_self.0 {
+        if let Some(sender) = &self.0 {
             if sender.send(true).is_err() {
                 error!("Error");
             }
@@ -375,8 +355,8 @@ impl Task {
 pub type TypingManagerChannel = ManagerChannel<TypingMessage>;
 
 pub trait TypingManagerChannelTrait {
-    fn set_websocketmanager(&self, wbsocket: Arc<WebsocketManagerChannel>) -> Result<(), String>;
-    fn set_selfmanager(&self, selfmanager: Arc<TypingManagerChannel>) -> Result<(), String>;
+    fn set_websocketmanager(&self, wbsocket: &Arc<WebsocketManagerChannel>) -> Result<(), String>;
+    fn set_selfmanager(&self, selfmanager: &Arc<TypingManagerChannel>) -> Result<(), String>;
     fn start_typing(
         &self,
         userid: UserId,
@@ -401,16 +381,16 @@ pub trait TypingManagerChannelTrait {
 }
 
 impl TypingManagerChannelTrait for TypingManagerChannel {
-    fn set_websocketmanager(&self, wbsocket: Arc<WebsocketManagerChannel>) -> Result<(), String> {
+    fn set_websocketmanager(&self, wbsocket: &Arc<WebsocketManagerChannel>) -> Result<(), String> {
         self.0
-            .send(TypingMessage::SetWebSocketManager(wbsocket))
+            .send(TypingMessage::SetWebSocketManager(wbsocket.clone()))
             .map(|_| ())
             .map_err(|f| f.to_string())
     }
 
-    fn set_selfmanager(&self, selfmanager: Arc<TypingManagerChannel>) -> Result<(), String> {
+    fn set_selfmanager(&self, selfmanager: &Arc<TypingManagerChannel>) -> Result<(), String> {
         self.0
-            .send(TypingMessage::SetTypingManager(selfmanager))
+            .send(TypingMessage::SetTypingManager(selfmanager.clone()))
             .map(|_| ())
             .map_err(|f| f.to_string())
     }

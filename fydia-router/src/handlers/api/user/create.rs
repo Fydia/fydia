@@ -23,7 +23,7 @@ pub async fn create_user(body: Bytes, Extension(database): Extension<DbConnectio
     let password = get_json("password".to_string(), &json)?;
 
     User::new(name, email, password, Instance::default())
-        .map_err(|error| FydiaResponse::new_error(error))?
+        .map_err(FydiaResponse::new_error)?
         .insert_user(&database)
         .await
         .map(|_| FydiaResponse::new_ok("Register successfully"))
