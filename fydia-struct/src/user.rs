@@ -106,6 +106,7 @@ impl UserId {
 
 pub const HEADERNAME: &str = "Authorization";
 
+#[derive(Debug)]
 pub struct Token(pub String);
 
 impl Token {

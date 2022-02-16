@@ -147,7 +147,7 @@ impl<'de> Deserialize<'de> for Date {
 impl<'de> Visitor<'de> for Date {
     type Value = Date;
 
-    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+    fn expecting(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.write_str("An string")
     }
 

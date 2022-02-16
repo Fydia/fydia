@@ -1,7 +1,7 @@
 use fydia_crypto::{PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RsaData(pub PrivateKey, pub PublicKey);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]

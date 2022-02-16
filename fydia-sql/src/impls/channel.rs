@@ -4,7 +4,7 @@ use super::{
 };
 use crate::impls::user::UserIdSql;
 use fydia_struct::{
-    channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageValue, ParentId},
+    channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageInner, ParentId},
     messages::Message,
     server::{Channels, ServerId},
     user::{User, UserId},
@@ -54,8 +54,8 @@ impl SqlChannel for Channel {
         // TODO: Check Permission
         match &self.parent_id {
             ParentId::DirectMessage(directmessage) => match &directmessage.users {
-                DirectMessageValue::Users(users) => Ok(users.clone()),
-                DirectMessageValue::UsersId(usersid) => {
+                DirectMessageInner::Users(users) => Ok(users.clone()),
+                DirectMessageInner::UsersId(usersid) => {
                     let mut vec = Vec::new();
 
                     for i in usersid {
@@ -237,7 +237,7 @@ impl SqlDirectMessages for DirectMessage {
 
         // Name of participant with a coma
         let mut name_of_dm = String::new();
-        if let DirectMessageValue::Users(users) = dm.users {
+        if let DirectMessageInner::Users(users) = dm.users {
             for (n, i) in users.iter().enumerate() {
                 if n == 0 {
                     name_of_dm.push_str(&i.name);
@@ -259,8 +259,8 @@ impl SqlDirectMessages for DirectMessage {
         let mut users = Vec::new();
 
         match &mut self.users {
-            DirectMessageValue::Users(_) => {}
-            DirectMessageValue::UsersId(userids) => {
+            DirectMessageInner::Users(_) => {}
+            DirectMessageInner::UsersId(userids) => {
                 for userid in userids {
                     let user = userid
                         .get_user(executor)
@@ -270,7 +270,7 @@ impl SqlDirectMessages for DirectMessage {
                     users.push(user);
                 }
 
-                self.users = DirectMessageValue::Users(users);
+                self.users = DirectMessageInner::Users(users);
             }
         }
 
