@@ -103,7 +103,7 @@ impl DirectMessage {
 ///
 /// DirectMessage contains `DirectMessage` with `Vec<User>` or `Vec<UserId>`
 ///
-/// ServerId contains `ServerId` with `String` represent
+/// ServerId contains `ServerId`
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ParentId {
@@ -216,7 +216,6 @@ impl Channel {
     ///  // This will be panic because there is no name
     ///  let channel = Channel::new("", "desc", ChannelType::Text).unwrap();
     /// ```
-    ///
     pub fn new<T: Into<String>>(
         name: T,
         description: T,

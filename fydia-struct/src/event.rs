@@ -3,18 +3,41 @@ use crate::server::ServerId;
 use crate::{messages::Message, user::UserId};
 use serde::{Deserialize, Serialize};
 
+/// `Event` represent the message by websocket.
+///
+///# Examples
+///```
+///use fydia_struct::event::EventContent;
+///use fydia_struct::server::ServerId;
+///use fydia_struct::event::Event;
+///
+///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
+///```
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
-    pub server: ServerId,
+    pub server_id: ServerId,
     pub content: EventContent,
 }
 
 impl Event {
-    pub fn new(server: ServerId, content: EventContent) -> Self {
-        Self { server, content }
+    /// Take server_id as `ServerId` and content as `EventContent`
+    /// and return `Event`
+    ///
+    ///# Examples
+    ///```
+    ///use fydia_struct::event::EventContent;
+    ///use fydia_struct::server::ServerId;
+    ///use fydia_struct::event::Event;
+    ///
+    ///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
+    ///```
+    pub fn new(server_id: ServerId, content: EventContent) -> Self {
+        Self { server_id, content }
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventContent {
