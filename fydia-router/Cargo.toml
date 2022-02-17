@@ -32,7 +32,7 @@ tower = "0.4.11"
 rand = "0.8.5"
 parking_lot =  {version = "0.12.0"}
 hyper = "0.14.17"
-flume = "0.10.10"
+flume = "0.10.11"
 
 [dev-dependencies]
 tokio-tungstenite = "0.16.1"
