@@ -31,7 +31,7 @@ tower-http = {version = "0.2.1", features=["trace"]}
 tower = "0.4.11"
 rand = "0.8.4"
 parking_lot =  {version = "0.12.0"}
-hyper = "0.14.16"
+hyper = "0.14.17"
 flume = "0.10.10"
 
 [dev-dependencies]
