@@ -220,7 +220,7 @@ impl Channel {
     ///
     /// let channel = Channel::new("name", "desc", ChannelType::Text);
     ///```
-    /// ## Expection
+    /// ## Error
     /// ```should_panic
     /// use fydia_struct::channel::{Channel, ChannelType};
     ///  // This will be panic because there is no name
@@ -260,7 +260,7 @@ impl Channel {
     ///
     /// let channel = Channel::new_with_parentid("name", "desc",ParentId::ServerId(ServerId::new(String::new())), ChannelType::Text);
     ///```
-    /// ## Expection
+    /// ## Error
     /// ```should_panic
     ///  use fydia_struct::channel::{Channel, ChannelType, ParentId};
     ///  use fydia_struct::server::ServerId;
