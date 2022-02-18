@@ -1,3 +1,5 @@
+//! This module is related to file
+
 use futures::prelude::*;
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,8 @@ impl FileDescriptor {
     ///
     ///# Examples
     ///```
+    /// use fydia_struct::{file::FileDescriptor, messages::Date};
+    ///
     /// let file_descriptor = FileDescriptor::new("name", Date::now());
     ///```
     pub fn new<T: Into<String>>(name: T, date: Date) -> Self {
@@ -42,6 +46,8 @@ impl FileDescriptor {
     ///
     ///# Examples
     ///```
+    /// use fydia_struct::file::FileDescriptor;
+    ///
     /// let file_descriptor = FileDescriptor::new_with_now("name");
     ///```
     pub fn new_with_now<T: Into<String>>(name: T) -> Self {
@@ -52,9 +58,8 @@ impl FileDescriptor {
     ///
     ///# Examples
     ///```
-    /// use fydia_struct::file::FileDescriptor;
+    /// use fydia_struct::{file::FileDescriptor, messages::Date};
     /// use chrono::MIN_DATETIME;
-    /// use fydia_struct::messages::Date;
     ///
     /// let file_descriptor = FileDescriptor::new("name", Date::new(MIN_DATETIME));
     /// let json_file_descriptor = file_descriptor.to_string().unwrap();
@@ -145,7 +150,7 @@ impl File {
             .open(&self.path)
             .map_err(|f| f.to_string())?;
 
-        file.write_all(&bytes).map_err(|f| f.to_string())
+        file.write_all(bytes).map_err(|f| f.to_string())
     }
 
     /// Take the name of file to return `File`

@@ -80,7 +80,9 @@ pub enum DirectMessageInner {
 
 impl DirectMessage {
     /// Take a `Vec<UserId>` to return a DirectMessage
+    ///
     /// # Examples
+    /// 
     /// ```
     /// use fydia_struct::user::UserId;
     /// use fydia_struct::channel::DirectMessage;
@@ -125,7 +127,7 @@ impl ParentId {
     ///let parent_id = ParentId::DirectMessage(DirectMessage::new(vec![
     ///    UserId::default(),
     ///    UserId::default(),
-    ///]));
+    ///])).to_string().unwrap();
     ///
     /// assert_eq!(parent_id, r#"{"direct_message":{"users":[{"id":-1},{"id":-1}]}}"#)
     /// ```
@@ -180,10 +182,15 @@ impl ChannelId {
 /// Return `Err(String)` when `name` is empty
 ///# Examples
 ///```
+/// use fydia_struct::channel::{Channel, ChannelType};
+///
 /// let channel = Channel::new("name", "desc", ChannelType::Text);
 ///```
 /// ## Expection
 /// ```should_panic
+///  use fydia_struct::channel::ChannelType;
+///  use fydia_struct::channel::Channel;
+///
 ///  // This will be panic because there is no name
 ///  let channel = Channel::new("", "desc", ChannelType::Text).unwrap();
 /// ```
@@ -209,10 +216,13 @@ impl Channel {
     ///
     ///# Examples
     ///```
+    /// use fydia_struct::channel::{Channel, ChannelType};
+    ///
     /// let channel = Channel::new("name", "desc", ChannelType::Text);
     ///```
     /// ## Expection
     /// ```should_panic
+    /// use fydia_struct::channel::{Channel, ChannelType};
     ///  // This will be panic because there is no name
     ///  let channel = Channel::new("", "desc", ChannelType::Text).unwrap();
     /// ```
@@ -245,12 +255,18 @@ impl Channel {
     ///
     ///# Examples
     ///```
-    /// let channel = Channel::new("name", "desc", ChannelType::Text);
+    /// use fydia_struct::channel::{Channel, ChannelType, ParentId};
+    /// use fydia_struct::server::ServerId;
+    ///
+    /// let channel = Channel::new_with_parentid("name", "desc",ParentId::ServerId(ServerId::new(String::new())), ChannelType::Text);
     ///```
     /// ## Expection
     /// ```should_panic
+    ///  use fydia_struct::channel::{Channel, ChannelType, ParentId};
+    ///  use fydia_struct::server::ServerId;
+    ///
     ///  // This will be panic because there is no name
-    ///  let channel = Channel::new_with_parentid("", "desc", ParentId::ChannelType::Text).unwrap();
+    ///  let channel = Channel::new_with_parentid("", "desc", ParentId::ServerId(ServerId::new(String::new())), ChannelType::Text).unwrap();
     /// ```
     ///
     pub fn new_with_parentid<T: Into<String>>(

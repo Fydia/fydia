@@ -1,3 +1,5 @@
+//! This module is related to Formatted representation of User, Server, Channel
+
 /// `UserFormat` used to represent a `User` as a String over Instance
 #[allow(missing_docs)]
 #[derive(Debug, Default, PartialEq)]

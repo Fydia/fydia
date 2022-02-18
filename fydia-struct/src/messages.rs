@@ -1,3 +1,5 @@
+//! This module related to message
+
 use crate::channel::ChannelId;
 use crate::user::User;
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDateTime, Timelike, Utc};
@@ -6,8 +8,10 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+/// `MessageType` reprensent the type of Message.
+/// This enum is used in the Message Json$
+#[allow(missing_docs)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum MessageType {
     TEXT,
     FILE,
@@ -31,6 +35,23 @@ impl Display for MessageType {
 }
 
 impl MessageType {
+    /// Parse a str to convert it in MessageType
+    ///
+    /// If str cannot be convert None is return
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fydia_struct::messages::MessageType;
+    /// 
+    /// assert_eq!(Some(MessageType::TEXT), MessageType::from_string("text"));
+    /// ```
+    ///
+    ///```
+    ///use fydia_struct::messages::MessageType;
+    ///
+    ///assert_eq!(None, MessageType::from_string("NOVALUE"));
+    ///```
     pub fn from_string<T: Into<String>>(from: T) -> Option<Self> {
         match from.into().to_uppercase().as_str() {
             "TEXT" => Some(Self::TEXT),
@@ -44,6 +65,8 @@ impl MessageType {
     }
 }
 
+/// Message contains all value of a message.
+#[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     pub id: String,
@@ -58,6 +81,16 @@ pub struct Message {
 }
 
 impl Message {
+    /// Create a new `Message` with all needed values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fydia_struct::{messages::{Message, MessageType, Date}, user::User, channel::ChannelId};
+    ///
+    /// Message::new("EMPTY", MessageType::TEXT, false, Date::now(), User::default(),
+    /// ChannelId::new(String::from("THISISANIDOF15C")));
+    /// ```
     pub fn new<T: Into<String>>(
         content: T,
         message_type: MessageType,
@@ -84,16 +117,29 @@ impl Message {
     }
 }
 
+/// Date contains a `DateTime<Utc>`
 #[derive(Debug, Clone)]
 pub struct Date(pub DateTime<Utc>);
 
 impl Date {
+    /// Create a new `Date` with a specific `DateTime<Utc>`
+    ///
+    /// Prefer use Date::now() for current Date
     pub fn new(date: DateTime<Utc>) -> Self {
         Self { 0: date }
     }
+    /// Create a new `Date` with `NaiveDateTime` 
     pub fn parse_from_naivetime(naivetime: NaiveDateTime) -> Self {
         Self(DateTime::from_utc(naivetime, Utc))
     }
+   
+    /// Create a new `Date` from a String
+    ///
+    /// ```
+    /// use fydia_struct::messages::Date;
+    ///
+    /// let date = Date::parse_string("2020-01-01 00:00:00");
+    /// ```
     pub fn parse_string<T: Into<String>>(parse: T) -> Option<Self> {
         if let Ok(datetime) = DateTime::parse_from_str(parse.into().as_str(), "%F %T") {
             Some(Self::new_fixed(datetime))
@@ -101,17 +147,22 @@ impl Date {
             None
         }
     }
+
+    /// Create a new `Date` with current time.
     pub fn now() -> Self {
         Self {
             0: DateTime::from(SystemTime::now()),
         }
     }
 
+    /// Create a new `Date` with a new `DateTime<FixedOffset>`
     pub fn new_fixed(date: DateTime<FixedOffset>) -> Self {
         Self {
             0: DateTime::from(date),
         }
     }
+    
+    /// Create a new `Date` with minimal DateTime 
     pub fn null() -> Self {
         Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
     }
@@ -164,6 +215,7 @@ impl<'de> Visitor<'de> for Date {
     }
 }
 
+/// Format `DateTime<Utc>` as "%F %T" and return String
 pub fn datetime_to_sqltime(date: DateTime<Utc>) -> String {
     format!(
         "{:0>#4}-{:0>#2}-{:0>#2} {:0>#2}:{:0>#2}:{:0>#2}",

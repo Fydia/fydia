@@ -1,3 +1,5 @@
+//! This modules is related to emoji
+
 use serde::{Deserialize, Serialize};
 
 /// `Emoji` is the struct that contains all information of an emoji

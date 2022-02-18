@@ -1,3 +1,5 @@
+//! This module is related to event
+
 use crate::channel::ChannelId;
 use crate::server::ServerId;
 use crate::{messages::Message, user::UserId};
