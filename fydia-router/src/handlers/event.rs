@@ -11,7 +11,7 @@ pub async fn event_handler(
 ) {
     let database = database;
 
-    if let Ok(server) = event.server.get_server(database).await {
+    if let Ok(server) = event.server_id.get_server(database).await {
         if let Ok(members) = server.get_user(database).await {
             if wbsockets.send(&event, &members.members).await.is_err() {
                 error!("Error");

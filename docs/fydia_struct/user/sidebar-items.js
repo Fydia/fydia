@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["HEADERNAME","Header name for the user token"]],"struct":[["Token","`Token` contains the token of a `User`"],["User","`User` contains all value of user"],["UserId","`UserId` contains id of `User`"],["UserInfo","`UserInfo` is `User` without sensitive information"]]});

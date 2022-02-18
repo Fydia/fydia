@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Manager","`Manager` struct with a generic value that implement `ManagerReceiverTrait`"],["ManagerChannel","ManagerChannel contains channel to communicate with Manager"]],"trait":[["ManagerReceiverTrait","Trait of Manager."]]});

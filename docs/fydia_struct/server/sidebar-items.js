@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Channels","`Channels` contains all channel of a `Server`"],["Members","`Members` contains number of member and all `User` in a `Server`"],["Server","`Server` contains all value of server"],["ServerId","`ServerId` contains a String that represent ServerId"],["Servers","`Servers` contains all server of an `User`"]]});

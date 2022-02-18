@@ -1,3 +1,5 @@
+//! This module is related to server
+
 use crate::channel::ChannelId;
 use crate::emoji::Emoji;
 use crate::roles::Role;
@@ -6,6 +8,8 @@ use crate::{channel::Channel, user::UserId};
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
+/// `Server` contains all value of server
+#[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Server {
     pub id: ServerId,
@@ -19,6 +23,11 @@ pub struct Server {
 }
 
 impl Server {
+    /// Take a `Into<String>` value and UserId and return `Result<Server, String>`
+    ///
+    /// # Error
+    ///
+    /// If name is empty or owner id is negative, an return is return
     pub fn new<T: Into<String>>(name: T, owner: UserId) -> Result<Self, String> {
         let name = name.into();
 
@@ -56,25 +65,31 @@ impl Default for Server {
     }
 }
 
+/// `ServerId` contains a String that represent ServerId
+#[allow(missing_docs)]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct ServerId {
     pub id: String,
 }
 
 impl ServerId {
+    /// Take a id as `Into<String>` and return `ServerId`
     pub fn new<T: Into<String>>(id: T) -> Self {
         Self { id: id.into() }
     }
 
+    /// Take a `Into<String>` value and compare with `Server.id`
     pub fn eq<T: Into<String>>(&mut self, id: T) -> bool {
         self.id == id.into()
     }
 }
 
+/// `Servers` contains all server of an `User`
 #[derive(Default, Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
 pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
+    /// Take a ServerId and check if is already in `Vec<ServerId>`
     pub fn is_join(&self, server_id: &ServerId) -> bool {
         for i in self.0.iter() {
             if cfg!(debug_assertion) {
@@ -90,7 +105,8 @@ impl Servers {
 
         false
     }
-
+    
+    /// Take a `Into<String>` and return ServerId if exists in `Vec<ServerId>`
     pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
         let server_id = server_id.into();
         for i in self.0.iter() {
@@ -101,12 +117,14 @@ impl Servers {
 
         None
     }
-
+    /// Return a default `Servers` with an empty `Vec`
     pub fn new() -> Self {
         Self(Vec::new())
     }
 }
 
+/// `Members` contains number of member and all `User` in a `Server`
+#[allow(missing_docs)]
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Members {
     count: i32,
@@ -114,22 +132,25 @@ pub struct Members {
 }
 
 impl Members {
+    /// Return an empty  `Members`
     pub fn new() -> Self {
         Self {
             count: 0,
             members: Vec::new(),
         }
     }
-
+    /// Return a new `Members` with value given
     pub fn new_with(count: i32, members: Vec<User>) -> Self {
         Self { count, members }
     }
 
+    /// Add a new `User` in members 
     pub fn push(&mut self, user: User) {
         self.count += 1;
         self.members.push(user);
     }
-
+    
+    /// Remove a `User` in members. Return a Err if `User` doesn't exists
     pub fn remove(&mut self, user: User) -> Result<(), String> {
         for (n, i) in (&self.members).iter().enumerate() {
             if i.id == user.id {
@@ -141,7 +162,9 @@ impl Members {
 
         Err("Not Found".to_string())
     }
-
+    
+    /// Serialize `Members` as Json and return 
+    /// if can be serialize a `Ok(String)` or `Err(String)` if cannot.
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(&self) {
             Ok(json) => Ok(json),
@@ -156,14 +179,17 @@ impl Default for Members {
     }
 }
 
+/// `Channels` contains all channel of a `Server`
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Channels(pub Vec<Channel>);
 
 impl Channels {
+    /// Return an empty `Channels`
     pub fn new() -> Self {
         Self(Vec::new())
     }
-
+    
+    /// Check if a `ChannelId` is already exists
     pub fn is_exists(&self, channel_id: &ChannelId) -> bool {
         for i in &self.0 {
             if &i.id == channel_id {
@@ -173,7 +199,8 @@ impl Channels {
 
         false
     }
-
+    
+    /// Return Channel with same `ChannelId` given or None if nothing match
     pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Channel> {
         for i in &self.0 {
             if &i.id == channel_id {

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["MessageType","`MessageType` reprensent the type of Message. This enum is used in the Message Json$"]],"fn":[["datetime_to_sqltime","Format `DateTime<Utc>` as “%F %T” and return String"]],"struct":[["Date","Date contains a `DateTime<Utc>`"],["Message","Message contains all value of a message."]]});

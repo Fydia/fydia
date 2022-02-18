@@ -1,5 +1,5 @@
 use fydia_struct::{
-    channel::{DirectMessage, DirectMessageValue, ParentId},
+    channel::{DirectMessage, DirectMessageInner, ParentId},
     roles::ChannelAccess,
     server::ServerId,
 };
@@ -8,7 +8,7 @@ pub fn main() {
     println!(
         "{}",
         serde_json::to_string(&ParentId::DirectMessage(DirectMessage {
-            users: DirectMessageValue::Users(Vec::new())
+            users: DirectMessageInner::Users(Vec::new())
         }))
         .unwrap_or_default()
     );

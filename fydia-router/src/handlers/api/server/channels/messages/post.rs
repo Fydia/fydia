@@ -247,7 +247,7 @@ pub fn get_mime_of_file(path: &str) -> Mime {
     let mut buf = [0; 16];
 
     let file = File::get(path);
-    if file.write_value(&mut buf).is_err() {
+    if file.read_file(&mut buf).is_err() {
         error!("Can't write on buf");
     }
     if let Some(e) = infer::get(&buf) {
