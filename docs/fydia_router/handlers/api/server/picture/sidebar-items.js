@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["get_picture_of_server",""],["post_picture_of_server",""]]});

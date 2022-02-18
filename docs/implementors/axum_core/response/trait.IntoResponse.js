@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["fydia_struct"] = [{"text":"impl IntoResponse for <a class=\"struct\" href=\"fydia_struct/response/struct.FydiaResponse.html\" title=\"struct fydia_struct::response::FydiaResponse\">FydiaResponse</a>","synthetic":false,"types":["fydia_struct::response::FydiaResponse"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["client","Return index client"],["get_axum_router",""],["get_axum_router_from_config",""],["get_database_connection",""],["get_router",""]],"mod":[["handlers","Handling routes"],["routes","All router routes"],["tests","All tests of Router"]]});
