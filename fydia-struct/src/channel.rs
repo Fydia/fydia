@@ -186,7 +186,7 @@ impl ChannelId {
 ///
 /// let channel = Channel::new("name", "desc", ChannelType::Text);
 ///```
-/// ## Expection
+/// ## Error
 /// ```should_panic
 ///  use fydia_struct::channel::ChannelType;
 ///  use fydia_struct::channel::Channel;
