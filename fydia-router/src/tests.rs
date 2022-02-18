@@ -95,7 +95,7 @@ mod tests {
         let body = response.text().await.unwrap();
 
         if status == StatusCode::OK {
-            if body == r#"{"status":"OK","content":"Register successfully"}"#.to_string() {
+            if body == r#"{"status":"Ok","content":"Register successfully"}"#.to_string() {
                 return Ok(());
             }
         }
@@ -135,9 +135,9 @@ mod tests {
         let body = response.text().await.unwrap();
 
         if status == StatusCode::OK {
-            if body.starts_with(r#"{"status":"OK","content":""#) {
+            if body.starts_with(r#"{"status":"Ok","content":""#) {
                 *token = body
-                    .strip_prefix(r#"{"status":"OK","content":""#)
+                    .strip_prefix(r#"{"status":"Ok","content":""#)
                     .unwrap()
                     .strip_suffix("\"}")
                     .unwrap()

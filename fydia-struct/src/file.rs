@@ -110,8 +110,7 @@ impl File {
     ///
     /// Return an `Err(String)` if cannot create a directory or the `File`
     pub fn create(&self) -> Result<(), String> {
-        println!("{}", self.path);
-        std::fs::create_dir(PREFIX).map_err(|error| error.to_string())?;
+        drop(std::fs::create_dir(PREFIX).map_err(|error| error.to_string()));
         std::fs::File::create(&self.path)
             .map_err(|f| f.to_string())
             .map(|_| ())

@@ -31,7 +31,7 @@ mod tests {
                     Some(UserFormat {
                         name: "User".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     UserFormat::from_string("User@localhost.com")
                 );
@@ -43,7 +43,7 @@ mod tests {
                     Some(UserFormat {
                         name: "User@@@@🙊/\\*/".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     UserFormat::from_string("User@@@@🙊/\\*/@localhost.com")
                 );
@@ -58,7 +58,7 @@ mod tests {
                     Some(ServerFormat {
                         name: "Server".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     ServerFormat::from_string("Server$localhost.com")
                 );
@@ -70,7 +70,7 @@ mod tests {
                     Some(ServerFormat {
                         name: "Server$$$$🙊/\\*/".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     ServerFormat::from_string("Server$$$$🙊/\\*/$localhost.com")
                 );
@@ -86,7 +86,7 @@ mod tests {
                         channel: "Channel".into(),
                         server: "server".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     ChannelFormat::from_string("Channel#server$localhost.com")
                 );
@@ -99,7 +99,7 @@ mod tests {
                         channel: "Channel\\è##".into(),
                         server: "Server🙊/\\*/".into(),
                         domain: "localhost.com".into(),
-                        ..Default::default()
+                        port: Some(80)
                     }),
                     ChannelFormat::from_string("Channel\\è###Server🙊/\\*/$localhost.com")
                 );
