@@ -35,6 +35,6 @@ hyper = "0.14.17"
 flume = "0.10.11"
 
 [dev-dependencies]
-tokio-tungstenite = "0.16.1"
+tokio-tungstenite = "0.17.0"
 reqwest = "0.11.9"
 url = "2.2.2"
