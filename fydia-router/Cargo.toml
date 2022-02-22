@@ -27,7 +27,7 @@ reqwest = "0.11.9"
 infer = "0.7.0"
 mime_guess = "2.0.4"
 tracing = "0.1.31"
-tower-http = {version = "0.2.1", features=["trace"]}
+tower-http = {version = "0.2.3", features=["trace"]}
 tower = "0.4.12"
 rand = "0.8.5"
 parking_lot =  {version = "0.12.0"}
