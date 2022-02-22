@@ -64,8 +64,10 @@ mod tests {
 
         create_user().await?;
         create_user_without_email().await?;
+        create_empty_user().await?;
         login_user(&mut token).await?;
         login_user_with_bad_json().await?;
+        login_empty_user().await?;
         token_verify(&token).await?;
         get_me(&token).await?;
         create_a_server(&token, &mut server_id).await?;
@@ -123,6 +125,27 @@ mod tests {
         Err(body)
     }
 
+   async fn create_empty_user() -> Result<(), String> {
+        let response = reqwest::Client::new()
+            .post(format!("{IP_WITH_HTTP}/api/user/create"))
+            .body(r#"{"name":"", "email":"", "password":""}"#)
+            .send()
+            .await
+            .unwrap();
+        let status = response.status();
+        let body = response.text().await.unwrap();
+        println!("{body}");
+        if status == StatusCode::BAD_REQUEST {
+            if body.starts_with(r#"{"status":"Error","content":""#) {
+                return Ok(());
+            }
+        }
+
+        Err(body)
+    }
+
+
+
     async fn login_user(token: &mut String) -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!("{IP_WITH_HTTP}/api/user/login"))
@@ -167,6 +190,26 @@ mod tests {
 
         Err(body)
     }
+
+    async fn login_empty_user() -> Result<(), String> {
+        let response = reqwest::Client::new()
+            .post(format!("{IP_WITH_HTTP}/api/user/login"))
+            .body(r#"{"email":"", "password":""}"#)
+            .send()
+            .await
+            .unwrap();
+        let status = response.status();
+        let body = response.text().await.unwrap();
+
+        if status == StatusCode::BAD_REQUEST {
+            if body.starts_with(r#"{"status":"Error","#) {
+                return Ok(());
+            }
+        }
+
+        Err(body)
+    }
+
 
     async fn token_verify(token: &String) -> Result<(), String> {
         let response = reqwest::Client::new()
