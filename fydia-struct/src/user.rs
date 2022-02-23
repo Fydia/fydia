@@ -26,7 +26,7 @@ pub struct User {
 
 impl User {
     /// Return `User` if all given value are correct
-    /// 
+    ///
     /// # Errors
     /// If name or email or password is empty, an error will be return
     pub fn new<T: Into<String>>(
@@ -51,7 +51,7 @@ impl User {
         }
 
         if name.len() < 5 {
-            return Err("Name is too short".to_string())
+            return Err("Name is too short".to_string());
         }
 
         if email.len() < 5 {
@@ -71,25 +71,6 @@ impl User {
         })
     }
 
-    /// Remove token from `User`
-    #[deprecated(note = "Please use UserInfo")]
-    pub fn drop_token(&mut self) {
-        self.token = None;
-    }
-
-    /// Remove password from `User`
-    #[deprecated(note = "Please use UserInfo")]
-    pub fn drop_password(&mut self) {
-        self.password = None;
-    }
-
-    /// Remove password and token from `User`
-    #[deprecated(note = "Please use UserInfo")]
-    pub fn drop_sensitive_information(&mut self) {
-        self.drop_token();
-        self.drop_password();
-    }
-
     /// Convert `User` to `UserInfo`
     pub fn to_userinfo(&self) -> UserInfo {
         UserInfo::new(
@@ -100,7 +81,7 @@ impl User {
             self.servers.clone(),
         )
     }
-    
+
     /// Clone `User` from another `User`
     pub fn take_value_of(&mut self, from: User) {
         self.id = from.id;
@@ -157,13 +138,14 @@ impl Token {
 }
 
 /// `UserInfo` is `User` without sensitive information
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserInfo {
-    id: i32,
-    name: String,
-    email: String,
-    description: String,
-    servers: Servers,
+    pub id: i32,
+    pub name: String,
+    pub email: String,
+    pub description: String,
+    pub servers: Servers,
 }
 
 impl UserInfo {

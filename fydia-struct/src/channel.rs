@@ -82,7 +82,7 @@ impl DirectMessage {
     /// Take a `Vec<UserId>` to return a DirectMessage
     ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use fydia_struct::user::UserId;
     /// use fydia_struct::channel::DirectMessage;

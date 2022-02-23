@@ -10,7 +10,7 @@ use flume::Sender;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::manager::{Manager, ManagerChannel, ManagerReceiverTrait};
 use fydia_struct::server::ServerId;
-use fydia_struct::user::User;
+use fydia_struct::user::UserInfo;
 use fydia_struct::{channel::ChannelId, user::UserId};
 use parking_lot::Mutex;
 use tokio::spawn;
@@ -22,9 +22,9 @@ pub type TypingManager = Manager<TypingStruct>;
 pub enum TypingMessage {
     SetWebSocketManager(Arc<WebsocketManagerChannel>),
     SetTypingManager(Arc<TypingManagerChannel>),
-    StartTyping(UserId, ChannelId, ServerId, Vec<User>),
-    StopTyping(UserId, ChannelId, ServerId, Vec<User>),
-    RemoveTask(UserId, ChannelId, ServerId, Vec<User>),
+    StartTyping(UserId, ChannelId, ServerId, Vec<UserInfo>),
+    StopTyping(UserId, ChannelId, ServerId, Vec<UserInfo>),
+    RemoveTask(UserId, ChannelId, ServerId, Vec<UserInfo>),
 }
 
 #[derive(Debug, Default)]
@@ -81,13 +81,12 @@ impl ManagerReceiverTrait for TypingStruct {
             TypingMessage::RemoveTask(user, channelid, serverid, users_of_channel) => {
                 if self.inner.remove_task(&user, &channelid).is_ok() {
                     if let Some(wb) = &self.wbsocketmanager {
-                        if self
+                        if let Err(error) = self
                             .inner
                             .send_stop_typing(serverid, user, channelid, users_of_channel, wb)
                             .await
-                            .is_err()
                         {
-                            error!("Error");
+                            error!(error);
                         }
                     }
                 }
@@ -130,7 +129,7 @@ impl TypingInner {
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        channel_user: Vec<User>,
+        channel_user: Vec<UserInfo>,
         websocket: &Arc<WebsocketManagerChannel>,
         selfmanager: &Arc<TypingManagerChannel>,
     ) {
@@ -158,7 +157,7 @@ impl TypingInner {
             error!(error);
         }
 
-        if self
+        if let Err(error) = self
             .send_start_typing(
                 serverid,
                 userid.clone(),
@@ -167,9 +166,8 @@ impl TypingInner {
                 websocket,
             )
             .await
-            .is_err()
         {
-            error!("Can't Send Message");
+            error!(error);
         }
 
         self.insert_new_typing(&channelid, UserTyping::new(userid, task));
@@ -186,16 +184,15 @@ impl TypingInner {
         serverid: ServerId,
         userid: UserId,
         channelid: ChannelId,
-        channel_user: Vec<User>,
+        channel_user: Vec<UserInfo>,
         websocket: &Arc<WebsocketManagerChannel>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), String> {
         websocket
             .send(
                 &Event::new(serverid, EventContent::StartTyping { userid, channelid }),
                 &channel_user,
             )
             .await
-            .map_err(|_| ())
     }
 
     pub async fn send_stop_typing(
@@ -203,16 +200,15 @@ impl TypingInner {
         serverid: ServerId,
         userid: UserId,
         channelid: ChannelId,
-        channel_user: Vec<User>,
+        channel_user: Vec<UserInfo>,
         websocket: &Arc<WebsocketManagerChannel>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), String> {
         websocket
             .send(
                 &Event::new(serverid, EventContent::StopTyping { userid, channelid }),
                 &channel_user,
             )
             .await
-            .map_err(|_| ())
     }
 
     pub fn remove_channel(&mut self, channelid: &ChannelId) {
@@ -281,7 +277,7 @@ pub struct Task(Option<Arc<Sender<bool>>>, TaskValue);
 #[derive(Clone, Debug)]
 pub struct TaskValue(
     Arc<TypingManagerChannel>,
-    Vec<User>,
+    Vec<UserInfo>,
     UserId,
     ChannelId,
     ServerId,
@@ -290,7 +286,7 @@ pub struct TaskValue(
 impl Task {
     pub fn new(
         typingsocketmanager: Arc<TypingManagerChannel>,
-        user_vec: Vec<User>,
+        user_vec: Vec<UserInfo>,
         executor: UserId,
         channelid: ChannelId,
         serverid: ServerId,
@@ -343,8 +339,8 @@ impl Task {
 
     pub fn kill(&mut self) {
         if let Some(sender) = &self.0 {
-            if sender.send(true).is_err() {
-                error!("Error");
+            if let Err(error) = sender.send(true) {
+                error!(error.to_string());
             }
 
             self.0 = None;
@@ -362,21 +358,21 @@ pub trait TypingManagerChannelTrait {
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        user_of_channel: Vec<User>,
+        user_of_channel: Vec<UserInfo>,
     ) -> Result<(), String>;
     fn stop_typing(
         &self,
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        user_of_channel: Vec<User>,
+        user_of_channel: Vec<UserInfo>,
     ) -> Result<(), String>;
     fn remove_task(
         &self,
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        users_of_channel: Vec<User>,
+        users_of_channel: Vec<UserInfo>,
     ) -> Result<(), String>;
 }
 
@@ -400,7 +396,7 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        user_of_channel: Vec<User>,
+        user_of_channel: Vec<UserInfo>,
     ) -> Result<(), String> {
         self.0
             .send(TypingMessage::StartTyping(
@@ -418,7 +414,7 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        user_of_channel: Vec<User>,
+        user_of_channel: Vec<UserInfo>,
     ) -> Result<(), String> {
         self.0
             .send(TypingMessage::StopTyping(
@@ -436,7 +432,7 @@ impl TypingManagerChannelTrait for TypingManagerChannel {
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
-        users_of_channel: Vec<User>,
+        users_of_channel: Vec<UserInfo>,
     ) -> Result<(), String> {
         self.0
             .send(TypingMessage::RemoveTask(

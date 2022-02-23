@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// `Role` contains all value of roles
 #[allow(missing_docs)]
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Role {
     pub id: i32,
     pub server_id: ServerId,
@@ -17,7 +17,7 @@ pub struct Role {
 }
 
 /// `ChannelAccess` contains all channel can be accessed by a `Role`
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 pub struct ChannelAccess(pub Vec<String>);
 
 impl ChannelAccess {

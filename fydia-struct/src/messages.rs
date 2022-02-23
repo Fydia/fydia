@@ -43,7 +43,7 @@ impl MessageType {
     ///
     /// ```
     /// use fydia_struct::messages::MessageType;
-    /// 
+    ///
     /// assert_eq!(Some(MessageType::TEXT), MessageType::from_string("text"));
     /// ```
     ///
@@ -128,11 +128,11 @@ impl Date {
     pub fn new(date: DateTime<Utc>) -> Self {
         Self { 0: date }
     }
-    /// Create a new `Date` with `NaiveDateTime` 
+    /// Create a new `Date` with `NaiveDateTime`
     pub fn parse_from_naivetime(naivetime: NaiveDateTime) -> Self {
         Self(DateTime::from_utc(naivetime, Utc))
     }
-   
+
     /// Create a new `Date` from a String
     ///
     /// ```
@@ -161,8 +161,8 @@ impl Date {
             0: DateTime::from(date),
         }
     }
-    
-    /// Create a new `Date` with minimal DateTime 
+
+    /// Create a new `Date` with minimal DateTime
     pub fn null() -> Self {
         Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
     }

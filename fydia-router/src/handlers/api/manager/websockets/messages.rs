@@ -10,7 +10,7 @@ use futures::prelude::*;
 use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
-use fydia_struct::user::{Token, User};
+use fydia_struct::user::{Token, UserInfo};
 use http::StatusCode;
 use serde::Serialize;
 
@@ -23,7 +23,10 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let token = Token(token.token.unwrap_or_default());
-    let user = token.get_user(&database).await;
+    let user = token
+        .get_user(&database)
+        .await
+        .map(|user| user.to_userinfo());
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
         .into_response()
 }
@@ -35,7 +38,7 @@ pub fn empty_response<'a>() -> (StatusCode, &'a str) {
 async fn connected(
     socket: WebSocket,
     wbmanager: Arc<WebsocketManagerChannel>,
-    user: Option<User>,
+    user: Option<UserInfo>,
 ) -> Result<(), String> {
     let user = user.ok_or_else(|| "No user".to_string())?;
     let (sender, mut receiver) = wbmanager

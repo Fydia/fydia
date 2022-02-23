@@ -264,12 +264,19 @@ impl SqlUser for User {
     }
 }
 #[async_trait]
-pub trait UserIdSql {
+pub trait UserFrom {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User>;
 }
 
 #[async_trait]
-impl UserIdSql for UserId {
+impl UserFrom for UserId {
+    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
+        User::get_user_by_id(self.id, executor).await
+    }
+}
+
+#[async_trait]
+impl UserFrom for UserInfo {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
         User::get_user_by_id(self.id, executor).await
     }

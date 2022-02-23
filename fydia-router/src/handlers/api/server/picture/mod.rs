@@ -31,7 +31,13 @@ pub async fn get_picture_of_server(
         .to_string();
 
     let mut result = FydiaResponse::new_bytes_ok(value);
-    result.add_headers("Content-Type", &mime_str);
+
+    result.add_headers("Content-Type", &mime_str).map_err(|_| {
+        FydiaResponse::new_error_custom_status(
+            "Can't add Content-Type Header",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )
+    })?;
 
     Ok(result)
 }

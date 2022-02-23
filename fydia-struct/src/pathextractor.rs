@@ -8,8 +8,7 @@ pub struct ChannelExtractor {
     pub channelid: String,
 }
 
-
-/// Path Extractor for path with /api/server/{} 
+/// Path Extractor for path with /api/server/{}
 #[allow(missing_docs)]
 #[derive(serde::Deserialize, Debug)]
 pub struct ServerExtractor {
@@ -23,7 +22,7 @@ pub struct UserExtractor {
     pub id: String,
 }
 /// Path Extractor for path with
-#[allow(missing_docs)] 
+#[allow(missing_docs)]
 #[derive(serde::Deserialize, Debug)]
 pub struct DmExtractor {
     pub id: String,

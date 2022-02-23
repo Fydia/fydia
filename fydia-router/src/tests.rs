@@ -86,6 +86,7 @@ mod tests {
         //test_wb_stop_typing(&token, &server_id, &channel_id).await?;
         Ok(())
     }
+
     async fn create_user() -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!("{IP_WITH_HTTP}/api/user/create"))
@@ -125,7 +126,7 @@ mod tests {
         Err(body)
     }
 
-   async fn create_empty_user() -> Result<(), String> {
+    async fn create_empty_user() -> Result<(), String> {
         let response = reqwest::Client::new()
             .post(format!("{IP_WITH_HTTP}/api/user/create"))
             .body(r#"{"name":"", "email":"", "password":""}"#)
@@ -143,8 +144,6 @@ mod tests {
 
         Err(body)
     }
-
-
 
     async fn login_user(token: &mut String) -> Result<(), String> {
         let response = reqwest::Client::new()
@@ -209,7 +208,6 @@ mod tests {
 
         Err(body)
     }
-
 
     async fn token_verify(token: &String) -> Result<(), String> {
         let response = reqwest::Client::new()

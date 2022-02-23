@@ -1,5 +1,5 @@
 use axum::extract::{Extension, Path};
-use fydia_sql::impls::{channel::SqlDirectMessages, user::UserIdSql};
+use fydia_sql::impls::{channel::SqlDirectMessages, user::UserFrom};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::FydiaResult;
 use fydia_struct::{

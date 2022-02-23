@@ -18,7 +18,7 @@ impl Permission {
     /// Take a `Into<String>` value and return `Permission`
     ///
     /// Default value is `Permission::NoPerm`
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -42,7 +42,7 @@ impl Permission {
     /// # Examples
     /// ```
     /// use fydia_struct::permission::Permission;
-    /// 
+    ///
     /// let perms: u32 = Permission::Read as u32 | Permission::Write as u32;
     ///
     /// // Permission::can will return true

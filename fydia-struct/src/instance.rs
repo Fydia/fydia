@@ -3,10 +3,9 @@
 use fydia_crypto::{PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 
-/// `RsaData` contains PrivateKey and PublicKey of Instance 
+/// `RsaData` contains PrivateKey and PublicKey of Instance
 #[derive(Clone, Debug)]
 pub struct RsaData(pub PrivateKey, pub PublicKey);
-
 
 /// Enum to know if Instance is in HTTP or HTTPS
 #[allow(missing_docs)]
@@ -32,14 +31,14 @@ impl Protocol {
     /// ```
     /// use fydia_struct::instance::Protocol;
     /// let protocol = Protocol::parse("https://");
-    /// 
+    ///
     /// assert_eq!(protocol, Protocol::HTTPS)
     /// ```
     ///
     /// ```
     /// use fydia_struct::instance::Protocol;
     /// let protocol = Protocol::parse("http://");
-    /// 
+    ///
     /// assert_eq!(protocol, Protocol::HTTP);
     /// ```
     pub fn parse(string: &str) -> Self {
@@ -70,7 +69,7 @@ impl Instance {
     /// use fydia_struct::instance::Protocol;
     ///
     /// let instance = Instance::new(Protocol::HTTPS, "domain.com", 80);
-    /// 
+    ///
     /// assert_eq!(instance, Instance {protocol: Protocol::HTTPS, domain: "domain.com".to_string(),
     /// port: 80});
     /// ```
@@ -89,7 +88,7 @@ impl Instance {
     /// use fydia_struct::instance::Protocol;
     ///
     /// let instance = Instance::from("http://domain.com:80");
-    /// 
+    ///
     /// assert_eq!(instance, Some(Instance {protocol: Protocol::HTTP, domain: "domain.com".to_string(), port: 80}))
     /// ```
     pub fn from<T: Into<String>>(string: T) -> Option<Self> {

@@ -5,7 +5,7 @@ use std::{fmt::Debug, marker::PhantomData, process::exit};
 use tokio::sync::{mpsc::UnboundedSender, oneshot};
 
 /// Trait of Manager.
-/// 
+///
 /// Manager is a thread with Channel to communicate with him.
 #[async_trait::async_trait]
 pub trait ManagerReceiverTrait {

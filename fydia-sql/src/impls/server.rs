@@ -11,7 +11,7 @@ use crate::entity::server;
 use super::{
     channel::SqlChannel,
     role::SqlRoles,
-    user::{SqlUser, UserIdSql},
+    user::{SqlUser, UserFrom},
 };
 
 #[async_trait::async_trait]
@@ -110,6 +110,7 @@ impl SqlServer for Server {
                     .get_user(executor)
                     .await
                     .ok_or_else(|| "Owner is existing ?".to_string())?;
+
                 self.join(&mut user, executor).await?;
 
                 Ok(())
@@ -192,8 +193,9 @@ impl SqlServer for Server {
         }?;
 
         let mut members = self.get_user(executor).await?;
-
-        members.push(user.clone());
+        let mut to_push = user.to_userinfo();
+        to_push.servers.0.push(self.id.clone());
+        members.push(to_push);
 
         let json = members.to_string()?;
 

@@ -139,12 +139,11 @@ pub async fn post_messages_json(
 
         let key = rsa.clone();
         tokio::spawn(async move {
-            if wbsocket
+            if let Err(error) = wbsocket
                 .send_with_origin_and_key(&event, &members.members, Some(&key), None)
                 .await
-                .is_err()
             {
-                error!(r#"Error"#);
+                error!(error);
             };
         });
     }

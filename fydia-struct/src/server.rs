@@ -3,14 +3,14 @@
 use crate::channel::ChannelId;
 use crate::emoji::Emoji;
 use crate::roles::Role;
-use crate::user::User;
+use crate::user::UserInfo;
 use crate::{channel::Channel, user::UserId};
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
 /// `Server` contains all value of server
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Server {
     pub id: ServerId,
     pub name: String,
@@ -105,7 +105,7 @@ impl Servers {
 
         false
     }
-    
+
     /// Take a `Into<String>` and return ServerId if exists in `Vec<ServerId>`
     pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
         let server_id = server_id.into();
@@ -128,7 +128,7 @@ impl Servers {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Members {
     count: i32,
-    pub members: Vec<User>,
+    pub members: Vec<UserInfo>,
 }
 
 impl Members {
@@ -140,18 +140,18 @@ impl Members {
         }
     }
     /// Return a new `Members` with value given
-    pub fn new_with(count: i32, members: Vec<User>) -> Self {
+    pub fn new_with(count: i32, members: Vec<UserInfo>) -> Self {
         Self { count, members }
     }
 
-    /// Add a new `User` in members 
-    pub fn push(&mut self, user: User) {
+    /// Add a new `User` in members
+    pub fn push(&mut self, user: UserInfo) {
         self.count += 1;
         self.members.push(user);
     }
-    
+
     /// Remove a `User` in members. Return a Err if `User` doesn't exists
-    pub fn remove(&mut self, user: User) -> Result<(), String> {
+    pub fn remove(&mut self, user: UserInfo) -> Result<(), String> {
         for (n, i) in (&self.members).iter().enumerate() {
             if i.id == user.id {
                 self.members.remove(n);
@@ -162,8 +162,8 @@ impl Members {
 
         Err("Not Found".to_string())
     }
-    
-    /// Serialize `Members` as Json and return 
+
+    /// Serialize `Members` as Json and return
     /// if can be serialize a `Ok(String)` or `Err(String)` if cannot.
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(&self) {
@@ -180,7 +180,7 @@ impl Default for Members {
 }
 
 /// `Channels` contains all channel of a `Server`
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Channels(pub Vec<Channel>);
 
 impl Channels {
@@ -188,7 +188,7 @@ impl Channels {
     pub fn new() -> Self {
         Self(Vec::new())
     }
-    
+
     /// Check if a `ChannelId` is already exists
     pub fn is_exists(&self, channel_id: &ChannelId) -> bool {
         for i in &self.0 {
@@ -199,7 +199,7 @@ impl Channels {
 
         false
     }
-    
+
     /// Return Channel with same `ChannelId` given or None if nothing match
     pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Channel> {
         for i in &self.0 {

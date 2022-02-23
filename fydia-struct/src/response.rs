@@ -1,6 +1,5 @@
 //! This module is related to HTTP Response
 
-
 use axum::{body, headers::HeaderName, response::IntoResponse};
 use http::{HeaderValue, Response};
 use hyper::{header::CONTENT_TYPE, HeaderMap, StatusCode};
@@ -65,10 +64,10 @@ impl FydiaResponse {
             ..Default::default()
         }
     }
-    
+
     /// Return a String if Ok or a error message as a String
     ///
-    /// # Examples 
+    /// # Examples
     /// ```
     /// use fydia_struct::response::FydiaResponse;
     ///
@@ -83,7 +82,7 @@ impl FydiaResponse {
             FydiaResponseBody::Bytes(_) => Err(String::from("Error body is not a string")),
         }
     }
-    
+
     /// Create a new Ok `FydiaResponse` from a `Vec<u8>`
     pub fn new_bytes_ok(body: Vec<u8>) -> Self {
         Self::new(
@@ -92,7 +91,7 @@ impl FydiaResponse {
             StatusCode::OK,
         )
     }
-    
+
     /// Create a new Error `FydiaResponse` from a `Vec<u8>`
     pub fn new_bytes_error(body: Vec<u8>) -> Self {
         Self::new(
@@ -102,7 +101,7 @@ impl FydiaResponse {
         )
     }
 
-    /// Create a new Errror with custum status `FydiaResponse`  from a `Vec<u8>` 
+    /// Create a new Errror with custum status `FydiaResponse`  from a `Vec<u8>`
     pub fn new_bytes_error_custom_status(body: Vec<u8>, status_code: StatusCode) -> Self {
         Self::new(
             FydiaStatus::Error,
@@ -119,7 +118,7 @@ impl FydiaResponse {
             StatusCode::BAD_REQUEST,
         )
     }
-    
+
     /// Create a new Error with a custom status `FydiaResponse` from a `Into<String>` value
     pub fn new_error_custom_status<T: Into<String>>(body: T, status_code: StatusCode) -> Self {
         Self::new(
@@ -128,8 +127,8 @@ impl FydiaResponse {
             status_code,
         )
     }
-    
-    /// Create a new Ok `FydiaResponse` from a `Into<String>` value 
+
+    /// Create a new Ok `FydiaResponse` from a `Into<String>` value
     pub fn new_ok<T: Into<String>>(body: T) -> Self {
         Self::new(
             FydiaStatus::Ok,
@@ -138,7 +137,7 @@ impl FydiaResponse {
         )
     }
 
-    /// Create a new Ok `FydiaResponse` from a value that implement `Serialize` 
+    /// Create a new Ok `FydiaResponse` from a value that implement `Serialize`
     pub fn new_ok_json<S: Serialize>(body: S) -> Self
     where
         S: Serialize,
@@ -154,12 +153,12 @@ impl FydiaResponse {
             Err(e) => Self::new_error(format!(r#"{{"status":"Error", "content":{e}}}"#,)),
         }
     }
-    
+
     /// Add header in `FydiaResponse` with name and value of header
     pub fn add_headers<T: Into<String>>(&mut self, name: T, value: T) -> Result<(), String> {
         if let (Ok(name), Ok(value)) = (
             HeaderName::from_bytes(name.into().as_bytes()),
-            HeaderValue::from_bytes(value.into().as_bytes())
+            HeaderValue::from_bytes(value.into().as_bytes()),
         ) {
             self.headers.insert(name, value);
             return Ok(());
