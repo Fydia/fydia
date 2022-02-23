@@ -15,7 +15,7 @@ futures = "0.3.21"
 futures-util = "0.3.18"
 time = "0.3.7"
 chrono = "0.4.19"
-axum = {version = "0.4.5",  features = ["ws", "headers"]}
+axum = {version = "0.4.6",  features = ["ws", "headers"]}
 http = "0.2.6"
 logger = { git="https://github.com/Rheydskey/logger.git", branch="master" }
 base64 = "0.13"
