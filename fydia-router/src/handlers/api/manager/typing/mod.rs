@@ -236,7 +236,7 @@ impl TypingInner {
             .map_err(|_| "No user exists in channel".to_string())
     }
 
-    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), ()> {
+    pub fn remove_task(&mut self, user: &UserId, channelid: &ChannelId) -> Result<(), String> {
         if let Some(index) = self.get_index_of_user_of_channelid(user, channelid) {
             self.kill_task(channelid, index);
 
@@ -247,7 +247,7 @@ impl TypingInner {
             return Ok(());
         }
 
-        Err(())
+        Err("Cannot remove task".to_string())
     }
 
     pub fn kill_task(&mut self, channelid: &ChannelId, index: usize) {

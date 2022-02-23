@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 //! This module is related to HTTP Response
 
 use axum::{body, headers::HeaderName, response::IntoResponse};

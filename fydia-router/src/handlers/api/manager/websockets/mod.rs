@@ -107,7 +107,7 @@ impl WebsocketInner {
     }
 
     pub fn insert_user(&mut self, user: &UserInfo) -> Result<(), String> {
-        if self.get_user_index(&user).is_some() {
+        if self.get_user_index(user).is_some() {
             return Err("User already exists".to_string());
         }
 
@@ -117,7 +117,9 @@ impl WebsocketInner {
     }
 
     pub fn insert_channel(&mut self, user: &UserInfo) -> Result<WbChannel, String> {
-        let user_nth = self.get_user_index(user).ok_or("No User".to_string())?;
+        let user_nth = self
+            .get_user_index(user)
+            .ok_or_else(|| "No User".to_string())?;
         if let Some(user) = self.wb_channel.get_mut().iter_mut().nth(user_nth) {
             return Ok(user.insert_channel());
         }
@@ -133,7 +135,7 @@ impl WebsocketInner {
 
     pub async fn remove_sender(&mut self, user: &UserInfo, wbsender: &WbSender) -> Result<(), ()> {
         let (index_channel, index_user) = self
-            .get_sender_index_and_user_index(&user, wbsender)
+            .get_sender_index_and_user_index(user, wbsender)
             .ok_or(())?;
 
         let mut wblist = self.wb_channel.lock();
@@ -182,9 +184,9 @@ impl ManagerReceiverTrait for WebsocketInner {
                 };
             }
             WbManagerMessage::Insert(user, callback) => {
-                drop(self.insert_user(&user).map_err(|error| {
+                if let Err(error) = self.insert_user(&user) {
                     error!(error);
-                }));
+                }
 
                 let channel = self.insert_channel(&user);
 
