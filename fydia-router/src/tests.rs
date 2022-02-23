@@ -135,7 +135,6 @@ mod tests {
             .unwrap();
         let status = response.status();
         let body = response.text().await.unwrap();
-        println!("{body}");
         if status == StatusCode::BAD_REQUEST {
             if body.starts_with(r#"{"status":"Error","content":""#) {
                 return Ok(());
@@ -393,7 +392,6 @@ mod tests {
 
         let status = response.status();
         let body = response.text().await.unwrap();
-        println!("{body}");
 
         if status == StatusCode::OK {
             if let Some(content) = serde_json::from_str::<Value>(&body).unwrap().get("content") {
@@ -592,8 +590,7 @@ mod tests {
             let time = Instant::now();
             while let Some(Ok(wb)) = socket.next().await {
                 match wb {
-                    tokio_tungstenite::tungstenite::Message::Text(e) => {
-                        println!("{e}");
+                    tokio_tungstenite::tungstenite::Message::Text(_) => {
                         return Ok(());
                     }
                     _ => {
@@ -627,8 +624,7 @@ mod tests {
             let time = Instant::now();
             while let Some(Ok(wb)) = socket.next().await {
                 match wb {
-                    tokio_tungstenite::tungstenite::Message::Text(e) => {
-                        println!("{e}");
+                    tokio_tungstenite::tungstenite::Message::Text(_) => {
                         return Ok(());
                     }
                     _ => {
@@ -661,8 +657,7 @@ mod tests {
             let time = Instant::now();
             while let Some(Ok(wb)) = socket.next().await {
                 match wb {
-                    tokio_tungstenite::tungstenite::Message::Text(e) => {
-                        println!("{e}");
+                    tokio_tungstenite::tungstenite::Message::Text(_) => {
                         return Ok(());
                     }
                     _ => {

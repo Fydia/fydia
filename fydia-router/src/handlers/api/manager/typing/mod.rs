@@ -107,9 +107,6 @@ impl TypingInner {
         if let Some(channel) = self.0.lock().get(channelid) {
             for i in channel {
                 if &i.0 == userid {
-                    let id = i.0.id;
-                    let userid_id = userid.id;
-                    println!("{id}, {userid_id}");
                     return true;
                 }
             }

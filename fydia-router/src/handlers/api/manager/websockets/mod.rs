@@ -34,7 +34,6 @@ impl WbStruct {
     }
 
     pub fn is_same_user(&self, user: &UserInfo) -> bool {
-        println!("cmp : {:#?} / cmp_user: {:#?}", &self.0, user);
         self.0.eq(user)
     }
 }

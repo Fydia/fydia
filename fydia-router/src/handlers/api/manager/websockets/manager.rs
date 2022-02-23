@@ -76,7 +76,6 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         _keys: Option<&RsaData>,
         _origin: Option<Instance>,
     ) -> Result<(), String> {
-        println!("{:#?}", user);
         for i in user {
             if let Some(channel) = self.get_channels_of_user(i).await? {
                 for i in channel {
