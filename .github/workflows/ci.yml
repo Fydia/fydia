@@ -21,6 +21,9 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - uses: fusion-engineering/setup-git-credentials@v2
+        with:
+          credentials: ${{secrets.GIT_CREDENTIALS}}
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
