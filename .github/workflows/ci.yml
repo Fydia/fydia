@@ -21,9 +21,10 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: fusion-engineering/setup-git-credentials@v2
-        with:
-          credentials: ${{secrets.GIT_CREDENTIALS}}
+      - name: Configure git
+        env:
+          TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
