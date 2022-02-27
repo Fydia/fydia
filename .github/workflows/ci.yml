@@ -29,10 +29,6 @@ jobs:
         with:
           command: build
           args: -p fydia --features flutter_client --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --tests
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
@@ -59,10 +55,6 @@ jobs:
         with:
           command: build
           args: -p fydia --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --tests
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
