@@ -4,10 +4,16 @@ version = "0.1.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+flutter_client = ["fydia-router/flutter_client"]
+
 
 [dependencies]
 axum = "0.4.6"
-tokio = { version="1.17.0", default-features=false, features=["rt", "macros"] }
+tokio = { version = "1.17.0", default-features = false, features = [
+    "rt",
+    "macros",
+] }
 reqwest = "0.11.9"
-fydia-router = { path="../fydia-router" }
-fydia-config = { path="../fydia-config" }
+fydia-router = { path = "../fydia-router" }
+fydia-config = { path = "../fydia-config" }
