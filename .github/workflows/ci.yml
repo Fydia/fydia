@@ -16,13 +16,9 @@ jobs:
           toolchain: stable
           override: true
       - name: Clone fydiapackages
-        uses: GuillaumeFalourd/clone-github-repo-action@v1
-        with:
-          owner: "fydia"
-          repository: "fydiapackages"
-          access-token: ${{ secrets.ACCESS_TOKEN }}
-      - name: Move to fydiarouter
-        run: mv fydiapackages ./fydia-router
+        env:
+          TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: git clone https://${TOKEN}:x-oauth-basic@github.com/ fydia-router/fydiapackages/ --depth 1
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
       - uses: Swatinem/rust-cache@v1
