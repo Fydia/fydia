@@ -18,6 +18,7 @@ jobs:
       - name: Clone fydiapackages
         uses: actions/checkout@v1
         with:
+          ref: "origin/main"
           repository: "fydia/fydiapackages"
           path: "./fydia-router"
           token: ${{ secrets.GH_TOKEN }}
