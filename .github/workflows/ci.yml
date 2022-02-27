@@ -3,8 +3,8 @@ name: Fydia Builder
 on: "push"
 
 jobs:
-  build:
-    name: Build Fydia
+  buildflutter:
+    name: Build Fydia with Flutter client
     strategy:
       matrix:
         os: [ubuntu-18.04]
@@ -25,7 +25,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p fydia --feature flutter_client --release
+          args: -p fydia --features flutter_client --release
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -39,8 +39,8 @@ jobs:
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
-  flutter_build:
-    name: Build Fydia with Flutter client
+  build:
+    name: Build Fydia
     strategy:
       matrix:
         os: [ubuntu-18.04]
