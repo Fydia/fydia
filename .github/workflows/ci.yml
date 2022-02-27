@@ -20,6 +20,7 @@ jobs:
         with:
           repository: "fydia/fydiapackages"
           path: "./fydia-router"
+          token: ${{ secrets.GH_TOKEN }}
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
       - uses: Swatinem/rust-cache@v1
