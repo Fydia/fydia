@@ -17,8 +17,8 @@ jobs:
           override: true
       - name: Clone fydiapackages
         env:
-          TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        run: git clone https://${TOKEN}:x-oauth-basic@github.com/fydia/fydiapackages fydia-router/fydiapackages/ --depth 1
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git clone https://rheydskey:${TOKEN}@github.com/fydia/fydiapackages fydia-router/fydiapackages/ --depth 1
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
       - uses: Swatinem/rust-cache@v1
