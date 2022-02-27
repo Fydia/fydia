@@ -11,10 +11,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
       - name: Clone fydiapackages
         uses: actions/checkout@v1
         with:
@@ -22,6 +18,10 @@ jobs:
           repository: "fydia/fydiapackages"
           path: "./fydia-router"
           token: ${{ secrets.GH_TOKEN }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
       - uses: Swatinem/rust-cache@v1
