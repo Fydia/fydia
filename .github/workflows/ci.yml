@@ -16,7 +16,7 @@ jobs:
         with:
           ref: "origin/main"
           repository: "fydia/fydiapackages"
-          path: "./fydia-router/fydiapackages"
+          path: "./fydia/fydia-router/fydiapackages"
           token: ${{ secrets.GH_TOKEN }}
       - run: |
           ls ./fydia-router
