@@ -1,14 +1,8 @@
-# This is a basic workflow to help you get started with Actions
 name: Fydia Builder
-# Controls when the action will run. 
+
 on: "push"
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
     name: Build Fydia
     strategy:
@@ -25,6 +19,38 @@ jobs:
         env:
           TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Install Flutter
+        uses: britannio/action-install-flutter@v1
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p fydia --feature flutter_client --release
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --tests
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
+        with:
+          file: "/home/runner/work/fydia/fydia/target/release/fydia"
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "Linux-release"
+          path: "/home/runner/work/fydia/fydia/target/release/fydia"
+  flutter_build:
+    name: Build Fydia with Flutter client
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
@@ -41,8 +67,25 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: 'Linux-release'
+          name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+  tests:
+    name: Tests Fydia
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --tests
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
@@ -50,5 +93,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 1hr
-    
-      
