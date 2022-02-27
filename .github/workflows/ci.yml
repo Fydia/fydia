@@ -16,18 +16,18 @@ jobs:
         with:
           ref: "origin/main"
           repository: "fydia/fydiapackages"
-          path: "./fydia-router"
+          path: "./fydia-router/fydiapackages"
           token: ${{ secrets.GH_TOKEN }}
+      - run: |
+          ls ./fydia-router
+          ls ./fydia-router/fydiapackages
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
-      - run: |
-              ls ./fydia-router
-              ls ./fydia-router/fydiapackages
-              which flutter
+      - run:  which flutter 
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
