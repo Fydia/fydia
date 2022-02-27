@@ -15,10 +15,13 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Configure git
-        env:
-          TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        run: git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Clone fydiapackages
+        working-directory: ./fydia-router
+        uses: GuillaumeFalourd/clone-github-repo-action@v1
+        with:
+          owner: "fydia"
+          repository: "fydiapackages"
+          access-token: ${{ secrets.ACCESS_TOKEN }}
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
       - uses: Swatinem/rust-cache@v1
