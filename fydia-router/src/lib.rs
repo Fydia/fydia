@@ -205,7 +205,6 @@ mod client {
     //!     - icons/
     //!     - main.dart.js
     //!     - assets/
-    use std::borrow::Cow;
 
     use axum::{
         body::{boxed, Full},
