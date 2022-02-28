@@ -36,7 +36,7 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: "Linux-release"
+          name: "Linux-flutter-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
   build:
     name: Build Fydia
