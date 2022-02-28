@@ -20,8 +20,9 @@ use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
 use axum::body::Body;
 use axum::handler::Handler;
-use axum::response::{Html, IntoResponse};
+use axum::response::IntoResponse;
 use axum::{AddExtensionLayer, Router};
+use client::client_router;
 use fydia_config::{Config, DatabaseConfig, InstanceConfig};
 use fydia_crypto::key::private_to_public;
 use fydia_sql::connection::get_connection;
@@ -132,7 +133,7 @@ pub fn get_router(
     typing_manager: Arc<TypingManagerChannel>,
 ) -> Router {
     axum::Router::new()
-        .route("/", axum::routing::get(client))
+        .nest("/", client_router())
         .nest(
             "/api",
             axum::Router::new()
@@ -180,9 +181,128 @@ async fn not_found() -> impl IntoResponse {
     )
 }
 
-/// Return index client
-pub async fn client() -> Html<String> {
-    Html(INDEX.to_string())
+#[cfg(not(feature = "flutter_client"))]
+mod client {
+    use axum::{response::Html, routing, Router};
+
+    /// Return index client
+    pub async fn client() -> Html<String> {
+        Html(INDEX.to_string())
+    }
+
+    pub fn client_router() -> Router {
+        Router::new().route("/", routing::get(client))
+    }
+
+    const INDEX: &str = include_str!("../index.html");
 }
 
-const INDEX: &str = include_str!("../index.html");
+#[cfg(feature = "flutter_client")]
+mod client {
+    //! Flutter fydia_client need
+    //!     - manifest.json
+    //!     - favicon.png (optional)
+    //!     - icons/
+    //!     - main.dart.js
+    //!     - assets/
+
+    use axum::{
+        body::{boxed, Full},
+        extract::Path,
+        response::{Html, IntoResponse, Response},
+        routing, Router,
+    };
+    use http::{header, StatusCode};
+    use rust_embed::RustEmbed;
+
+    /// Return index client
+    pub async fn client() -> Html<String> {
+        Html(INDEX.to_string())
+    }
+
+    pub async fn maindartjs() -> Response {
+        Response::builder()
+            .header("Content-Type", "application/javascript")
+            .body(boxed(Full::from(
+                include_bytes!("../fydiapackages/fydiaclient/build/web/main.dart.js").to_vec(),
+            )))
+            .unwrap()
+    }
+
+    pub async fn manifestjson() -> Response {
+        Response::builder()
+            .header("Content-Type", "application/json")
+            .body(boxed(Full::from(
+                include_bytes!("../fydiapackages/fydiaclient/build/web/manifest.json").to_vec(),
+            )))
+            .unwrap()
+    }
+
+    pub async fn flutterserverworking() -> Response {
+        Response::builder()
+            .header("Content-Type", "application/javascript")
+            .body(boxed(Full::from(
+                include_bytes!("../fydiapackages/fydiaclient/build/web/flutter_service_worker.js")
+                    .to_vec(),
+            )))
+            .unwrap()
+    }
+
+    pub async fn versionjson() -> Response {
+        Response::builder()
+            .header("Content-Type", "application/json")
+            .body(boxed(Full::from(
+                include_bytes!("../fydiapackages/fydiaclient/build/web/version.json").to_vec(),
+            )))
+            .unwrap()
+    }
+
+    pub fn client_router() -> Router {
+        Router::new()
+            .route("/", routing::get(client))
+            .route("/main.dart.js", routing::get(maindartjs))
+            .route("/manifest.json", routing::get(manifestjson))
+            .route(
+                "/flutter_service_worker.js",
+                routing::get(flutterserverworking),
+            )
+            .route("/version.json", routing::get(versionjson))
+            .route("/assets/*path", routing::get(get_asset))
+    }
+
+    #[derive(RustEmbed)]
+    #[folder = "fydiapackages/fydiaclient/build/web/assets"]
+    struct Asset;
+
+    pub struct StaticFile<T>(pub T);
+
+    impl<T> IntoResponse for StaticFile<T>
+    where
+        T: Into<String>,
+    {
+        fn into_response(self) -> Response {
+            let path = self.0.into();
+
+            match Asset::get(path.as_str()) {
+                Some(content) => {
+                    let body = boxed(Full::from(content.data));
+                    let mime = mime_guess::from_path(path).first_or_octet_stream();
+                    Response::builder()
+                        .header(header::CONTENT_TYPE, mime.as_ref())
+                        .body(body)
+                        .unwrap()
+                }
+                None => Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(boxed(Full::from("404")))
+                    .unwrap(),
+            }
+        }
+    }
+
+    pub async fn get_asset(Path(path): Path<String>) -> impl IntoResponse {
+        StaticFile(path.strip_prefix("/").unwrap().to_string())
+    }
+
+    const INDEX: &str = include_str!("../fydiapackages/fydiaclient/build/web/index.html");
+}

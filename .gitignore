@@ -9,3 +9,4 @@ storage/
 *.db
 *.db-shm
 *.db-wal
+/fydiapackages

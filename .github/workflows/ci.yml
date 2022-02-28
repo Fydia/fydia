@@ -1,17 +1,43 @@
-# This is a basic workflow to help you get started with Actions
 name: Fydia Builder
-# Controls when the action will run. 
-on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: "*"
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+on: "push"
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  buildflutter:
+    name: Build Fydia with Flutter client
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Clone fydiapackages
+        uses: actions/checkout@v1
+        with:
+          ref: "origin/main"
+          repository: "fydia/fydiapackages"
+          path: "./fydia/fydia-router/fydiapackages"
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install Flutter
+        uses: britannio/action-install-flutter@v1 
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p fydia --features flutter_client --release
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
+        with:
+          file: "/home/runner/work/fydia/fydia/target/release/fydia"
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "Linux-flutter-release"
+          path: "/home/runner/work/fydia/fydia/target/release/fydia"
   build:
     name: Build Fydia
     strategy:
@@ -29,10 +55,6 @@ jobs:
         with:
           command: build
           args: -p fydia --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --tests
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
@@ -40,8 +62,25 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: 'Linux-release'
+          name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+  tests:
+    name: Tests Fydia
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --tests
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
@@ -49,5 +88,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 1hr
-    
-      
