@@ -72,9 +72,6 @@ pub async fn post_picture_of_server(
     }
 
     let file = File::new();
-    let name = file.get_name();
-    let len_of_boy = body.len();
-    println!("{name} / ({len_of_boy})");
 
     file.create_and_write(&body).map_err(|error| {
         error!(error);
@@ -82,6 +79,7 @@ pub async fn post_picture_of_server(
     })?;
 
     server.icon = file.get_name();
+
     server
         .update(&database)
         .await

@@ -426,7 +426,6 @@ mod tests {
             .unwrap();
         let statuscode = response.status();
         let body = response.text().await.unwrap();
-
         if statuscode == StatusCode::OK {
             if serde_json::from_str::<Value>(&body)
                 .unwrap()
@@ -579,7 +578,6 @@ mod tests {
         server_id: &String,
         channel_id: &String,
     ) -> Result<(), String> {
-        //ws://127.0.0.1:8080/api/user/websocket?token=default_token
         let url =
             url::Url::parse(format!("{IP_WITH_WS}/api/user/websocket?token={token}").as_str())
                 .unwrap();
@@ -588,17 +586,16 @@ mod tests {
                 .await
                 .expect("Connection error");
             let time = Instant::now();
-            while let Some(Ok(wb)) = socket.next().await {
-                match wb {
-                    tokio_tungstenite::tungstenite::Message::Text(_) => {
+            loop {
+                if let Some(Ok(wb)) = socket.next().await {
+                    if let tokio_tungstenite::tungstenite::Message::Text(_) = wb {
                         return Ok(());
                     }
-                    _ => {
-                        if time.elapsed().whole_seconds() == 10 {
-                            break;
-                        }
-                    }
-                };
+                }
+
+                if time.elapsed().whole_seconds() > 10 {
+                    break;
+                }
             }
 
             Err(String::from("No message"))
