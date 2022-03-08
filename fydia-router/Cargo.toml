@@ -19,7 +19,7 @@ futures = "0.3.21"
 futures-util = "0.3.18"
 time = "0.3.7"
 chrono = "0.4.19"
-axum = { version = "0.4.6", features = ["ws", "headers"] }
+axum = { version = "0.4.8", features = ["ws", "headers"] }
 http = "0.2.6"
 logger = { git = "https://github.com/Rheydskey/logger.git", branch = "master" }
 base64 = "0.13"
@@ -31,7 +31,7 @@ reqwest = "0.11.9"
 infer = "0.7.0"
 mime_guess = "2.0.4"
 tracing = "0.1.31"
-tower-http = { version = "0.2.3", features = ["trace"] }
+tower-http = { version = "0.2.4", features = ["trace"] }
 tower = "0.4.12"
 rand = "0.8.5"
 parking_lot = { version = "0.12.0" }

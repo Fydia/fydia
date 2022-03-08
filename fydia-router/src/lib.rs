@@ -21,7 +21,7 @@ use crate::routes::user::user_routes;
 use axum::body::Body;
 use axum::handler::Handler;
 use axum::response::IntoResponse;
-use axum::{AddExtensionLayer, Router};
+use axum::{Router, extract::Extension};
 use client::client_router;
 use fydia_config::{Config, DatabaseConfig, InstanceConfig};
 use fydia_crypto::key::private_to_public;
@@ -143,11 +143,11 @@ pub fn get_router(
                 .nest("/federation", federation_routes()),
         )
         .fallback(not_found.into_service())
-        .layer(AddExtensionLayer::new(database))
-        .layer(AddExtensionLayer::new(instance))
-        .layer(AddExtensionLayer::new(rsadata))
-        .layer(AddExtensionLayer::new(websocket_manager))
-        .layer(AddExtensionLayer::new(typing_manager))
+        .layer(Extension(database))
+        .layer(Extension(instance))
+        .layer(Extension(rsadata))
+        .layer(Extension(websocket_manager))
+        .layer(Extension(typing_manager))
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http().on_request(Log).on_response(Log)),
