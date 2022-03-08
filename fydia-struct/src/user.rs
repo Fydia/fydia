@@ -50,18 +50,6 @@ impl User {
             return Err("Password is empty".to_string());
         }
 
-        if name.len() < 5 {
-            return Err("Name is too short".to_string());
-        }
-
-        if email.len() < 5 {
-            return Err("Email is too short".to_string());
-        }
-
-        if password.len() < 5 {
-            return Err("Password is too short".to_string());
-        }
-
         Ok(User {
             name,
             instance,
