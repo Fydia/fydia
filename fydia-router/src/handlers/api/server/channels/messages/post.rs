@@ -10,7 +10,7 @@ use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::channel::{Channel, ChannelId};
+use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
@@ -51,8 +51,7 @@ pub async fn post_messages(
 
     let mime_type =
         Mime::from_str(content_type).map_err(|_| FydiaResponse::new_error("Bad Content-Type"))?;
-
-    if mime_type == mime::APPLICATION_JSON
+    let event = if mime_type == mime::APPLICATION_JSON
         || mime_type == mime::TEXT_PLAIN
         || mime_type == mime::TEXT_PLAIN_UTF_8
         || content_type == "application/json; charset=utf-8"
@@ -60,10 +59,10 @@ pub async fn post_messages(
         let body =
             String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::new_error("Body error"))?;
 
-        let json =
+        let value =
             serde_json::from_str(&body).map_err(|_| FydiaResponse::new_error("JSON error"))?;
 
-        post_messages_json(json, database, &rsa, wbsocket, (user, channel, server)).await
+        json_message(value, &user, &channel.id, &server.id).await?
     } else if mime_type == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
         let boundary =
@@ -71,88 +70,16 @@ pub async fn post_messages(
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
-        post_messages_multipart(multer, database, &rsa, wbsocket, (user, channel, server)).await
+        multipart_to_event(multer, &user.clone(), &channel.id, &server.id).await?
     } else {
-        Err(FydiaResponse::new_error("Content-Type error"))
-    }
+        return Err(FydiaResponse::new_error("Content-Type error"));
+    };
+
+    send_event(event, server, &rsa, wbsocket, database).await
 }
 
-pub async fn post_messages_multipart(
-    multipart: Multipart<'static>,
-    database: DbConnection,
-    rsa: &Arc<RsaData>,
-    wbsocket: Arc<WebsocketManagerChannel>,
-    (user, channel, server): (User, Channel, Server),
-) -> FydiaResult {
-    let event = multipart_to_event(multipart, &user.clone(), &channel.id, &server.id).await?;
-    let members = server.get_user(&database).await.map_err(|_| {
-        FydiaResponse::new_error_custom_status(
-            "Cannot get users of the server",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )
-    })?;
-
-    if let EventContent::Message { ref content } = event.content {
-        content.insert_message(&database).await.map_err(|_| {
-            FydiaResponse::new_error_custom_status(
-                "Cannot send message",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
-        })?;
-        let key = rsa.clone();
-        tokio::spawn(async move {
-            if wbsocket
-                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
-                .await
-                .is_err()
-            {
-                error!("Error");
-            };
-        });
-    }
-
-    Ok(FydiaResponse::new_ok("Message send"))
-}
-
-pub async fn post_messages_json(
-    value: Value,
-    database: DbConnection,
-    rsa: &Arc<RsaData>,
-    wbsocket: Arc<WebsocketManagerChannel>,
-    (user, channel, server): (User, Channel, Server),
-) -> FydiaResult {
-    let event = json_message(value, &user, &channel.id, &server.id).await?;
-
-    let members = server.get_user(&database).await.map_err(|_| {
-        FydiaResponse::new_error_custom_status(
-            "Cannot get users of the server",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )
-    })?;
-    if let EventContent::Message { ref content } = event.content {
-        content.insert_message(&database).await.map_err(|_| {
-            FydiaResponse::new_error_custom_status(
-                "Cannot send message",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
-        })?;
-
-        let key = rsa.clone();
-        tokio::spawn(async move {
-            if let Err(error) = wbsocket
-                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
-                .await
-            {
-                error!(error);
-            };
-        });
-    }
-
-    Ok(FydiaResponse::new_ok("Message send"))
-}
-
-pub async fn multipart_to_event(
-    mut multipart: Multipart<'static>,
+pub async fn multipart_to_event<'a>(
+    mut multipart: Multipart<'a>,
     user: &User,
     channelid: &ChannelId,
     server_id: &ServerId,
@@ -246,9 +173,11 @@ pub fn get_mime_of_file(path: &str) -> Mime {
     let mut buf = [0; 16];
 
     let file = File::get(path);
+
     if file.read_file(&mut buf).is_err() {
         error!("Can't write on buf");
     }
+
     if let Some(e) = infer::get(&buf) {
         return mime::Mime::from_str(e.mime_type()).unwrap_or(mime::APPLICATION_OCTET_STREAM);
     }
@@ -266,4 +195,43 @@ pub fn get_boundary(headers: &HeaderMap) -> Option<String> {
         let idx = ct.find(BOUNDARY)?;
         Some(ct[idx + BOUNDARY.len()..].to_string())
     })
+}
+
+pub async fn send_event(
+    event: Event,
+    server: Server,
+    rsa: &Arc<RsaData>,
+    wbsocket: Arc<WebsocketManagerChannel>,
+    database: DbConnection,
+) -> FydiaResult {
+    let members = match server.get_user(&database).await {
+        Ok(members) => members,
+        Err(_) => {
+            return Err(FydiaResponse::new_error_custom_status(
+                "Cannot get users of the server",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    };
+
+    if let EventContent::Message { ref content } = event.content {
+        if content.insert_message(&database).await.is_err() {
+            return Err(FydiaResponse::new_error_custom_status(
+                "Cannot send message",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ));
+        }
+
+        let key = rsa.clone();
+        tokio::spawn(async move {
+            if let Err(error) = wbsocket
+                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
+                .await
+            {
+                error!(error);
+            };
+        });
+    }
+
+    Ok(FydiaResponse::new_ok("Message send"))
 }
