@@ -1,5 +1,5 @@
 use fydia_struct::{
-    channel::{Channel, ChannelId},
+    channel::{Channel, ChannelId, ParentId},
     instance::Instance,
     messages::{Date, Message},
     server::{Server, ServerId},
@@ -18,6 +18,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         Some(user) => user,
         None => {
             let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
+            user.token = Some(String::from("default_token"));
             if let Err(error) = user.insert_user_and_update(db).await {
                 error!(error);
             }
@@ -43,6 +44,8 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         server
     };
 
+    user.update_from_database(db).await?;
+
     if !user.servers.is_join(&ServerId::new("server_default_id")) {
         if let Err(error) = server.join(&mut user, db).await {
             error!(error);
@@ -53,9 +56,10 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         .channel
         .is_exists(&ChannelId::new("channel_default_id"))
     {
-        let mut channel = Channel::new(
+        let mut channel = Channel::new_with_parentid(
             "channel_default",
             "channel_default",
+            ParentId::ServerId(ServerId::new("server_default_id")),
             fydia_struct::channel::ChannelType::Text,
         )?;
 

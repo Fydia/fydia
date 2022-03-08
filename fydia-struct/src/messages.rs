@@ -126,7 +126,7 @@ impl Date {
     ///
     /// Prefer use Date::now() for current Date
     pub fn new(date: DateTime<Utc>) -> Self {
-        Self { 0: date }
+        Self(date)
     }
     /// Create a new `Date` with `NaiveDateTime`
     pub fn parse_from_naivetime(naivetime: NaiveDateTime) -> Self {
@@ -150,16 +150,12 @@ impl Date {
 
     /// Create a new `Date` with current time.
     pub fn now() -> Self {
-        Self {
-            0: DateTime::from(SystemTime::now()),
-        }
+        Self(DateTime::from(SystemTime::now()))
     }
 
     /// Create a new `Date` with a new `DateTime<FixedOffset>`
     pub fn new_fixed(date: DateTime<FixedOffset>) -> Self {
-        Self {
-            0: DateTime::from(date),
-        }
+        Self(DateTime::from(date))
     }
 
     /// Create a new `Date` with minimal DateTime
