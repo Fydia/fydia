@@ -1,6 +1,7 @@
 name: Fydia Builder
 
-on: "push"
+on: 
+  push
 
 jobs:
   buildflutter:
@@ -22,36 +23,14 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Install Flutter
-        uses: britannio/action-install-flutter@v1 
       - uses: Swatinem/rust-cache@v1
-      - uses: actions-rs/cargo@v1
+      - name: Test
+        uses: actions-rs/cargo@v1
         with:
-          command: build
-          args: -p fydia --features flutter_client --release
-      - name: Compress binaries
-        uses: svenstaro/upx-action@v2
-        with:
-          file: "/home/runner/work/fydia/fydia/target/release/fydia"
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: "Linux-flutter-release"
-          path: "/home/runner/work/fydia/fydia/target/release/fydia"
-  build:
-    name: Build Fydia
-    strategy:
-      matrix:
-        os: [ubuntu-18.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: Swatinem/rust-cache@v1
-      - uses: actions-rs/cargo@v1
+          command: test
+          args: --tests
+      - name: Fydia without Flutter Client
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p fydia --release
@@ -64,23 +43,22 @@ jobs:
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
-  tests:
-    name: Tests Fydia
-    strategy:
-      matrix:
-        os: [ubuntu-18.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
+      - name: Install Flutter
+        uses: britannio/action-install-flutter@v1 
+      - name: Fydia with Flutter Client
+        uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
-          override: true
-      - uses: Swatinem/rust-cache@v1
-      - uses: actions-rs/cargo@v1
+          command: build
+          args: -p fydia --features flutter_client --release
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
         with:
-          command: test
-          args: --tests
+          file: "/home/runner/work/fydia/fydia/target/release/fydia"
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "Linux-flutter-release"
+          path: "/home/runner/work/fydia/fydia/target/release/fydia"
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
