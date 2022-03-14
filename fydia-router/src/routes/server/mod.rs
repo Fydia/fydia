@@ -6,7 +6,11 @@ use crate::handlers::{
             create::create_channel,
             delete::delete_channel,
             info_channel,
-            messages::{get::get_message, post::post_messages},
+            messages::{
+                get::get_message,
+                messageid::{delete::delete_message, post::update_message},
+                post::post_messages,
+            },
             typing::{start_typing, stop_typing},
             update::{update_description, update_name},
             vocal::join_channel,
@@ -86,7 +90,9 @@ pub fn messageid() -> Router {
     axum::Router::new()
         .route(
             "/",
-            axum::routing::get(default).post(default).delete(default),
+            axum::routing::get(default)
+                .post(update_message)
+                .delete(delete_message),
         )
         .route("reactions", axum::routing::post(default).delete(default))
 }

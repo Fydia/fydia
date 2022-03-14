@@ -21,7 +21,7 @@ use crate::routes::user::user_routes;
 use axum::body::Body;
 use axum::handler::Handler;
 use axum::response::IntoResponse;
-use axum::{Router, extract::Extension};
+use axum::{extract::Extension, Router};
 use client::client_router;
 use fydia_config::{Config, DatabaseConfig, InstanceConfig};
 use fydia_crypto::key::private_to_public;

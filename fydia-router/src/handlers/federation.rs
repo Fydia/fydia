@@ -12,7 +12,7 @@ use fydia_struct::instance::{Instance, RsaData};
 use fydia_struct::messages::{Date, Message, MessageType};
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use fydia_struct::server::ServerId;
-use fydia_struct::user::User;
+use fydia_struct::user::UserInfo;
 use http::HeaderMap;
 
 pub async fn event_handler(
@@ -45,7 +45,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
                     MessageType::TEXT,
                     false,
                     Date::now(),
-                    User::default(),
+                    UserInfo::default(),
                     ChannelId::new("CkFg9d9IVf7Shht"),
                 )
                 .map_err(FydiaResponse::new_error)?,

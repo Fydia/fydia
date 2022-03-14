@@ -1,7 +1,7 @@
 //! This module related to message
 
 use crate::channel::ChannelId;
-use crate::user::User;
+use crate::user::UserInfo;
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDateTime, Timelike, Utc};
 use fydia_utils::generate_string;
 use serde::de::{Error, Unexpected, Visitor};
@@ -65,9 +65,15 @@ impl MessageType {
     }
 }
 
+impl Default for MessageType {
+    fn default() -> Self {
+        Self::TEXT
+    }
+}
+
 /// Message contains all value of a message.
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct Message {
     pub id: String,
     pub content: String,
@@ -77,7 +83,7 @@ pub struct Message {
     #[serde(rename = "channel")]
     pub channel_id: ChannelId,
     #[serde(rename = "author")]
-    pub author_id: User,
+    pub author_id: UserInfo,
 }
 
 impl Message {
@@ -96,7 +102,7 @@ impl Message {
         message_type: MessageType,
         edited: bool,
         timestamp: Date,
-        author_id: User,
+        author_id: UserInfo,
         channel_id: ChannelId,
     ) -> Result<Self, String> {
         let content = content.into();
@@ -118,7 +124,7 @@ impl Message {
 }
 
 /// Date contains a `DateTime<Utc>`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Date(pub DateTime<Utc>);
 
 impl Date {
@@ -148,6 +154,21 @@ impl Date {
         }
     }
 
+    /// Create a new `Date` from a Timestamp
+    ///
+    /// ```
+    /// use fydia_struct::messages::Date;
+    ///
+    /// let date = Date::parse_timestamp(1647285703);
+    /// ```
+    pub fn parse_timestamp(parse: i64) -> Option<Self> {
+        if let Some(datetime) = NaiveDateTime::from_timestamp_opt(parse, 0) {
+            Some(Self(DateTime::from_utc(datetime, Utc)))
+        } else {
+            None
+        }
+    }
+
     /// Create a new `Date` with current time.
     pub fn now() -> Self {
         Self(DateTime::from(SystemTime::now()))
@@ -161,6 +182,12 @@ impl Date {
     /// Create a new `Date` with minimal DateTime
     pub fn null() -> Self {
         Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
+    }
+}
+
+impl Default for Date {
+    fn default() -> Self {
+        Self::now()
     }
 }
 
@@ -178,16 +205,12 @@ impl<'de> Deserialize<'de> for Date {
     where
         D: Deserializer<'de>,
     {
-        if let Ok(string_deser) = String::deserialize(deserializer) {
-            if let Ok(e) = NaiveDateTime::parse_from_str(string_deser.as_str(), "%Y-%m-%d %H:%M:%S")
-            {
-                Ok(Date::new(DateTime::<Utc>::from_utc(e, Utc)))
-            } else {
-                Err(de::Error::custom("Error on Date"))
-            }
-        } else {
-            Err(de::Error::custom("Error on Date"))
+        if let Ok(timestamp) = i32::deserialize(deserializer) {
+            return Date::parse_timestamp(timestamp as i64)
+                .ok_or_else(|| de::Error::custom("Error on Date"));
         }
+
+        Err(de::Error::custom("Error on Date"))
     }
 }
 

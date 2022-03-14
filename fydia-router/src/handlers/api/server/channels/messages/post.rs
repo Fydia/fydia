@@ -130,7 +130,7 @@ pub async fn multipart_to_event<'a>(
                     MessageType::FILE,
                     false,
                     Date::new(DateTime::from(SystemTime::now())),
-                    user.clone(),
+                    user.to_userinfo(),
                     channelid.clone(),
                 )
                 .map_err(FydiaResponse::new_error)?,
@@ -160,7 +160,7 @@ pub async fn json_message(
                     messagetype,
                     false,
                     Date::new(DateTime::from(SystemTime::now())),
-                    user.clone(),
+                    user.to_userinfo(),
                     channelid.clone(),
                 )
                 .map_err(FydiaResponse::new_error)?,

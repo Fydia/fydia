@@ -237,7 +237,7 @@ impl UserFrom for UserId {
 #[async_trait]
 impl UserFrom for UserInfo {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.id, executor).await
+        User::get_user_by_id(self.id.id, executor).await
     }
 }
 

@@ -62,7 +62,7 @@ impl User {
     /// Convert `User` to `UserInfo`
     pub fn to_userinfo(&self) -> UserInfo {
         UserInfo::new(
-            self.id.id,
+            UserId::new(self.id.id),
             &self.name,
             &self.email,
             &self.description.clone().unwrap_or_default(),
@@ -127,19 +127,22 @@ impl Token {
 
 /// `UserInfo` is `User` without sensitive information
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UserInfo {
-    pub id: i32,
+    pub id: UserId,
     pub name: String,
+    #[serde(skip)]
     pub email: String,
+    #[serde(skip)]
     pub description: String,
+    #[serde(skip)]
     pub servers: Servers,
 }
 
 impl UserInfo {
     /// Take all value to return `UserInfo`
     pub fn new<T: Into<String>>(
-        id: i32,
+        id: UserId,
         name: T,
         email: T,
         description: T,

@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 
 use fydia_struct::{channel::ChannelId, messages::Message};
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
+    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
 
 use crate::entity::messages::Model;
@@ -19,6 +19,10 @@ pub trait SqlMessage {
         channel_id: ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String>;
+    async fn get_message_by_id(
+        message_id: &str,
+        executor: &DatabaseConnection,
+    ) -> Result<Message, String>;
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_message(
         &mut self,
@@ -78,6 +82,15 @@ impl SqlMessage for Message {
         Ok(messages)
     }
 
+    async fn get_message_by_id(
+        message_id: &str,
+        executor: &DatabaseConnection,
+    ) -> Result<Message, String> {
+        let message = Model::get_model_by_id(message_id, executor).await?;
+
+        message.to_message(executor).await
+    }
+
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
 
@@ -93,13 +106,9 @@ impl SqlMessage for Message {
         content: &str,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let active_model = crate::entity::messages::ActiveModel {
-            content: Set(Some(content.to_string())),
-            edited: Set(true as i8),
-            ..Default::default()
-        };
+        let model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::messages::Entity::update(active_model)
+        crate::entity::messages::Entity::update(model)
             .filter(crate::entity::messages::Column::Id.eq(self.id.as_str()))
             .exec(executor)
             .await
@@ -113,10 +122,15 @@ impl SqlMessage for Message {
     async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model = Model::get_model_by_id(&self.id, executor).await?;
         let active_model: crate::entity::messages::ActiveModel = model.into();
-        crate::entity::messages::Entity::delete(active_model)
+        let res = crate::entity::messages::Entity::delete(active_model)
             .exec(executor)
             .await
             .map(|_| ())
-            .map_err(|f| f.to_string())
+            .map_err(|f| f.to_string());
+
+        // Poisoning struct to not be used after
+        *self = Message::default();
+
+        res
     }
 }

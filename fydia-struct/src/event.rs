@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 ///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
 ///```
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Event {
     pub server_id: ServerId,
     pub content: EventContent,
@@ -40,14 +40,19 @@ impl Event {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum EventContent {
     Message {
         content: Box<Message>,
     },
-    MessageDelete(String),
-    MessageUpdate(String),
+    MessageDelete {
+        message_id: String,
+    },
+    MessageUpdate {
+        message_id: String,
+        update: Box<Message>,
+    },
     UserChangeName(String),
     VocalChannelJoin(String),  // When user join a vocal channel
     VocalChannelLeave(String), // When user quit a vocal channel

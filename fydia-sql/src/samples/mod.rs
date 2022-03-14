@@ -80,7 +80,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
                     fydia_struct::messages::MessageType::TEXT,
                     false,
                     Date::now(),
-                    user.clone(),
+                    user.to_userinfo(),
                     ChannelId::new("channel_default_id"),
                 )?;
 

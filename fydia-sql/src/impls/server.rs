@@ -72,10 +72,8 @@ impl SqlServer for Server {
     }
 
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_channel = crate::entity::server::ActiveModel {
-            id: Set(self.id.id.clone()),
-            ..Default::default()
-        };
+        let active_channel = crate::entity::server::ActiveModel::try_from(self.clone())?;
+
         if let Err(error) = crate::entity::server::Entity::delete(active_channel)
             .exec(executor)
             .await

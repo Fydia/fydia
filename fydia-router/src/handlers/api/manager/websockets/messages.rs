@@ -70,7 +70,13 @@ async fn connected(
                     }
                 }
                 ChannelMessage::Message(e) => {
-                    if let Ok(msg) = serde_json::to_string(&e) {
+                    let json = serde_json::to_string(&e);
+
+                    if json.is_err() {
+                        error!(format!("{:?}", json));
+                    }
+
+                    if let Ok(msg) = json {
                         if let Err(error) = sink.send(Message::Text(msg)).await {
                             error!(error);
                         }

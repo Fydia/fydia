@@ -29,7 +29,8 @@ impl Model {
     pub async fn to_message(&self, executor: &DatabaseConnection) -> Result<Message, String> {
         let author_id = User::get_user_by_id(self.author_id, executor)
             .await
-            .ok_or_else(|| "Error Author_Id".to_string())?;
+            .ok_or_else(|| "Error Author_Id".to_string())?
+            .to_userinfo();
 
         let message_type = MessageType::from_string(&self.message_type)
             .ok_or_else(|| "Error Message_type".to_string())?;
