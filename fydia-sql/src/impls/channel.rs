@@ -9,7 +9,7 @@ use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageInner, ParentId},
     messages::Message,
     server::{Channels, ServerId},
-    user::{UserId, UserInfo},
+    user::UserId,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -19,7 +19,7 @@ pub trait SqlChannel {
     async fn get_user_of_channel(
         &self,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<UserInfo>, String>;
+    ) -> Result<Vec<UserId>, String>;
     async fn get_channels_by_server_id(
         server_id: &ServerId,
         executor: &DatabaseConnection,
@@ -51,21 +51,21 @@ impl SqlChannel for Channel {
     async fn get_user_of_channel(
         &self,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<UserInfo>, String> {
+    ) -> Result<Vec<UserId>, String> {
         // TODO: Check Permission
         match &self.parent_id {
             ParentId::DirectMessage(directmessage) => match &directmessage.users {
                 DirectMessageInner::Users(users) => Ok(users
                     .iter()
-                    .map(|user| user.to_userinfo())
-                    .collect::<Vec<UserInfo>>()),
+                    .map(|user| user.id.clone())
+                    .collect::<Vec<UserId>>()),
 
                 DirectMessageInner::UsersId(usersid) => {
                     let mut vec = Vec::new();
 
                     for i in usersid {
                         if let Some(user) = i.get_user(executor).await {
-                            vec.push(user.to_userinfo());
+                            vec.push(user.id);
                         }
                     }
 

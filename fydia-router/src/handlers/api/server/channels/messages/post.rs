@@ -8,7 +8,7 @@ use axum::extract::{Extension, Path};
 use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
-use fydia_sql::impls::server::SqlServer;
+use fydia_sql::impls::server::{SqlMember, SqlServer};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
@@ -29,6 +29,11 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 const BOUNDARY: &str = "boundary=";
+const CHECK_MIME: [mime::Mime; 3] = [
+    mime::APPLICATION_JSON,
+    mime::TEXT_PLAIN,
+    mime::TEXT_PLAIN_UTF_8,
+];
 
 pub async fn post_messages(
     body: Bytes,
@@ -51,31 +56,31 @@ pub async fn post_messages(
 
     let mime_type =
         Mime::from_str(content_type).map_err(|_| FydiaResponse::new_error("Bad Content-Type"))?;
-    let event = if mime_type == mime::APPLICATION_JSON
-        || mime_type == mime::TEXT_PLAIN
-        || mime_type == mime::TEXT_PLAIN_UTF_8
-        || content_type == "application/json; charset=utf-8"
-    {
+
+    if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
         let body =
             String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::new_error("Body error"))?;
 
         let value =
             serde_json::from_str(&body).map_err(|_| FydiaResponse::new_error("JSON error"))?;
 
-        json_message(value, &user, &channel.id, &server.id).await?
-    } else if mime_type == mime::MULTIPART_FORM_DATA {
+        let event = json_message(value, &user, &channel.id, &server.id).await?;
+        return send_event(event, server, &rsa, wbsocket, database).await;
+    }
+
+    if mime_type == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
         let boundary =
             get_boundary(&headers).ok_or_else(|| FydiaResponse::new_error("No boundary found"))?;
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
-        multipart_to_event(multer, &user.clone(), &channel.id, &server.id).await?
-    } else {
-        return Err(FydiaResponse::new_error("Content-Type error"));
-    };
+        let event = multipart_to_event(multer, &user.clone(), &channel.id, &server.id).await?;
 
-    send_event(event, server, &rsa, wbsocket, database).await
+        return send_event(event, server, &rsa, wbsocket, database).await;
+    }
+
+    Err(FydiaResponse::new_error("Content-Type error"))
 }
 
 pub async fn multipart_to_event<'a>(
@@ -89,6 +94,7 @@ pub async fn multipart_to_event<'a>(
         if let Some(field_name) = field.name() {
             if field_name == "file" {
                 let file = File::new();
+
                 file.create_with_description(FileDescriptor::new_with_now(
                     field
                         .file_name()
@@ -101,6 +107,7 @@ pub async fn multipart_to_event<'a>(
                         StatusCode::INTERNAL_SERVER_ERROR,
                     )
                 })?;
+
                 let body = field
                     .bytes()
                     .await
@@ -121,20 +128,20 @@ pub async fn multipart_to_event<'a>(
         }
     }
 
+    let message = Message::new(
+        file.get_name(),
+        MessageType::FILE,
+        false,
+        Date::new(DateTime::from(SystemTime::now())),
+        user.to_userinfo(),
+        channelid.clone(),
+    )
+    .map_err(FydiaResponse::new_error)?;
+
     let event = Event::new(
         server_id.clone(),
         EventContent::Message {
-            content: Box::from(
-                Message::new(
-                    file.get_name(),
-                    MessageType::FILE,
-                    false,
-                    Date::new(DateTime::from(SystemTime::now())),
-                    user.to_userinfo(),
-                    channelid.clone(),
-                )
-                .map_err(FydiaResponse::new_error)?,
-            ),
+            content: Box::from(message),
         },
     );
 
@@ -147,24 +154,26 @@ pub async fn json_message(
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse> {
-    let messagetype = MessageType::from_string(get_json("type", &value)?.to_string())
+    let type_from_json = get_json("type", &value)?.to_string();
+    let messagetype = MessageType::from_string(type_from_json)
         .ok_or_else(|| FydiaResponse::new_error("Bad Message Type"))?;
+
     let content = get_json("content", &value)?.to_string();
+
+    let message = Message::new(
+        content,
+        messagetype,
+        false,
+        Date::new(DateTime::from(SystemTime::now())),
+        user.to_userinfo(),
+        channelid.clone(),
+    )
+    .map_err(FydiaResponse::new_error)?;
 
     Ok(Event::new(
         server_id.clone(),
         EventContent::Message {
-            content: Box::from(
-                Message::new(
-                    content,
-                    messagetype,
-                    false,
-                    Date::new(DateTime::from(SystemTime::now())),
-                    user.to_userinfo(),
-                    channelid.clone(),
-                )
-                .map_err(FydiaResponse::new_error)?,
-            ),
+            content: Box::from(message),
         },
     ))
 }
@@ -205,7 +214,16 @@ pub async fn send_event(
     database: DbConnection,
 ) -> FydiaResult {
     let members = match server.get_user(&database).await {
-        Ok(members) => members,
+        Ok(members) => {
+            if let Ok(userinfos) = members.to_userinfo(&database).await {
+                userinfos
+            } else {
+                return Err(FydiaResponse::new_error_custom_status(
+                    "Cannot get users of the server",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ));
+            }
+        }
         Err(_) => {
             return Err(FydiaResponse::new_error_custom_status(
                 "Cannot get users of the server",
@@ -225,7 +243,7 @@ pub async fn send_event(
         let key = rsa.clone();
         tokio::spawn(async move {
             if let Err(error) = wbsocket
-                .send_with_origin_and_key(&event, &members.members, Some(&key), None)
+                .send_with_origin_and_key(&event, &members, Some(&key), None)
                 .await
             {
                 error!(error);

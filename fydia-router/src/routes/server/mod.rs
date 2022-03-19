@@ -7,8 +7,8 @@ use crate::handlers::{
             delete::delete_channel,
             info_channel,
             messages::{
-                get::get_message,
-                messageid::{delete::delete_message, post::update_message},
+                get::get_messages,
+                messageid::{delete::delete_message, get::get_message, post::update_message},
                 post::post_messages,
             },
             typing::{start_typing, stop_typing},
@@ -73,7 +73,7 @@ pub fn channelid() -> Router {
                 .nest(
                     "/messages",
                     Router::new()
-                        .route("/", axum::routing::get(get_message).post(post_messages))
+                        .route("/", axum::routing::get(get_messages).post(post_messages))
                         .nest("/:messageid/", messageid()),
                 ),
         )
@@ -90,7 +90,7 @@ pub fn messageid() -> Router {
     axum::Router::new()
         .route(
             "/",
-            axum::routing::get(default)
+            axum::routing::get(get_message)
                 .post(update_message)
                 .delete(delete_message),
         )

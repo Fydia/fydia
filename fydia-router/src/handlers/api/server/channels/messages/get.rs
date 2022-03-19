@@ -5,7 +5,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use http::HeaderMap;
 
-pub async fn get_message(
+pub async fn get_messages(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,

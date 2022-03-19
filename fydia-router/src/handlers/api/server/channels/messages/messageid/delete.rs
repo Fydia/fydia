@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Extension, Path};
 use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage},
+    impls::{channel::SqlChannel, message::SqlMessage, server::SqlMember},
     sqlpool::DbConnection,
 };
 use fydia_struct::{
@@ -33,13 +33,10 @@ pub async fn delete_message(
     let mut message = Message::get_message_by_id(&messageid, &executor)
         .await
         .map_err(FydiaResponse::new_error)?;
+
     if message.author_id.id != user.id {
         return Err(FydiaResponse::new_error("You can't delete this message"));
     }
-    message
-        .delete_message(&executor)
-        .await
-        .map_err(FydiaResponse::new_error)?;
 
     wbsocket
         .send(
@@ -52,7 +49,10 @@ pub async fn delete_message(
             &channel
                 .get_user_of_channel(&executor)
                 .await
-                .map_err(FydiaResponse::new_error)?,
+                .map_err(FydiaResponse::new_error)?
+                .to_userinfo(&executor)
+                .await
+                .map_err(|_| FydiaResponse::new_error("Can't delete"))?,
         )
         .await
         .map_err(|_| {
@@ -61,6 +61,11 @@ pub async fn delete_message(
                 StatusCode::INTERNAL_SERVER_ERROR,
             )
         })?;
+
+    message
+        .delete_message(&executor)
+        .await
+        .map_err(FydiaResponse::new_error)?;
 
     Ok(FydiaResponse::new_ok("Message delete"))
 }

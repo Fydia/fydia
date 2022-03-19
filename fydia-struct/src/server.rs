@@ -3,7 +3,6 @@
 use crate::channel::ChannelId;
 use crate::emoji::Emoji;
 use crate::roles::Role;
-use crate::user::UserInfo;
 use crate::{channel::Channel, user::UserId};
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
@@ -128,7 +127,7 @@ impl Servers {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Members {
     count: i32,
-    pub members: Vec<UserInfo>,
+    pub members: Vec<UserId>,
 }
 
 impl Members {
@@ -140,20 +139,20 @@ impl Members {
         }
     }
     /// Return a new `Members` with value given
-    pub fn new_with(count: i32, members: Vec<UserInfo>) -> Self {
+    pub fn new_with(count: i32, members: Vec<UserId>) -> Self {
         Self { count, members }
     }
 
     /// Add a new `User` in members
-    pub fn push(&mut self, user: UserInfo) {
+    pub fn push(&mut self, user: UserId) {
         self.count += 1;
         self.members.push(user);
     }
 
     /// Remove a `User` in members. Return a Err if `User` doesn't exists
-    pub fn remove(&mut self, user: UserInfo) -> Result<(), String> {
+    pub fn remove(&mut self, user: UserId) -> Result<(), String> {
         for (n, i) in (&self.members).iter().enumerate() {
-            if i.id == user.id {
+            if i.0 == user.0 {
                 self.members.remove(n);
                 self.count -= 1;
                 return Ok(());

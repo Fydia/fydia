@@ -1,5 +1,5 @@
 use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
-use fydia_sql::impls::server::{SqlServer, SqlServerId};
+use fydia_sql::impls::server::{SqlMember, SqlServer, SqlServerId};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::event::Event;
 
@@ -13,9 +13,11 @@ pub async fn event_handler(
 
     if let Ok(server) = event.server_id.get_server(database).await {
         if let Ok(members) = server.get_user(database).await {
-            if wbsockets.send(&event, &members.members).await.is_err() {
-                error!("Error");
-            };
+            if let Ok(members) = members.to_userinfo(database).await {
+                if wbsockets.send(&event, &members).await.is_err() {
+                    error!("Error");
+                };
+            }
         }
     }
 }

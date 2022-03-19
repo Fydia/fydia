@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use fydia_struct::{
     channel::{Channel, ParentId},
     server::{Members, Server, ServerId},
-    user::User,
+    user::{User, UserId, UserInfo},
 };
 use sea_orm::{DatabaseConnection, EntityTrait, Set};
 
@@ -119,10 +119,7 @@ impl SqlServer for Server {
         let server = Model::get_model_by_id(&self.id.id, executor).await?;
         let mut members = self.get_user(executor).await?;
 
-        let mut to_push = user.to_userinfo();
-        to_push.servers.0.push(self.id.clone());
-        members.push(to_push);
-
+        members.push(user.id.clone());
         let json = members.to_string()?;
 
         let mut active_model: crate::entity::server::ActiveModel = server.into();
@@ -172,5 +169,36 @@ pub trait SqlServerId {
 impl SqlServerId for ServerId {
     async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
         Server::get_server_by_id(&ServerId::new(self.id.clone()), executor).await
+    }
+}
+
+#[async_trait::async_trait]
+pub trait SqlMember {
+    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String>;
+}
+
+#[async_trait::async_trait]
+impl SqlMember for Members {
+    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String> {
+        let mut result = Vec::new();
+        for i in &self.members {
+            let user = i
+                .get_user(executor)
+                .await
+                .ok_or_else(|| String::from("User not exists"))?
+                .to_userinfo();
+            result.push(user);
+        }
+
+        Ok(result)
+    }
+}
+
+#[async_trait::async_trait]
+impl SqlMember for Vec<UserId> {
+    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String> {
+        let members = Members::new_with(self.len() as i32, self.clone());
+
+        members.to_userinfo(executor).await
     }
 }

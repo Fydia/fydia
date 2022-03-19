@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Extension, Path};
-use fydia_sql::impls::channel::SqlChannel;
+use fydia_sql::impls::{channel::SqlChannel, server::SqlMember};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use http::{HeaderMap, StatusCode};
@@ -25,7 +25,10 @@ pub async fn start_typing(
     let users = channel
         .get_user_of_channel(&database)
         .await
-        .map_err(|_| FydiaResponse::new_ok(""))?;
+        .map_err(|_| FydiaResponse::new_error(""))?
+        .to_userinfo(&database)
+        .await
+        .map_err(|_| FydiaResponse::new_error(""))?;
 
     typingmanager
         .start_typing(user.id, channel.id, server.id, users)
@@ -52,7 +55,10 @@ pub async fn stop_typing(
     let users = channel
         .get_user_of_channel(&database)
         .await
-        .map_err(|_| FydiaResponse::new_ok(""))?;
+        .map_err(|_| FydiaResponse::new_ok(""))?
+        .to_userinfo(&database)
+        .await
+        .map_err(|_| FydiaResponse::new_error(""))?;
 
     typingmanager
         .stop_typing(user.id, channel.id, server.id, users)

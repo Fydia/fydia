@@ -1,3 +1,4 @@
+use crate::handlers::get_json;
 use axum::body::Bytes;
 use axum::extract::Extension;
 use fydia_sql::impls::user::SqlUser;
@@ -8,8 +9,6 @@ use fydia_struct::{
 };
 use http::StatusCode;
 use serde_json::value;
-
-use crate::handlers::get_json;
 
 pub async fn user_login(body: Bytes, Extension(database): Extension<DbConnection>) -> FydiaResult {
     let body = body.to_vec();
