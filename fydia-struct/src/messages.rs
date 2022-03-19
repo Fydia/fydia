@@ -162,11 +162,8 @@ impl Date {
     /// let date = Date::parse_timestamp(1647285703);
     /// ```
     pub fn parse_timestamp(parse: i64) -> Option<Self> {
-        if let Some(datetime) = NaiveDateTime::from_timestamp_opt(parse, 0) {
-            Some(Self(DateTime::from_utc(datetime, Utc)))
-        } else {
-            None
-        }
+        NaiveDateTime::from_timestamp_opt(parse, 0)
+            .map(|datetime| Self(DateTime::from_utc(datetime, Utc)))
     }
 
     /// Create a new `Date` with current time.

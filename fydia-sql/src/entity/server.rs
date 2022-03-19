@@ -68,7 +68,7 @@ impl TryFrom<Server> for ActiveModel {
             id: Set(value.id.id.clone()),
             name: Set(value.name.clone()),
             members: Set(members_json),
-            owner: Set(value.owner.id),
+            owner: Set(value.owner.0),
             icon: Set(Some(value.icon)),
         })
     }

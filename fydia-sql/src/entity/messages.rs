@@ -68,7 +68,7 @@ impl TryFrom<Message> for ActiveModel {
             timestamp: Set(value.timestamp.0.naive_utc()),
             edited: Set(value.edited as i8),
             channel_id: Set(value.channel_id.id.clone()),
-            author_id: Set(value.author_id.id.id),
+            author_id: Set(value.author_id.id.0),
         })
     }
 }

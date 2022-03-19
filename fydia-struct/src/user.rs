@@ -62,7 +62,7 @@ impl User {
     /// Convert `User` to `UserInfo`
     pub fn to_userinfo(&self) -> UserInfo {
         UserInfo::new(
-            UserId::new(self.id.id),
+            self.id.clone(),
             &self.name,
             &self.email,
             &self.description.clone().unwrap_or_default(),
@@ -86,20 +86,18 @@ impl User {
 /// `UserId` contains id of `User`
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
-pub struct UserId {
-    pub id: i32,
-}
+pub struct UserId(pub i32);
 
 impl Default for UserId {
     fn default() -> Self {
-        Self { id: -1 }
+        Self(-1)
     }
 }
 
 impl UserId {
     /// Return a new `UserId`
     pub fn new(id: i32) -> Self {
-        Self { id }
+        Self(id)
     }
 
     /// Serialize UserId as Json and return `Ok(String)` if can be serialize

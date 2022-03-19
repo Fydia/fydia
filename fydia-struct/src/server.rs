@@ -35,7 +35,7 @@ impl Server {
             return Err(String::from("Name server is empty"));
         }
 
-        if owner.id.is_negative() {
+        if owner.0.is_negative() {
             return Err(String::from("UserId is negative"));
         }
 

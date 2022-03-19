@@ -100,7 +100,7 @@ impl SqlUser for User {
     }
 
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let model = Model::get_model_by_id(&self.id.id, executor).await?;
+        let model = Model::get_model_by_id(&self.id.0, executor).await?;
         let user_of_db = model.to_user()?;
 
         self.take_value_of(user_of_db);
@@ -110,7 +110,7 @@ impl SqlUser for User {
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let token = generate_string(30);
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(&self.id.id, executor).await?.into();
+            Model::get_model_by_id(&self.id.0, executor).await?.into();
         active_model.token = Set(token.clone());
 
         UserEntity::update(active_model)
@@ -129,7 +129,7 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         let name = name.into();
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(&self.id.id, executor).await?.into();
+            Model::get_model_by_id(&self.id.0, executor).await?.into();
 
         active_model.name = Set(name.clone());
 
@@ -149,7 +149,7 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         let clear_password = clear_password.into();
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(&self.id.id, executor).await?.into();
+            Model::get_model_by_id(&self.id.0, executor).await?.into();
 
         let password = hash(clear_password)?;
         active_model.password = Set(password.clone());
@@ -168,7 +168,7 @@ impl SqlUser for User {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(&self.id.id, executor).await?.into();
+            Model::get_model_by_id(&self.id.0, executor).await?.into();
 
         let mut current_server = self.servers.clone().0;
         current_server.push(server_short_id.clone());
@@ -208,7 +208,7 @@ impl SqlUser for User {
     }
 
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let model = Model::get_model_by_id(&self.id.id, executor).await?;
+        let model = Model::get_model_by_id(&self.id.0, executor).await?;
         let active_model: UserActiveModel = model.into();
 
         UserEntity::delete(active_model)
@@ -230,14 +230,14 @@ pub trait UserFrom {
 #[async_trait]
 impl UserFrom for UserId {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.id, executor).await
+        User::get_user_by_id(self.0, executor).await
     }
 }
 
 #[async_trait]
 impl UserFrom for UserInfo {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.id.id, executor).await
+        User::get_user_by_id(self.id.0, executor).await
     }
 }
 
