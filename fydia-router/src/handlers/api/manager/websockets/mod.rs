@@ -160,7 +160,7 @@ pub enum ChannelMessage {
 
 #[derive(Debug)]
 pub enum WbManagerMessage {
-    Get(UserInfo, OSSender<Option<Vec<WbSender>>>),
+    Get(UserInfo, OSSender<Vec<WbSender>>),
     GetWithIndex(UserInfo, usize, OSSender<Option<WbSender>>),
     Insert(UserInfo, OSSender<Result<WbChannel, String>>),
     Remove(UserInfo, WbSender, OSSender<Result<(), ()>>),
@@ -172,13 +172,12 @@ impl ManagerReceiverTrait for WebsocketInner {
     async fn on_receiver(&mut self, message: Self::Message) {
         match message {
             WbManagerMessage::Get(user, callback) => {
-                if callback
-                    .send(
-                        self.get_user(&user)
-                            .map(|mut wbstruct| wbstruct.get_senders()),
-                    )
-                    .is_err()
-                {
+                let senders = self
+                    .get_user(&user)
+                    .map(|mut wbstruct| wbstruct.get_senders())
+                    .unwrap_or_else(|| Vec::new());
+
+                if callback.send(senders).is_err() {
                     error!("Can't send");
                 };
             }

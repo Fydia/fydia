@@ -16,7 +16,7 @@ pub type WebsocketManagerChannel = ManagerChannel<WbManagerMessage>;
 
 #[async_trait]
 pub trait WbManagerChannelTrait {
-    async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Option<Vec<WbSender>>, String>;
+    async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Vec<WbSender>, String>;
     async fn get_new_channel(&self, user: &UserInfo) -> Option<WbChannel>;
     async fn remove(&self, user: &UserInfo, wbsender: &WbSender) -> Result<(), ()>;
     async fn send(&self, msg: &Event, user: &[UserInfo]) -> Result<(), String>;
@@ -31,8 +31,8 @@ pub trait WbManagerChannelTrait {
 
 #[async_trait]
 impl WbManagerChannelTrait for WebsocketManagerChannel {
-    async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Option<Vec<WbSender>>, String> {
-        let (sender, receiver) = oneshot::channel::<Option<Vec<WbSender>>>();
+    async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Vec<WbSender>, String> {
+        let (sender, receiver) = oneshot::channel::<Vec<WbSender>>();
         if let Err(e) = self.0.send(WbManagerMessage::Get(user.clone(), sender)) {
             error!(e.to_string());
         }
@@ -77,11 +77,10 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         _origin: Option<Instance>,
     ) -> Result<(), String> {
         for i in user {
-            if let Some(channel) = self.get_channels_of_user(i).await? {
-                for i in channel {
-                    if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                        error!(e.to_string());
-                    }
+            let channels = self.get_channels_of_user(i).await?;
+            for i in channels {
+                if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
+                    error!(e.to_string());
                 }
             }
         }
