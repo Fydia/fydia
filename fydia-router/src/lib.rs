@@ -1,5 +1,4 @@
 //! Router of fydia
-//! Working with gotham.rs
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![warn(missing_debug_implementations)]
@@ -175,10 +174,7 @@ impl<B> OnResponse<B> for Log {
 
 /// Return index client
 async fn not_found() -> impl IntoResponse {
-    (
-        http::StatusCode::NOT_FOUND,
-        String::from("Route Not Found : 404"),
-    )
+    (http::StatusCode::NOT_FOUND, String::from(""))
 }
 
 #[cfg(not(feature = "flutter_client"))]
