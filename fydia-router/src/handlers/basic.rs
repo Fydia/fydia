@@ -75,7 +75,7 @@ impl BasicValues {
         let channel = channel_id
             .get_channel(executor)
             .await
-            .ok_or_else(|| FydiaResponse::new_error("Bad ChannelId"))?;
+            .map_err(FydiaResponse::new_error)?;
 
         Ok((user, server, channel))
     }

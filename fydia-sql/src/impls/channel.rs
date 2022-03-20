@@ -15,7 +15,10 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
-    async fn get_channel_by_id(id: &ChannelId, executor: &DatabaseConnection) -> Option<Channel>;
+    async fn get_channel_by_id(
+        id: &ChannelId,
+        executor: &DatabaseConnection,
+    ) -> Result<Channel, String>;
     async fn get_user_of_channel(
         &self,
         executor: &DatabaseConnection,
@@ -41,10 +44,15 @@ pub trait SqlChannel {
 
 #[async_trait::async_trait]
 impl SqlChannel for Channel {
-    async fn get_channel_by_id(id: &ChannelId, executor: &DatabaseConnection) -> Option<Channel> {
+    async fn get_channel_by_id(
+        id: &ChannelId,
+        executor: &DatabaseConnection,
+    ) -> Result<Channel, String> {
         match Model::get_model_by_id(&id.id, executor).await {
-            Ok(model) => model.to_channel(),
-            _ => None,
+            Ok(model) => model
+                .to_channel()
+                .ok_or_else(|| "Cannot convert model to channel".to_string()),
+            _ => Err("This Channel doesn't exists".to_string()),
         }
     }
 
@@ -180,12 +188,12 @@ impl SqlChannel for Channel {
 
 #[async_trait::async_trait]
 pub trait SqlChannelId {
-    async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel>;
+    async fn get_channel(&self, executor: &DatabaseConnection) -> Result<Channel, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlChannelId for ChannelId {
-    async fn get_channel(&self, executor: &DatabaseConnection) -> Option<Channel> {
+    async fn get_channel(&self, executor: &DatabaseConnection) -> Result<Channel, String> {
         Channel::get_channel_by_id(self, executor).await
     }
 }

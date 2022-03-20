@@ -20,7 +20,7 @@ pub async fn info_channel(
 ) -> FydiaResult {
     let channel = Channel::get_channel_by_id(&ChannelId::new(channelid), &database)
         .await
-        .ok_or_else(|| FydiaResponse::new_error("Error"))?;
+        .map_err(FydiaResponse::new_error)?;
 
     Ok(FydiaResponse::new_ok_json(&channel))
 }
