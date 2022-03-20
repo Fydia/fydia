@@ -111,6 +111,11 @@ pub async fn get_axum_router(
         exit(1)
     }
 
+    if let Err(error) = typing_manager.set_database(&database) {
+        error!(error);
+        exit(1)
+    }
+
     get_router(
         database,
         Arc::new(Instance::new(
