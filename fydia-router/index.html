@@ -28,18 +28,18 @@
 </body>
 <script>
   url = window.location;
-  token = "BsBPys7gus95TiLBCQTE8DqTlDqp"
+  token = "default_token"
 
   function spam_ws() {
     for (let index = 0; index < 50; index++) {
       let sock;
       if (document.location.protocol == "http:") {
         sock = new WebSocket(
-          `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+          `ws://${document.location.host}/api/user/websocket?token=${token}`
         );
       } else {
         sock = new WebSocket(
-          `wss://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+          `wss://${document.location.host}/api/user/websocket?token=${token}`
         );
       }
 
@@ -62,11 +62,11 @@
     let sock;
     if (document.location.protocol == "http:") {
       sock = new WebSocket(
-        `ws://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+        `ws://${document.location.host}/api/user/websocket?token=${token}`
       );
     } else {
       sock = new WebSocket(
-        `wss://${document.location.host}/api/user/websocket?token=BsBPys7gus95TiLBCQTE8DqTlDqp9n`
+        `wss://${document.location.host}/api/user/websocket?token=${token}`
       );
     }
     sock.onopen = () => {
@@ -148,7 +148,7 @@
 
     http.open(
       "POST",
-      `http://${document.location.host}/api/server/Eg7TthyaoB/channel/bP5ptzOKdUrzjhn/messages`
+      `http://${document.location.host}/api/server/server_default_id/channel/channel_default/messages`
     );
     http.setRequestHeader("Content-Type", "application/json");
     http.setRequestHeader("token", "BsBPys7gus95TiLBCQTE8DqTlDqp9n");
