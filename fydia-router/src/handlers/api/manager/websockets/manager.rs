@@ -1,14 +1,14 @@
 use axum::async_trait;
 use tokio::sync::oneshot;
 
+use super::{ChannelMessage, WbChannel, WbManagerMessage, WbSender, WebsocketInner};
 use fydia_struct::{
     event::Event,
     instance::{Instance, RsaData},
     manager::{Manager, ManagerChannel},
     user::UserInfo,
 };
-
-use super::{ChannelMessage, WbChannel, WbManagerMessage, WbSender, WebsocketInner};
+use rayon::prelude::*;
 
 pub type WbManager = Manager<WebsocketInner>;
 
@@ -18,7 +18,7 @@ pub type WebsocketManagerChannel = ManagerChannel<WbManagerMessage>;
 pub trait WbManagerChannelTrait {
     async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Vec<WbSender>, String>;
     async fn get_new_channel(&self, user: &UserInfo) -> Option<WbChannel>;
-    async fn remove(&self, user: &UserInfo, wbsender: &WbSender) -> Result<(), ()>;
+    async fn remove(&self, user: &UserInfo, wbsender: &WbSender) -> Result<(), String>;
     async fn send(&self, msg: &Event, user: &[UserInfo]) -> Result<(), String>;
     async fn send_with_origin_and_key(
         &self,
@@ -52,8 +52,8 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
         receiver.await.ok()?.ok()
     }
 
-    async fn remove(&self, user: &UserInfo, wbsender: &WbSender) -> Result<(), ()> {
-        let (sender, receiver) = oneshot::channel::<Result<(), ()>>();
+    async fn remove(&self, user: &UserInfo, wbsender: &WbSender) -> Result<(), String> {
+        let (sender, receiver) = oneshot::channel::<Result<(), String>>();
         if let Err(error) = self.0.send(WbManagerMessage::Remove(
             user.clone(),
             wbsender.clone(),
@@ -62,7 +62,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
             error!(error.to_string());
         }
 
-        receiver.await.unwrap_or(Err(()))
+        receiver.await.map_err(|error| error.to_string())?
     }
 
     async fn send(&self, msg: &Event, user: &[UserInfo]) -> Result<(), String> {
@@ -78,11 +78,11 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
     ) -> Result<(), String> {
         for i in user {
             let channels = self.get_channels_of_user(i).await?;
-            for i in channels {
+            channels.par_iter().for_each(|i| {
                 if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
                     error!(e.to_string());
                 }
-            }
+            });
         }
 
         Ok(())

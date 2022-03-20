@@ -85,7 +85,7 @@ impl User {
 
 /// `UserId` contains id of `User`
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Hash, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd)]
 pub struct UserId(pub i32);
 
 impl Default for UserId {
@@ -125,7 +125,7 @@ impl Token {
 
 /// `UserInfo` is `User` without sensitive information
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Hash, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct UserInfo {
     pub id: UserId,
     pub name: String,

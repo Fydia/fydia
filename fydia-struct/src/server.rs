@@ -84,7 +84,7 @@ impl ServerId {
 }
 
 /// `Servers` contains all server of an `User`
-#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[derive(Default, Hash, Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Eq)]
 pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
