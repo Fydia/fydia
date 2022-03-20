@@ -11,7 +11,6 @@ use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
 use fydia_struct::user::{Token, UserInfo};
-use http::StatusCode;
 use serde::Serialize;
 
 use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
@@ -29,10 +28,6 @@ pub async fn ws_handler(
         .map(|user| user.to_userinfo());
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
         .into_response()
-}
-
-pub fn empty_response<'a>() -> (StatusCode, &'a str) {
-    (StatusCode::BAD_REQUEST, "")
 }
 
 async fn connected(
@@ -99,8 +94,7 @@ pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>
 where
     T: Serialize,
 {
-    match serde_json::to_string(msg) {
-        Ok(json) => Ok(axum::extract::ws::Message::Text(json)),
-        Err(e) => Err(e.to_string()),
-    }
+    serde_json::to_string(msg)
+        .map(|json| axum::extract::ws::Message::Text(json))
+        .map_err(|error| error.to_string())
 }

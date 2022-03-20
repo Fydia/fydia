@@ -37,10 +37,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
             error!(e.to_string());
         }
 
-        match receiver.await {
-            Ok(e) => Ok(e),
-            Err(e) => Err(e.to_string()),
-        }
+        receiver.await.map_err(|error| error.to_string())
     }
 
     async fn get_new_channel(&self, user: &UserInfo) -> Option<WbChannel> {
