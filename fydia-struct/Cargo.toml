@@ -15,7 +15,7 @@ serde = { version="1.0.136", features=["derive"] }
 serde_json = { version="1.0.79" }
 chrono = "0.4.19"
 url = "2.2.2"
-reqwest = {version = "0.11.9",features = ["blocking"]}
+reqwest = {version = "0.11.10",features = ["blocking"]}
 hyper = "0.14.17"
 http = "0.2.6"
 mime = "0.3.16"

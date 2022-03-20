@@ -14,6 +14,6 @@ tokio = { version = "1.17.0", default-features = false, features = [
     "rt",
     "macros",
 ] }
-reqwest = "0.11.9"
+reqwest = "0.11.10"
 fydia-router = { path = "../fydia-router" }
 fydia-config = { path = "../fydia-config" }
