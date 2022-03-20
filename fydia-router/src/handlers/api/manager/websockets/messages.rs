@@ -95,6 +95,6 @@ where
     T: Serialize,
 {
     serde_json::to_string(msg)
-        .map(|json| axum::extract::ws::Message::Text(json))
+        .map(axum::extract::ws::Message::Text)
         .map_err(|error| error.to_string())
 }

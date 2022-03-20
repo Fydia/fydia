@@ -65,31 +65,27 @@ impl ManagerReceiverTrait for TypingStruct {
                 self.set_database(databasemanager);
             }
             TypingMessage::StartTyping(user, channelid, serverid) => {
-                match (&self.wbsocketmanager, &self.selfmanager, &self.database) {
-                    (Some(wb), Some(typing), Some(database)) => {
-                        if let Err(error) = self
-                            .inner
-                            .start_typing(database, wb, typing, channelid, user, serverid)
-                            .await
-                        {
-                            error!(error);
-                        };
-                    }
-                    _ => {}
-                };
+                if let (Some(wb), Some(typing), Some(database)) =
+                    (&self.wbsocketmanager, &self.selfmanager, &self.database)
+                {
+                    if let Err(error) = self
+                        .inner
+                        .start_typing(database, wb, typing, channelid, user, serverid)
+                        .await
+                    {
+                        error!(error);
+                    };
+                }
             }
             TypingMessage::StopTyping(user, channelid, serverid) => {
-                match (&self.wbsocketmanager, &self.database) {
-                    (Some(wb), Some(database)) => {
-                        if let Err(error) = self
-                            .inner
-                            .stop_typing(database, wb, channelid, user, serverid)
-                            .await
-                        {
-                            error!(error);
-                        };
-                    }
-                    _ => {}
+                if let (Some(wb), Some(database)) = (&self.wbsocketmanager, &self.database) {
+                    if let Err(error) = self
+                        .inner
+                        .stop_typing(database, wb, channelid, user, serverid)
+                        .await
+                    {
+                        error!(error);
+                    };
                 };
             }
         }
@@ -112,7 +108,7 @@ impl TypingInner {
         let mut task = Task::new(typingmanager, &userid, &channelid, &serverid);
 
         task.spawn();
-        usertypings.insert(userid.clone(), task);
+        usertypings.insert(userid, task);
 
         Ok(())
     }
@@ -213,7 +209,7 @@ impl TypingInner {
             database.clone(),
         );
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -294,7 +290,7 @@ impl Task {
 
     pub fn kill(&mut self) {
         if let Some(sender) = &self.0 {
-            drop(sender.send(true));
+            sender.send(true).unwrap_or(());
 
             self.0 = None;
         }
