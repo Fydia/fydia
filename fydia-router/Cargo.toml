@@ -30,7 +30,7 @@ serde = "1.0.136"
 reqwest = "0.11.10"
 infer = "0.7.0"
 mime_guess = "2.0.4"
-tracing = "0.1.31"
+tracing = "0.1.32"
 tower-http = { version = "0.2.5", features = ["trace"] }
 tower = "0.4.12"
 rand = "0.8.5"
