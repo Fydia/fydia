@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `User` (
     `email` text NOT NULL,
     `password` text NOT NULL,
     `description` text DEFAULT NULL,
-    `server` text DEFAULT NULL,
+    UNIQUE KEY `User_UN` (`token`),
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 CREATE TABLE IF NOT EXISTS `Server` (
@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS `Server` (
     `name` text NOT NULL,
     `owner` int(10) NOT NULL,
     `icon` text DEFAULT NULL,
-    `members` text NOT NULL,
     KEY `server_FK` (`owner`),
     CONSTRAINT `server_FK` FOREIGN KEY (`owner`) REFERENCES `User` (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
@@ -50,3 +49,11 @@ CREATE TABLE IF NOT EXISTS `Roles` (
     KEY `Roles_FK` (`serverid`),
     CONSTRAINT `Roles_FK` FOREIGN KEY (`serverid`) REFERENCES `Server` (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+CREATE TABLE `Members` (
+  `serverid` varchar(30) NOT NULL,
+  `userid` int(10) NOT NULL,
+  UNIQUE KEY `Members_UN` (`serverid`,`userid`),
+  KEY `Members_FK` (`userid`),
+  CONSTRAINT `Members_FK` FOREIGN KEY (`userid`) REFERENCES `User` (`id`),
+  CONSTRAINT `Members_FK_1` FOREIGN KEY (`serverid`) REFERENCES `Server` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

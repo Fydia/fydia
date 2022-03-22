@@ -22,15 +22,11 @@ pub struct Model {
     pub owner: i32,
     #[sea_orm(column_type = "Text", nullable)]
     pub icon: Option<String>,
-    #[sea_orm(column_type = "Text")]
-    pub members: String,
 }
 
 impl Model {
     pub async fn to_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        let members =
-            serde_json::from_str::<Members>(self.members.as_str()).map_err(|f| f.to_string())?;
-
+        let members = Members::new();
         let roles = Role::get_roles_by_server_id(self.id.clone(), executor).await?;
 
         let channel =
@@ -63,11 +59,9 @@ impl TryFrom<Server> for ActiveModel {
     type Error = String;
 
     fn try_from(value: Server) -> Result<Self, Self::Error> {
-        let members_json = serde_json::to_string(&value.members).map_err(|f| f.to_string())?;
         Ok(crate::entity::server::ActiveModel {
             id: Set(value.id.id.clone()),
             name: Set(value.name.clone()),
-            members: Set(members_json),
             owner: Set(value.owner.0),
             icon: Set(Some(value.icon)),
         })
@@ -84,6 +78,8 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     User,
+    #[sea_orm(has_many = "super::members::Entity")]
+    Members,
     #[sea_orm(has_many = "super::roles::Entity")]
     Roles,
 }
@@ -91,6 +87,12 @@ pub enum Relation {
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::User.def()
+    }
+}
+
+impl Related<super::members::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Members.def()
     }
 }
 

@@ -9,7 +9,10 @@ use sea_orm::{DatabaseConnection, EntityTrait, Set};
 
 use crate::entity::server::Model;
 
-use super::user::{SqlUser, UserFrom};
+use super::{
+    members::SqlMembers,
+    user::{SqlUser, UserFrom},
+};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -41,8 +44,7 @@ pub trait SqlServer {
 #[async_trait::async_trait]
 impl SqlServer for Server {
     async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String> {
-        let model = Model::get_model_by_id(&self.id.id, executor).await?;
-        serde_json::from_str::<Members>(&model.members).map_err(|error| error.to_string())
+        Members::get_users_by_serverid(&self.id, executor).await
     }
 
     async fn get_server_by_id(
@@ -116,24 +118,11 @@ impl SqlServer for Server {
     }
 
     async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
-        let server = Model::get_model_by_id(&self.id.id, executor).await?;
-        let mut members = self.get_user(executor).await?;
+        Members::insert(&self.id, &user.id, executor).await?;
 
-        members.push(user.id.clone());
-        let json = members.to_string()?;
+        user.insert_server(&self.id)?;
 
-        let mut active_model: crate::entity::server::ActiveModel = server.into();
-
-        active_model.members = Set(json);
-
-        crate::entity::server::Entity::update(active_model.clone())
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
-
-        user.insert_server(&self.id, executor).await?;
-
-        self.members = members;
+        self.members.push(user.id.clone());
 
         Ok(())
     }

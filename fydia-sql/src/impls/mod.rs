@@ -1,5 +1,6 @@
 pub mod channel;
 pub mod emoji;
+pub mod members;
 pub mod message;
 pub mod permission;
 pub mod role;

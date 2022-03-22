@@ -4,10 +4,12 @@ use std::convert::TryFrom;
 
 use fydia_struct::{
     instance::Instance,
-    server::Servers,
+    server::{Members, Servers},
     user::{User, UserId},
 };
 use sea_orm::{entity::prelude::*, sea_query::IntoCondition, Set};
+
+use crate::impls::members::SqlMembers;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "User")]
@@ -25,17 +27,12 @@ pub struct Model {
     pub password: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub server: Option<String>,
 }
 
 impl Model {
-    pub fn to_user(&self) -> Result<User, String> {
-        let db_servers = self
-            .server
-            .as_ref()
-            .ok_or_else(|| String::from("No server in user"))?;
-        let servers = Servers(serde_json::from_str(db_servers.as_str()).unwrap_or_default());
+    pub async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String> {
+        let servers =
+            Servers(Members::get_servers_by_usersid(&UserId::new(self.id), executor).await?);
 
         Ok(User {
             id: UserId::new(self.id),
@@ -95,7 +92,6 @@ impl TryFrom<User> for ActiveModel {
     type Error = String;
 
     fn try_from(value: User) -> Result<Self, Self::Error> {
-        let json = serde_json::to_string(&value.servers).map_err(|f| f.to_string())?;
         let instance_json = serde_json::to_string(&value.instance).map_err(|f| f.to_string())?;
         let password = value
             .password
@@ -107,7 +103,6 @@ impl TryFrom<User> for ActiveModel {
             token: Set(value.token.unwrap_or_default()),
             email: Set(value.email.clone()),
             password: Set(password),
-            server: Set(Some(json)),
             instance: Set(Some(instance_json)),
             description: Set(value.description),
             ..Default::default()
@@ -117,10 +112,18 @@ impl TryFrom<User> for ActiveModel {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::members::Entity")]
+    Members,
     #[sea_orm(has_many = "super::messages::Entity")]
     Messages,
     #[sea_orm(has_many = "super::server::Entity")]
     Server,
+}
+
+impl Related<super::members::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Members.def()
+    }
 }
 
 impl Related<super::messages::Entity> for Entity {

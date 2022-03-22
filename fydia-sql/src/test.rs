@@ -17,7 +17,6 @@ mod tests {
                 email: "email@localhost".to_string(),
                 password: "$argon2id$v=19$m=4096,t=3,p=1$Jyx49kgh1ERrUKSQ8dMDPg$CAcbUAStkv4k2pZwBoN09n4IYVE/W9IIFSA1NWFXU/M".to_string(),
                 description: None,
-                server: None,
             }
             ], ])
             .into_connection();

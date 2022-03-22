@@ -45,11 +45,7 @@ pub trait SqlUser {
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     /// Prefere use [SqlServer::join()](`crate::impls::server::SqlServer::join()`)
-    async fn insert_server(
-        &mut self,
-        server_short_id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<(), String>;
+    fn insert_server(&mut self, server_short_id: &ServerId) -> Result<(), String>;
     async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn insert_user_and_update(&mut self, executor: &DatabaseConnection)
         -> Result<(), String>;
@@ -77,7 +73,7 @@ impl SqlUser for User {
         );
 
         if password_is_good {
-            model.to_user().ok()
+            model.to_user(executor).await.ok()
         } else {
             None
         }
@@ -87,7 +83,8 @@ impl SqlUser for User {
         Model::get_model_by_id(&id, executor)
             .await
             .ok()?
-            .to_user()
+            .to_user(executor)
+            .await
             .ok()
     }
 
@@ -95,13 +92,14 @@ impl SqlUser for User {
         Model::get_model_by_token(&token.0, executor)
             .await
             .ok()?
-            .to_user()
+            .to_user(executor)
+            .await
             .ok()
     }
 
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model = Model::get_model_by_id(&self.id.0, executor).await?;
-        let user_of_db = model.to_user()?;
+        let user_of_db = model.to_user(executor).await?;
 
         self.take_value_of(user_of_db);
         Ok(())
@@ -162,25 +160,7 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn insert_server(
-        &mut self,
-        server_short_id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<(), String> {
-        let mut active_model: UserActiveModel =
-            Model::get_model_by_id(&self.id.0, executor).await?.into();
-
-        let mut current_server = self.servers.clone().0;
-        current_server.push(server_short_id.clone());
-
-        let json = serde_json::to_string(&current_server).map_err(|f| f.to_string())?;
-
-        active_model.server = Set(Some(json));
-        UserEntity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
-
+    fn insert_server(&mut self, server_short_id: &ServerId) -> Result<(), String> {
         self.servers.0.push(server_short_id.clone());
 
         Ok(())
