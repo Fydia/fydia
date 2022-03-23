@@ -5,14 +5,11 @@ use fydia_struct::{
     server::{Members, Server, ServerId},
     user::{User, UserId, UserInfo},
 };
-use sea_orm::{DatabaseConnection, EntityTrait, Set};
+use sea_orm::{DatabaseConnection, Set};
 
 use crate::entity::server::Model;
 
-use super::{
-    members::SqlMembers,
-    user::{SqlUser, UserFrom},
-};
+use super::{delete, insert, members::SqlMembers, update, user::UserFrom};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -51,9 +48,10 @@ impl SqlServer for Server {
         id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Server, String> {
-        let model = Model::get_model_by_id(&id.id, executor).await?;
-
-        model.to_server(executor).await
+        Model::get_model_by_id(&id.id, executor)
+            .await?
+            .to_server(executor)
+            .await
     }
 
     async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
@@ -65,10 +63,7 @@ impl SqlServer for Server {
 
         let active_channel = crate::entity::server::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::server::Entity::insert(active_channel)
-            .exec(executor)
-            .await
-            .map_err(|error| error.to_string())?;
+        insert(active_channel, executor).await?;
 
         self.join(&mut user, executor).await
     }
@@ -76,14 +71,7 @@ impl SqlServer for Server {
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = crate::entity::server::ActiveModel::try_from(self.clone())?;
 
-        if let Err(error) = crate::entity::server::Entity::delete(active_channel)
-            .exec(executor)
-            .await
-        {
-            return Err(error.to_string());
-        }
-
-        Ok(())
+        delete(active_channel, executor).await
     }
 
     async fn update_name<T: Into<String> + Send>(
@@ -96,10 +84,7 @@ impl SqlServer for Server {
             Model::get_model_by_id(&self.id.id, executor).await?.into();
         active_model.name = Set(name.clone());
 
-        crate::entity::server::Entity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|e| e.to_string())?;
+        update(active_model, executor).await?;
 
         self.name = name;
 
@@ -108,19 +93,14 @@ impl SqlServer for Server {
 
     async fn update(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let am = crate::entity::server::ActiveModel::try_from(self.clone())?;
-        match crate::entity::server::Entity::update(am)
-            .exec(executor)
-            .await
-        {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+
+        update(am, executor).await
     }
 
     async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
         Members::insert(&self.id, &user.id, executor).await?;
 
-        user.insert_server(&self.id)?;
+        user.insert_server(&self.id);
 
         self.members.push(user.id.clone());
 
@@ -138,10 +118,7 @@ impl SqlServer for Server {
 
         let active_channel = crate::entity::channels::ActiveModel::try_from(channel)?;
 
-        crate::entity::channels::Entity::insert(active_channel)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        insert(active_channel, executor).await?;
 
         self.channel.0.push(channel.clone());
 

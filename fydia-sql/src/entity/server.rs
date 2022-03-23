@@ -10,7 +10,7 @@ use fydia_struct::{
 };
 use sea_orm::{entity::prelude::*, Set};
 
-use crate::impls::{channel::SqlChannel, role::SqlRoles};
+use crate::impls::{channel::SqlChannel, members::SqlMembers, role::SqlRoles};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "Server")]
@@ -26,14 +26,14 @@ pub struct Model {
 
 impl Model {
     pub async fn to_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        let members = Members::new();
-        let roles = Role::get_roles_by_server_id(self.id.clone(), executor).await?;
+        let id = ServerId::new(self.id.clone());
+        let members = Members::get_users_by_serverid(&id, executor).await?;
+        let roles = Role::get_roles_by_server_id(id.id.clone(), executor).await?;
 
-        let channel =
-            Channel::get_channels_by_server_id(&ServerId::new(self.id.clone()), executor).await?;
+        let channel = Channel::get_channels_by_server_id(&id, executor).await?;
 
         Ok(Server {
-            id: ServerId::new(self.id.clone()),
+            id,
             name: self.name.clone(),
             owner: UserId::new(self.owner),
             icon: self.icon.clone().unwrap_or_else(|| "Error".to_string()),

@@ -8,14 +8,17 @@ use async_trait::async_trait;
 use fydia_crypto::password::hash;
 use fydia_crypto::password::verify_password;
 use fydia_struct::user::Token;
+use fydia_struct::user::User;
 use fydia_struct::user::UserId;
 use fydia_struct::user::UserInfo;
-use fydia_struct::{server::ServerId, user::User};
 use fydia_utils::generate_string;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
 use sea_orm::EntityTrait;
 use sea_orm::Set;
+
+use super::delete;
+use super::update;
 
 #[async_trait]
 pub trait SqlUser {
@@ -44,8 +47,6 @@ pub trait SqlUser {
         clear_password: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    /// Prefere use [SqlServer::join()](`crate::impls::server::SqlServer::join()`)
-    fn insert_server(&mut self, server_short_id: &ServerId) -> Result<(), String>;
     async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn insert_user_and_update(&mut self, executor: &DatabaseConnection)
         -> Result<(), String>;
@@ -111,10 +112,7 @@ impl SqlUser for User {
             Model::get_model_by_id(&self.id.0, executor).await?.into();
         active_model.token = Set(token.clone());
 
-        UserEntity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(active_model, executor).await?;
 
         self.token = Some(token.clone());
         Ok(())
@@ -131,10 +129,7 @@ impl SqlUser for User {
 
         active_model.name = Set(name.clone());
 
-        UserEntity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(active_model, executor).await?;
 
         self.name = name;
         Ok(())
@@ -152,17 +147,9 @@ impl SqlUser for User {
         let password = hash(clear_password)?;
         active_model.password = Set(password.clone());
 
-        UserEntity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(active_model, executor).await?;
+
         self.password = Some(password);
-        Ok(())
-    }
-
-    fn insert_server(&mut self, server_short_id: &ServerId) -> Result<(), String> {
-        self.servers.0.push(server_short_id.clone());
-
         Ok(())
     }
 
@@ -191,11 +178,7 @@ impl SqlUser for User {
         let model = Model::get_model_by_id(&self.id.0, executor).await?;
         let active_model: UserActiveModel = model.into();
 
-        UserEntity::delete(active_model)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string())
+        delete(active_model, executor).await
     }
 
     async fn get_user_message() -> Vec<String> {

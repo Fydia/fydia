@@ -3,6 +3,8 @@ use fydia_struct::roles::Role;
 
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
+use super::delete;
+
 #[async_trait::async_trait]
 pub trait SqlRoles {
     async fn get_roles_by_server_id(
@@ -111,10 +113,7 @@ impl SqlRoles for Role {
             .ok_or("Can't the role")?;
 
         let active_model: entity::roles::ActiveModel = model.into();
-        entity::roles::Entity::delete(active_model)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string())
+
+        delete(active_model, executor).await
     }
 }

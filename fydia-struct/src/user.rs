@@ -1,6 +1,9 @@
 //! This module is related to user
 
-use crate::{instance::Instance, server::Servers};
+use crate::{
+    instance::Instance,
+    server::{ServerId, Servers},
+};
 use fydia_crypto::password::hash;
 use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
@@ -80,6 +83,10 @@ impl User {
         self.password = from.password;
         self.description = from.description;
         self.servers = from.servers;
+    }
+    /// Use it with precausion
+    pub fn insert_server(&mut self, server_short_id: &ServerId) {
+        self.servers.0.push(server_short_id.clone());
     }
 }
 

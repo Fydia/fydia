@@ -9,6 +9,8 @@ use sea_orm::{
 
 use crate::entity::messages::Model;
 
+use super::{delete, insert};
+
 #[async_trait::async_trait]
 pub trait SqlMessage {
     async fn get_messages_by_user_id(
@@ -94,11 +96,7 @@ impl SqlMessage for Message {
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::messages::Entity::insert(active_model)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string())
+        insert(active_model, executor).await
     }
 
     async fn update_message(
@@ -122,15 +120,11 @@ impl SqlMessage for Message {
     async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model = Model::get_model_by_id(&self.id, executor).await?;
         let active_model: crate::entity::messages::ActiveModel = model.into();
-        let res = crate::entity::messages::Entity::delete(active_model)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string());
+        delete(active_model, executor).await?;
 
         // Poisoning struct to not be used after
         *self = Message::default();
 
-        res
+        Ok(())
     }
 }

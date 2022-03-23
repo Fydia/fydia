@@ -2,9 +2,11 @@ use fydia_struct::{
     server::{Members, ServerId},
     user::UserId,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
+use sea_orm::{ColumnTrait, DatabaseConnection};
 
 use crate::entity::members::*;
+
+use super::insert;
 
 #[async_trait::async_trait]
 pub trait SqlMembers {
@@ -57,10 +59,6 @@ impl SqlMembers for Members {
     ) -> Result<(), String> {
         let acmodel = Model::new_activemodel(userid.clone(), serverid.clone());
 
-        Entity::insert(acmodel)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|error| error.to_string())
+        insert(acmodel, executor).await
     }
 }

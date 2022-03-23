@@ -1,8 +1,10 @@
 use std::convert::TryFrom;
 
 use super::{
+    delete, insert,
     message::SqlMessage,
     server::{SqlServer, SqlServerId},
+    update,
 };
 use crate::{entity::channels::Model, impls::user::UserFrom};
 use fydia_struct::{
@@ -114,11 +116,7 @@ impl SqlChannel for Channel {
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = crate::entity::channels::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::channels::Entity::insert(active_channel)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string())
+        insert(active_channel, executor).await
     }
 
     async fn update_name<T: Into<String> + Send>(
@@ -134,10 +132,7 @@ impl SqlChannel for Channel {
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
         active_model.name = Set(name.clone());
 
-        crate::entity::channels::Entity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(active_model, executor).await?;
 
         self.name = name;
 
@@ -158,10 +153,7 @@ impl SqlChannel for Channel {
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
         active_model.description = Set(Some(description.clone()));
 
-        crate::entity::channels::Entity::update(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(active_model, executor).await?;
 
         self.description = description;
         Ok(())
@@ -174,11 +166,7 @@ impl SqlChannel for Channel {
                 .map_err(|_| "Can't update name".to_string())?
                 .into();
 
-        crate::entity::channels::Entity::delete(active_model)
-            .exec(executor)
-            .await
-            .map(|_| ())
-            .map_err(|f| f.to_string())
+        delete(active_model, executor).await
     }
 
     async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
