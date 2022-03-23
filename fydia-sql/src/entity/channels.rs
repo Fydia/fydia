@@ -19,7 +19,7 @@ pub struct Model {
 
 impl Model {
     pub fn to_channel(&self) -> Option<Channel> {
-        let channel_type = self.channel_type.clone().map(ChannelType::from_string)?;
+        let channel_type = self.channel_type.as_ref().map(ChannelType::from_string)?;
         let parent_id = serde_json::from_str::<ParentId>(&self.parent_id).ok()?;
         Some(Channel {
             id: ChannelId::new(self.id.clone()),

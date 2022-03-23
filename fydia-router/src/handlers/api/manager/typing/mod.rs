@@ -140,8 +140,8 @@ impl TypingInner {
             },
             serverid,
             channelid,
-            websocket.clone(),
-            database.clone(),
+            &websocket,
+            &database,
         );
 
         Ok(())
@@ -205,8 +205,8 @@ impl TypingInner {
             },
             serverid,
             channelid,
-            websocket.clone(),
-            database.clone(),
+            &websocket,
+            &database,
         );
 
         Ok(())
@@ -223,9 +223,11 @@ fn send_websocket_message(
     event: EventContent,
     serverid: ServerId,
     channelid: ChannelId,
-    websocket: Arc<WebsocketManagerChannel>,
-    database: DbConnection,
+    websocket: &Arc<WebsocketManagerChannel>,
+    database: &DbConnection,
 ) {
+    let database = database.clone();
+    let websocket = websocket.clone();
     tokio::task::spawn(async move {
         let users = channelid
             .get_channel(&database)
