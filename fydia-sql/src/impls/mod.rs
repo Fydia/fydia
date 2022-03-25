@@ -1,5 +1,6 @@
 use sea_orm::{
-    sea_query::SimpleExpr, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
+    sea_query::IntoCondition, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
+    QueryFilter,
 };
 
 pub mod channel;
@@ -12,24 +13,37 @@ pub mod server;
 pub mod token;
 pub mod user;
 
-#[async_trait::async_trait]
-trait DefaultSql {
-    type SelfModel;
-    type ActiveModel;
-    type ResultData;
+pub async fn get_all<T: EntityTrait, S: IntoCondition>(
+    _: T,
+    simplexprs: Vec<S>,
+    executor: &DatabaseConnection,
+) -> Result<Vec<T::Model>, String> {
+    let mut select = T::find();
+    for i in simplexprs {
+        select = select.filter(i);
+    }
 
-    async fn get(
-        expr: SimpleExpr,
-        executor: &DatabaseConnection,
-    ) -> Result<Self::ResultData, String>;
+    select
+        .all(executor)
+        .await
+        .map_err(|error| error.to_string())
+}
 
-    async fn get_by_id(executor: &DatabaseConnection) -> Result<Self::SelfModel, String>;
-    ///
-    async fn insert_model(executor: &DatabaseConnection) -> Result<Self::SelfModel, String>;
-    async fn insert(
-        am: Self::ActiveModel,
-        executor: &DatabaseConnection,
-    ) -> Result<Self::SelfModel, String>;
+pub async fn get_one<T: EntityTrait, S: IntoCondition>(
+    _: T,
+    simplexprs: Vec<S>,
+    executor: &DatabaseConnection,
+) -> Result<T::Model, String> {
+    let mut select = T::find();
+    for i in simplexprs {
+        select = select.filter(i);
+    }
+
+    select
+        .one(executor)
+        .await
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "This is not exists in DB".to_string())
 }
 
 pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(

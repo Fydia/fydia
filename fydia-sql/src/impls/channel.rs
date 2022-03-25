@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use super::{
-    delete, insert,
+    delete, get_all, get_one, insert,
     message::SqlMessage,
     server::{SqlServer, SqlServerId},
     update,
@@ -50,12 +50,16 @@ impl SqlChannel for Channel {
         id: &ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Channel, String> {
-        match Model::get_model_by_id(&id.id, executor).await {
-            Ok(model) => model
-                .to_channel()
-                .ok_or_else(|| "Cannot convert model to channel".to_string()),
-            _ => Err("This Channel doesn't exists".to_string()),
-        }
+        let model = get_one(
+            crate::entity::channels::Entity,
+            vec![crate::entity::channels::Column::Id.eq(id.id.as_str())],
+            executor,
+        )
+        .await?;
+
+        model
+            .to_channel()
+            .ok_or_else(|| "Cannot convert model to channel".to_string())
     }
 
     async fn get_user_of_channel(
@@ -96,21 +100,21 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
         let parentid = ParentId::ServerId(server_id.clone()).to_string()?;
-        let mut channels: Vec<Channel> = Vec::new();
 
-        let models = crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.eq(parentid))
-            .all(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        let models = get_all(
+            crate::entity::channels::Entity,
+            vec![crate::entity::channels::Column::ParentId.eq(parentid)],
+            executor,
+        )
+        .await?;
 
-        for model in models {
-            if let Some(channel) = model.to_channel() {
-                channels.push(channel);
-            }
-        }
-
-        Ok(Channels(channels))
+        Ok(Channels(
+            models
+                .iter()
+                .map(|model| model.to_channel())
+                .flatten() // Unwrap all model
+                .collect::<Vec<Channel>>(),
+        ))
     }
 
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
