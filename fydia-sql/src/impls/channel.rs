@@ -13,7 +13,7 @@ use fydia_struct::{
     server::{Channels, ServerId},
     user::UserId,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, DatabaseConnection, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
@@ -207,21 +207,16 @@ impl SqlDirectMessages for DirectMessage {
         userid: UserId,
     ) -> Result<Vec<Channel>, String> {
         let user = userid.to_string()?;
-        let vec_model = crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.contains(&user))
-            .all(executor)
-            .await
-            .map_err(|f| f.to_string())?;
-
-        let mut result = Vec::new();
-
-        for model in vec_model {
-            if let Some(channel) = model.to_channel() {
-                result.push(channel);
-            }
-        }
-
-        Ok(result)
+        Ok(get_all(
+            crate::entity::channels::Entity,
+            vec![crate::entity::channels::Column::ParentId.contains(&user)],
+            executor,
+        )
+        .await?
+        .iter()
+        .map(|model| model.to_channel())
+        .flatten()
+        .collect())
     }
 
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {

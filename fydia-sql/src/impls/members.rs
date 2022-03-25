@@ -6,7 +6,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection};
 
 use crate::entity::members::*;
 
-use super::insert;
+use super::{get_all, insert};
 
 #[async_trait::async_trait]
 pub trait SqlMembers {
@@ -31,12 +31,15 @@ impl SqlMembers for Members {
         serverid: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Members, String> {
-        let model: Vec<UserId> =
-            Model::get_models_by(Column::Serverid.contains(&serverid.id), executor)
-                .await?
-                .iter()
-                .map(|i| i.to_userid())
-                .collect();
+        let model: Vec<UserId> = get_all(
+            Entity,
+            vec![Column::Serverid.contains(&serverid.id)],
+            executor,
+        )
+        .await?
+        .iter()
+        .map(|i| i.to_userid())
+        .collect();
 
         Ok(Members::new_with(model.len() as i32, model))
     }
@@ -45,7 +48,7 @@ impl SqlMembers for Members {
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<ServerId>, String> {
-        Ok(Model::get_models_by(Column::Userid.eq(userid.0), executor)
+        Ok(get_all(Entity, vec![Column::Userid.eq(userid.0)], executor)
             .await?
             .iter()
             .map(|i| i.to_server())

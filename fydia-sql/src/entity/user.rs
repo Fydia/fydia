@@ -7,9 +7,9 @@ use fydia_struct::{
     server::{Members, Servers},
     user::{User, UserId},
 };
-use sea_orm::{entity::prelude::*, sea_query::IntoCondition, Set};
+use sea_orm::{entity::prelude::*, Set};
 
-use crate::impls::members::SqlMembers;
+use crate::impls::{get_one, members::SqlMembers};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "User")]
@@ -47,44 +47,24 @@ impl Model {
     }
 
     pub async fn get_model_by_id(id: &i32, executor: &DatabaseConnection) -> Result<Model, String> {
-        match crate::entity::user::Entity::find_by_id(*id)
-            .one(executor)
-            .await
-        {
-            Ok(Some(model)) => Ok(model),
-            _ => Err("No User with this id".to_string()),
-        }
+        get_one(
+            crate::entity::user::Entity,
+            vec![crate::entity::user::Column::Id.eq(*id)],
+            executor,
+        )
+        .await
     }
 
     pub async fn get_model_by_token(
         token: &str,
         executor: &DatabaseConnection,
     ) -> Result<Model, String> {
-        match crate::entity::user::Entity::find()
-            .filter(crate::entity::user::Column::Token.contains(token))
-            .one(executor)
-            .await
-        {
-            Ok(Some(model)) => Ok(model),
-            _ => Err("No User with this id".to_string()),
-        }
-    }
-
-    pub async fn get_model_by<F>(
-        condition: F,
-        executor: &DatabaseConnection,
-    ) -> Result<Model, String>
-    where
-        F: IntoCondition,
-    {
-        match crate::entity::user::Entity::find()
-            .filter(condition)
-            .one(executor)
-            .await
-        {
-            Ok(Some(model)) => Ok(model),
-            _ => Err("No User with this id".to_string()),
-        }
+        get_one(
+            crate::entity::user::Entity,
+            vec![crate::entity::user::Column::Token.contains(token)],
+            executor,
+        )
+        .await
     }
 }
 

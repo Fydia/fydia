@@ -18,6 +18,7 @@ use sea_orm::EntityTrait;
 use sea_orm::Set;
 
 use super::delete;
+use super::get_one;
 use super::update;
 
 #[async_trait]
@@ -61,8 +62,9 @@ impl SqlUser for User {
         password: T,
         executor: &DatabaseConnection,
     ) -> Option<Self> {
-        let model = Model::get_model_by(
-            crate::entity::user::Column::Email.contains(email.into().as_str()),
+        let model = get_one(
+            crate::entity::user::Entity,
+            vec![crate::entity::user::Column::Email.contains(email.into().as_str())],
             executor,
         )
         .await
