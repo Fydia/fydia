@@ -1,9 +1,9 @@
 use crate::entity;
 use fydia_struct::roles::Role;
 
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, Set};
 
-use super::delete;
+use super::{delete, get_all, get_one, update};
 
 #[async_trait::async_trait]
 pub trait SqlRoles {
@@ -31,30 +31,25 @@ impl SqlRoles for Role {
         shortid: String,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Self>, String> {
-        let mut result = Vec::new();
-        let query = crate::entity::roles::Entity::find()
-            .filter(entity::roles::Column::Serverid.eq(shortid))
-            .all(executor)
-            .await;
-        if let Ok(query) = query {
-            for i in query {
-                result.push(i.to_role());
-            }
-        }
-
-        Ok(result)
+        Ok(get_all(
+            entity::roles::Entity,
+            vec![entity::roles::Column::Serverid.eq(shortid)],
+            executor,
+        )
+        .await?
+        .iter()
+        .map(|f| f.to_role())
+        .collect::<Vec<Self>>())
     }
 
     async fn get_role_by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Self, String> {
-        let query = entity::roles::Entity::find()
-            .filter(entity::roles::Column::Id.eq(role_id))
-            .one(executor)
-            .await;
-        match query {
-            Ok(Some(model)) => Ok(model.to_role()),
-            Err(e) => Err(e.to_string()),
-            _ => Err(String::from("No Role with this id")),
-        }
+        Ok(get_one(
+            entity::roles::Entity,
+            vec![entity::roles::Column::Id.eq(role_id)],
+            executor,
+        )
+        .await?
+        .to_role())
     }
 
     async fn update_name<T: Into<String> + Send>(
@@ -64,21 +59,16 @@ impl SqlRoles for Role {
     ) -> Result<(), String> {
         let name = name.into();
         let active_model = entity::roles::ActiveModel {
+            id: Set(self.id),
             name: Set(name.clone()),
             ..Default::default()
         };
 
-        match entity::roles::Entity::update(active_model)
-            .filter(entity::messages::Column::Id.eq(self.id))
-            .exec(executor)
-            .await
-        {
-            Ok(_) => {
-                self.name = name;
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        }
+        update(active_model, executor).await?;
+
+        self.name = name;
+
+        Ok(())
     }
 
     async fn update_color<T: Into<String> + Send>(
@@ -88,21 +78,16 @@ impl SqlRoles for Role {
     ) -> Result<(), String> {
         let color = color.into();
         let active_model = entity::roles::ActiveModel {
+            id: Set(self.id),
             color: Set(color.clone()),
             ..Default::default()
         };
 
-        match entity::roles::Entity::update(active_model)
-            .filter(entity::messages::Column::Id.eq(self.id))
-            .exec(executor)
-            .await
-        {
-            Ok(_) => {
-                self.color = color;
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        }
+        update(active_model, executor).await?;
+
+        self.color = color;
+
+        Ok(())
     }
 
     async fn delete_role(&self, executor: &DatabaseConnection) -> Result<(), String> {

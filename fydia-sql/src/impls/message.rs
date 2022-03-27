@@ -3,13 +3,11 @@
 use std::convert::TryFrom;
 
 use fydia_struct::{channel::ChannelId, messages::Message};
-use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-};
+use sea_orm::{ColumnTrait, DatabaseConnection};
 
 use crate::entity::messages::Model;
 
-use super::{delete, insert};
+use super::{delete, get_all_with_limit_with_order, insert, update};
 
 #[async_trait::async_trait]
 pub trait SqlMessage {
@@ -40,21 +38,21 @@ impl SqlMessage for Message {
         id: i32,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
-        let mut messages = Vec::new();
-        let mut query = crate::entity::messages::Entity::find()
-            .filter(crate::entity::messages::Column::AuthorId.eq(id))
-            .order_by(
+        let models = get_all_with_limit_with_order(
+            crate::entity::messages::Entity,
+            vec![crate::entity::messages::Column::AuthorId.eq(id)],
+            (
                 crate::entity::messages::Column::Timestamp,
                 sea_orm::Order::Asc,
-            )
-            .paginate(executor, 50);
+            ),
+            50,
+            executor,
+        )
+        .await?;
 
-        while let Ok(Some(e)) = query.fetch_and_next().await {
-            for i in e {
-                if let Ok(message) = i.to_message(executor).await {
-                    messages.push(message);
-                }
-            }
+        let mut messages = Vec::new();
+        for i in models {
+            messages.push(i.to_message(executor).await?);
         }
 
         Ok(messages)
@@ -64,20 +62,22 @@ impl SqlMessage for Message {
         channel_id: ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
-        let mut messages = Vec::new();
-        let query = crate::entity::messages::Entity::find()
-            .filter(crate::entity::messages::Column::ChannelId.eq(channel_id.id))
-            .order_by(
+        let models = get_all_with_limit_with_order(
+            crate::entity::messages::Entity,
+            vec![crate::entity::messages::Column::ChannelId.eq(channel_id.id)],
+            (
                 crate::entity::messages::Column::Timestamp,
                 sea_orm::Order::Asc,
-            )
-            .paginate(executor, 50);
+            ),
+            50,
+            executor,
+        )
+        .await?;
 
-        if let Ok(models) = query.fetch().await {
-            for i in models {
-                if let Ok(message) = i.to_message(executor).await {
-                    messages.push(message);
-                }
+        let mut messages = Vec::new();
+        for i in models {
+            if let Ok(message) = i.to_message(executor).await {
+                messages.push(message);
             }
         }
 
@@ -106,11 +106,7 @@ impl SqlMessage for Message {
     ) -> Result<(), String> {
         let model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::messages::Entity::update(model)
-            .filter(crate::entity::messages::Column::Id.eq(self.id.as_str()))
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        update(model, executor).await?;
 
         self.content = content.to_string();
 
