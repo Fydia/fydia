@@ -111,8 +111,7 @@ impl SqlChannel for Channel {
         Ok(Channels(
             models
                 .iter()
-                .map(|model| model.to_channel())
-                .flatten() // Unwrap all model
+                .filter_map(|model| model.to_channel())
                 .collect::<Vec<Channel>>(),
         ))
     }
@@ -214,8 +213,7 @@ impl SqlDirectMessages for DirectMessage {
         )
         .await?
         .iter()
-        .map(|model| model.to_channel())
-        .flatten()
+        .filter_map(|model| model.to_channel())
         .collect())
     }
 
