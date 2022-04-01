@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `Roles` (
     KEY `Roles_FK` (`serverid`),
     CONSTRAINT `Roles_FK` FOREIGN KEY (`serverid`) REFERENCES `Server` (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
-CREATE TABLE `Members` (
+CREATE TABLE IF NOT EXISTS `Members` (
   `serverid` varchar(30) NOT NULL,
   `userid` int(10) NOT NULL,
   UNIQUE KEY `Members_UN` (`serverid`,`userid`),
