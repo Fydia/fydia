@@ -35,7 +35,7 @@ tower-http = { version = "0.2.5", features = ["trace"] }
 tower = "0.4.12"
 rand = "0.8.5"
 parking_lot = { version = "0.12.0" }
-hyper = "0.14.17"
+hyper = "0.14.18"
 flume = "0.10.12"
 rust-embed = "6.3.0"
 rayon = "1.5.1"
