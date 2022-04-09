@@ -9,16 +9,16 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
-pub async fn get_direct_messages(
+pub async fn get_direct_messages<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let user = BasicValues::get_user(&headers, &database).await?;
     let mut channels = DirectMessage::get_by_userid(&database, user.id)
         .await
         .map_err(|e| {
             error!(e);
-            FydiaResponse::new_error("Error")
+            FydiaResponse::TextError("Error")
         })?;
 
     for i in channels.iter_mut() {
@@ -29,5 +29,5 @@ pub async fn get_direct_messages(
         }
     }
 
-    Ok(FydiaResponse::new_ok_json(channels))
+    Ok(FydiaResponse::from_serialize(channels))
 }

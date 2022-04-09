@@ -6,21 +6,21 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
-pub async fn join(
+pub async fn join<'a>(
     headers: HeaderMap,
     Path(server_id): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (mut user, mut server) =
         BasicValues::get_user_and_server(&headers, server_id, &database).await?;
 
     if user.servers.is_join(&server.id) {
-        return Err(FydiaResponse::new_error("Already join"));
+        return Err(FydiaResponse::TextError("Already join"));
     }
 
     server
         .join(&mut user, &database)
         .await
-        .map(|_| FydiaResponse::new_ok("Server joined"))
-        .map_err(|_| FydiaResponse::new_error("Cannot join"))
+        .map(|_| FydiaResponse::Text("Server joined"))
+        .map_err(|_| FydiaResponse::TextError("Cannot join"))
 }

@@ -7,20 +7,15 @@ pub mod vocal;
 
 use axum::extract::{Extension, Path};
 use fydia_sql::{impls::channel::SqlChannel, sqlpool::DbConnection};
+use fydia_struct::channel::{Channel, ChannelId};
+use fydia_struct::response::{FydiaResponse, FydiaResult};
 
-use fydia_struct::response::FydiaResult;
-use fydia_struct::{
-    channel::{Channel, ChannelId},
-    response::FydiaResponse,
-};
-
-pub async fn info_channel(
+pub async fn info_channel<'a>(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult {
-    let channel = Channel::get_channel_by_id(&ChannelId::new(channelid), &database)
+) -> FydiaResult<'a> {
+    Channel::get_channel_by_id(&ChannelId::new(channelid), &database)
         .await
-        .map_err(FydiaResponse::new_error)?;
-
-    Ok(FydiaResponse::new_ok_json(&channel))
+        .map(FydiaResponse::from_serialize)
+        .map_err(FydiaResponse::StringError)
 }

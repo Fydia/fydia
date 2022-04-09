@@ -15,27 +15,27 @@ use fydia_struct::server::ServerId;
 use fydia_struct::user::UserInfo;
 use http::HeaderMap;
 
-pub async fn event_handler(
+pub async fn event_handler<'a>(
     headers: HeaderMap,
     body: Bytes,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
     Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let body = body.to_vec();
     let msg = receive_message(&headers, &body, &rsa)
         .await
-        .ok_or_else(|| FydiaResponse::new_error("Decryption Error"))?;
+        .ok_or(FydiaResponse::TextError("Decryption Error"))?;
 
     let event = serde_json::from_str::<Event>(msg.as_str())
-        .map_err(|_| FydiaResponse::new_error("Bad Body"))?;
+        .map_err(|_| FydiaResponse::TextError("Bad Body"))?;
 
     crate::handlers::event::event_handler(event, &database, &wbsockets).await;
 
-    Ok(FydiaResponse::new_ok(""))
+    Ok(FydiaResponse::Text(""))
 }
 
-pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> FydiaResult {
+pub async fn send_test_message<'a>(Extension(keys): Extension<Arc<RsaData>>) -> FydiaResult<'a> {
     let event = Event::new(
         ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD"),
         EventContent::Message {
@@ -48,7 +48,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
                     UserInfo::default(),
                     ChannelId::new("CkFg9d9IVf7Shht"),
                 )
-                .map_err(FydiaResponse::new_error)?,
+                .map_err(FydiaResponse::StringError)?,
             ),
         },
     );
@@ -59,7 +59,7 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
         port: 8080,
     })
     .await
-    .ok_or_else(|| FydiaResponse::new_error("Cannot get the publickey"))?;
+    .ok_or(FydiaResponse::TextError("Cannot get the publickey"))?;
 
     fydia_dispatcher::message::send::send_message(
         &keys,
@@ -73,6 +73,6 @@ pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> Fydi
         )],
     )
     .await
-    .map(|_| FydiaResponse::new_ok(""))
-    .map_err(|_| FydiaResponse::new_error("Error when send message"))
+    .map(|_| FydiaResponse::Text(""))
+    .map_err(|_| FydiaResponse::TextError("Error when send message"))
 }

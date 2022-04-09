@@ -5,11 +5,11 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use http::HeaderMap;
 
-pub async fn get_messages(
+pub async fn get_messages<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &database,
     )
@@ -18,6 +18,6 @@ pub async fn get_messages(
     channel
         .get_messages(&database)
         .await
-        .map(|value| FydiaResponse::new_ok_json(&value))
-        .map_err(|_| FydiaResponse::new_error("Cannot get message"))
+        .map(|value| FydiaResponse::from_serialize(&value))
+        .map_err(|_| FydiaResponse::TextError("Cannot get message"))
 }

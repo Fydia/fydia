@@ -15,67 +15,69 @@ use fydia_struct::{
 pub struct BasicValues;
 
 impl BasicValues {
-    pub async fn get_user(
+    pub async fn get_user<'a>(
         headers: &HeaderMap,
         executor: &DbConnection,
-    ) -> Result<User, FydiaResponse> {
-        let token =
-            Token::from_headervalue(headers).ok_or_else(|| FydiaResponse::new_error("No token"))?;
+    ) -> Result<User, FydiaResponse<'a>> {
+        let token = Token::from_headervalue(headers).ok_or(FydiaResponse::TextError("No token"))?;
+
         token
             .get_user(executor)
             .await
-            .ok_or_else(|| FydiaResponse::new_error("Wrong token"))
+            .ok_or(FydiaResponse::TextError("Wrong token"))
     }
 
-    pub async fn get_user_and_server_and_check_if_joined<T: Into<String>>(
+    pub async fn get_user_and_server_and_check_if_joined<'a, T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse> {
-        let user = Self::get_user(headers, executor).await?;
-        let serverid = ServerId::new(serverid);
-        if !user.servers.is_join(&serverid) {
-            return Err(FydiaResponse::new_error("Server not exists"));
-        }
-        let server = serverid
-            .get_server(executor)
-            .await
-            .map_err(|_| FydiaResponse::new_error("Bad ServerId"))?;
-
-        Ok((user, server))
-    }
-
-    pub async fn get_user_and_server<T: Into<String>>(
-        headers: &HeaderMap,
-        serverid: T,
-        executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse> {
+    ) -> Result<(User, Server), FydiaResponse<'a>> {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid)
             .get_server(executor)
             .await
-            .map_err(|_| FydiaResponse::new_error("Bad ServerId"))?;
+            .map_err(|_| FydiaResponse::TextError("Server not exists"))?;
+
+        if !user.servers.is_join(&server.id) {
+            return Err(FydiaResponse::TextError("Server not exists"));
+        }
 
         Ok((user, server))
     }
 
-    pub async fn get_user_and_server_and_check_if_joined_and_channel<T: Into<String>>(
+    pub async fn get_user_and_server<'a, T: Into<String>>(
+        headers: &HeaderMap,
+        serverid: T,
+        executor: &DbConnection,
+    ) -> Result<(User, Server), FydiaResponse<'a>> {
+        let user = Self::get_user(headers, executor).await?;
+
+        let server = ServerId::new(serverid)
+            .get_server(executor)
+            .await
+            .map_err(|_| FydiaResponse::TextError("Bad ServerId"))?;
+
+        Ok((user, server))
+    }
+
+    pub async fn get_user_and_server_and_check_if_joined_and_channel<'a, T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,
         channelid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server, Channel), FydiaResponse> {
+    ) -> Result<(User, Server, Channel), FydiaResponse<'a>> {
         let (user, server) =
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
-        let channel_id = ChannelId::new(channelid);
-        if !server.channel.is_exists(&channel_id) {
-            return Err(FydiaResponse::new_error("Channel is not exists"));
-        }
-        let channel = channel_id
+
+        let channel = ChannelId::new(channelid)
             .get_channel(executor)
             .await
-            .map_err(FydiaResponse::new_error)?;
+            .map_err(FydiaResponse::StringError)?;
+
+        if !server.channel.is_exists(&channel.id) {
+            return Err(FydiaResponse::TextError("Channel is not exists"));
+        }
 
         Ok((user, server, channel))
     }

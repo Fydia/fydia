@@ -10,12 +10,12 @@ use crate::handlers::{
     basic::BasicValues,
 };
 
-pub async fn start_typing(
+pub async fn start_typing<'a>(
     Extension(database): Extension<DbConnection>,
     Extension(typingmanager): Extension<Arc<TypingManagerChannel>>,
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &database,
     )
@@ -23,21 +23,21 @@ pub async fn start_typing(
 
     typingmanager
         .start_typing(user.id, channel.id, server.id)
-        .map(|_| FydiaResponse::new_ok(""))
+        .map(|_| FydiaResponse::Text(""))
         .map_err(|error| {
             error!(error);
-            FydiaResponse::new_error_custom_status(
-                "Can't start typing",
+            FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
+                "Can't start typing",
             )
         })
 }
-pub async fn stop_typing(
+pub async fn stop_typing<'a>(
     Extension(database): Extension<DbConnection>,
     Extension(typingmanager): Extension<Arc<TypingManagerChannel>>,
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &database,
     )
@@ -45,12 +45,12 @@ pub async fn stop_typing(
 
     typingmanager
         .stop_typing(user.id, channel.id, server.id)
-        .map(|_| FydiaResponse::new_ok(""))
+        .map(|_| FydiaResponse::Text(""))
         .map_err(|error| {
             error!(error);
-            FydiaResponse::new_error_custom_status(
-                "Can't start typing",
+            FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
+                "Can't start typing",
             )
         })
 }

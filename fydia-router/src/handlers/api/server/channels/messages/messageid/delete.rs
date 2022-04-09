@@ -18,13 +18,13 @@ use crate::handlers::{
     basic::BasicValues,
 };
 
-pub async fn delete_message(
+pub async fn delete_message<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
     Extension(_rsa): Extension<Arc<RsaData>>,
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &executor,
     )
@@ -32,10 +32,10 @@ pub async fn delete_message(
 
     let mut message = Message::get_message_by_id(&messageid, &executor)
         .await
-        .map_err(FydiaResponse::new_error)?;
+        .map_err(FydiaResponse::StringError)?;
 
     if message.author_id.id != user.id {
-        return Err(FydiaResponse::new_error("You can't delete this message"));
+        return Err(FydiaResponse::TextError("You can't delete this message"));
     }
 
     wbsocket
@@ -49,23 +49,23 @@ pub async fn delete_message(
             &channel
                 .get_user_of_channel(&executor)
                 .await
-                .map_err(FydiaResponse::new_error)?
+                .map_err(FydiaResponse::StringError)?
                 .to_userinfo(&executor)
                 .await
-                .map_err(|_| FydiaResponse::new_error("Can't delete"))?,
+                .map_err(|_| FydiaResponse::TextError("Can't delete"))?,
         )
         .await
         .map_err(|_| {
-            FydiaResponse::new_error_custom_status(
-                "Cannot delete message",
+            FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
+                "Cannot delete message",
             )
         })?;
 
     message
         .delete_message(&executor)
         .await
-        .map_err(FydiaResponse::new_error)?;
+        .map_err(FydiaResponse::StringError)?;
 
-    Ok(FydiaResponse::new_ok("Message delete"))
+    Ok(FydiaResponse::Text("Message delete"))
 }

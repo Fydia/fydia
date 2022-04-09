@@ -5,12 +5,12 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
-pub async fn verify(
+pub async fn verify<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     BasicValues::get_user(&headers, &database)
         .await
-        .map(|_| FydiaResponse::new_ok(""))
-        .map_err(|_| FydiaResponse::new_error(""))
+        .map(|_| FydiaResponse::Text(""))
+        .map_err(|_| FydiaResponse::TextError(""))
 }

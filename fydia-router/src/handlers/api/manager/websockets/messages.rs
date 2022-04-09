@@ -26,20 +26,27 @@ pub async fn ws_handler(
         .get_user(&database)
         .await
         .map(|user| user.to_userinfo());
+
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
-        .into_response()
 }
 
 async fn connected(
     socket: WebSocket,
     wbmanager: Arc<WebsocketManagerChannel>,
     user: Option<UserInfo>,
-) -> Result<(), String> {
-    let user = user.ok_or_else(|| "No user".to_string())?;
-    let (sender, mut receiver) = wbmanager
-        .get_new_channel(&user)
-        .await
-        .ok_or_else(|| "No Channel".to_string())?;
+) {
+    let user = if let Some(user) = user {
+        user
+    } else {
+        return;
+    };
+
+    let (sender, mut receiver) = if let Some(channels) = wbmanager.get_new_channel(&user).await {
+        channels
+    } else {
+        return;
+    };
+
     let (mut sink, mut stream) = socket.split();
     let thread_sender = sender.clone();
 
@@ -86,8 +93,6 @@ async fn connected(
             }
         }
     });
-
-    Ok(())
 }
 
 pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>

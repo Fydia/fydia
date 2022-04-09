@@ -11,12 +11,12 @@ pub mod join;
 pub mod picture;
 pub mod roles;
 
-pub async fn get_server(
+pub async fn get_server<'a>(
     headers: HeaderMap,
     Path(serverid): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     BasicValues::get_user_and_server_and_check_if_joined(&headers, serverid, &database)
         .await
-        .map(|(_, server)| FydiaResponse::new_ok_json(&server))
+        .map(|(_, server)| FydiaResponse::from_serialize(&server))
 }

@@ -10,31 +10,32 @@ use fydia_struct::{
 use http::StatusCode;
 use serde_json::value;
 
-pub async fn user_login(body: Bytes, Extension(database): Extension<DbConnection>) -> FydiaResult {
+pub async fn user_login<'a>(
+    body: Bytes,
+    Extension(database): Extension<DbConnection>,
+) -> FydiaResult<'a> {
     let body = body.to_vec();
     if body.is_empty() {
-        return Err(FydiaResponse::new_error("Bad Body"));
+        return Err(FydiaResponse::TextError("Bad Body"));
     }
     let body_string =
-        String::from_utf8(body).map_err(|_| FydiaResponse::new_error("Body error"))?;
+        String::from_utf8(body).map_err(|_| FydiaResponse::TextError("Body error"))?;
 
     let json = serde_json::from_str::<value::Value>(body_string.as_str())
-        .map_err(|_| FydiaResponse::new_error("Json error"))?;
+        .map_err(|_| FydiaResponse::TextError("Json error"))?;
 
     let email = get_json("email", &json)?;
     let password = get_json("password", &json)?;
 
     let mut user = User::get_user_by_email_and_password(email, password, &database)
         .await
-        .ok_or_else(|| FydiaResponse::new_error("User not exists"))?;
+        .ok_or(FydiaResponse::TextError("User not exists"))?;
 
     user.update_token(&database).await.map_err(|_| {
-        FydiaResponse::new_error_custom_status("Database Error", StatusCode::INTERNAL_SERVER_ERROR)
+        FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Database Error")
     })?;
 
-    let token = user
-        .token
-        .ok_or_else(|| FydiaResponse::new_error("Token error"))?;
+    let token = user.token.ok_or(FydiaResponse::Text("Token error"))?;
 
-    Ok(FydiaResponse::new_ok(token))
+    Ok(FydiaResponse::String(token))
 }

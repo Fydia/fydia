@@ -94,5 +94,5 @@ pub fn messageid() -> Router {
                 .post(update_message)
                 .delete(delete_message),
         )
-        .route("reactions", axum::routing::post(default).delete(default))
+        .route("/reactions", axum::routing::post(default).delete(default))
 }

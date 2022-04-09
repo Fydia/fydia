@@ -5,11 +5,11 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
-pub async fn get_info_of_self(
+pub async fn get_info_of_self<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     BasicValues::get_user(&headers, &executor)
         .await
-        .map(|user| FydiaResponse::new_ok_json(&user.to_userinfo()))
+        .map(|user| FydiaResponse::from_serialize(&user.to_userinfo()))
 }

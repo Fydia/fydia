@@ -23,14 +23,14 @@ use crate::handlers::{
     get_json,
 };
 
-pub async fn update_message(
+pub async fn update_message<'a>(
     body: Bytes,
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
     Extension(_rsa): Extension<Arc<RsaData>>,
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &executor,
     )
@@ -38,35 +38,35 @@ pub async fn update_message(
 
     let mut message = Message::get_message_by_id(&messageid, &executor)
         .await
-        .map_err(FydiaResponse::new_error)?;
+        .map_err(FydiaResponse::StringError)?;
 
     if message.message_type != MessageType::TEXT && message.message_type != MessageType::URL {
-        return Err(FydiaResponse::new_error("Cannot edit this type of message"));
+        return Err(FydiaResponse::TextError("Cannot edit this type of message"));
     }
 
     if message.author_id.id != user.id {
-        return Err(FydiaResponse::new_error("You can't edit this message"));
+        return Err(FydiaResponse::TextError("You can't edit this message"));
     }
 
     let body =
-        String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::new_error("Body error"))?;
+        String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::TextError("Body error"))?;
 
-    let value = serde_json::from_str(&body).map_err(|_| FydiaResponse::new_error("JSON error"))?;
+    let value = serde_json::from_str(&body).map_err(|_| FydiaResponse::TextError("JSON error"))?;
 
     let content = get_json("content", &value)?.to_string();
 
     message
         .update_message(&content, &executor)
         .await
-        .map_err(FydiaResponse::new_error)?;
+        .map_err(FydiaResponse::StringError)?;
 
     let userinfos = &channel
         .get_user_of_channel(&executor)
         .await
-        .map_err(FydiaResponse::new_error)?
+        .map_err(|_| FydiaResponse::TextError("Cannot get user"))?
         .to_userinfo(&executor)
         .await
-        .map_err(|_| FydiaResponse::new_error("Cannot post message"))?;
+        .map_err(|_| FydiaResponse::TextError("Cannot post message"))?;
 
     wbsocket
         .send(
@@ -81,11 +81,11 @@ pub async fn update_message(
         )
         .await
         .map_err(|_| {
-            FydiaResponse::new_error_custom_status(
-                "Cannot delete message",
+            FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
+                "Cannot delete message",
             )
         })?;
 
-    Ok(FydiaResponse::new_ok("Message delete"))
+    Ok(FydiaResponse::Text("Message delete"))
 }

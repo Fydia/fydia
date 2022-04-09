@@ -11,12 +11,12 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
-pub async fn get_message(
+pub async fn get_message<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
     Extension(_rsa): Extension<Arc<RsaData>>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     let (_, _, _) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, serverid, channelid, &executor,
     )
@@ -24,7 +24,7 @@ pub async fn get_message(
 
     let message = Message::get_message_by_id(&messageid, &executor)
         .await
-        .map_err(FydiaResponse::new_error)?;
+        .map_err(FydiaResponse::StringError)?;
 
-    Ok(FydiaResponse::new_ok_json(&message))
+    Ok(FydiaResponse::from_serialize(&message))
 }

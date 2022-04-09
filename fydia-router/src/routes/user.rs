@@ -16,7 +16,7 @@ pub fn user_routes() -> Router {
         .route("/create", axum::routing::post(create_user))
         .route("/update", axum::routing::put(default))
         .route("/delete", axum::routing::delete(default))
-        .route("logout", axum::routing::get(default))
+        .route("/logout", axum::routing::get(default))
         .route("/websocket", axum::routing::get(ws_handler))
         .route("/login", axum::routing::post(user_login))
         .route("/token/verify", axum::routing::get(verify))

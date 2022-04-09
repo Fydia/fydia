@@ -7,18 +7,18 @@ use fydia_struct::{
 };
 use http::{HeaderMap, StatusCode};
 
-pub async fn post_message_dm(
+pub async fn post_message_dm<'a>(
     _headers: HeaderMap,
     Path(dm_id): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
+) -> FydiaResult<'a> {
     println!(
         "{:?}",
         Message::get_messages_by_channel(ChannelId::new(dm_id.clone()), &database).await
     );
 
-    Err(FydiaResponse::new_error_custom_status(
-        "",
+    Err(FydiaResponse::TextErrorWithStatusCode(
         StatusCode::NOT_IMPLEMENTED,
+        "",
     ))
 }
