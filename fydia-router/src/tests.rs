@@ -40,10 +40,17 @@ mod tests {
             url::Url::parse(format!("{IP_WITH_WS}/api/user/websocket?token={token}").as_str())
                 .unwrap();
 
-        tokio_tungstenite::connect_async(url)
+        if let Ok(map) = tokio_tungstenite::connect_async(url)
             .await
-            .expect("Connection error")
-            .0
+            .map_err(|error| {
+                println!("{}", error);
+                error
+            })
+        {
+            return map.0;
+        }
+
+        panic!("Error")
     }
 
     pub async fn get_router() -> Router {
