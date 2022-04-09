@@ -163,7 +163,7 @@ impl SqlChannel for Channel {
         let active_model: crate::entity::channels::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor)
                 .await
-                .map_err(|_| "Can't update name".to_string())?
+                .map_err(|_| "Can't find this channel".to_string())?
                 .into();
 
         delete(active_model, executor).await
