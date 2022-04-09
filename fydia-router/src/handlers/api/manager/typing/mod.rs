@@ -140,8 +140,8 @@ impl TypingInner {
             },
             serverid,
             channelid,
-            &websocket,
-            &database,
+            websocket,
+            database,
         );
 
         Ok(())
@@ -205,8 +205,8 @@ impl TypingInner {
             },
             serverid,
             channelid,
-            &websocket,
-            &database,
+            websocket,
+            database,
         );
 
         Ok(())
