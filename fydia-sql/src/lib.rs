@@ -12,4 +12,3 @@ pub mod impls;
 pub mod samples;
 pub mod setup;
 pub mod sqlpool;
-pub mod test;
