@@ -38,7 +38,7 @@ parking_lot = { version = "0.12.0" }
 hyper = "0.14.18"
 flume = "0.10.12"
 rust-embed = "6.3.0"
-rayon = "1.5.1"
+rayon = "1.5.2"
 
 [dev-dependencies]
 tokio-tungstenite = "0.17.1"
