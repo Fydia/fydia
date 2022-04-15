@@ -10,7 +10,7 @@ fydia-config = { path = "../fydia-config" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
-sqlx = { version = "0.5.11", default-features = false, features = [
+sqlx = { version = "0.5.12", default-features = false, features = [
     "runtime-tokio-rustls",
     "all-databases",
     "chrono",
