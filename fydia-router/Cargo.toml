@@ -21,7 +21,7 @@ time = "0.3.9"
 chrono = "0.4.19"
 axum = { version = "0.5.1", features = ["ws", "headers"] }
 http = "0.2.6"
-logger = { git = "https://github.com/Rheydskey/logger.git", branch = "master" }
+log = "0.4.0"
 base64 = "0.13"
 mime = "0.3.16"
 multer = "2.0.2"
@@ -31,7 +31,7 @@ reqwest = "0.11.10"
 infer = "0.7.0"
 mime_guess = "2.0.4"
 tracing = "0.1.32"
-tower-http = { version = "0.2.5", features = ["trace"] }
+tower-http = { version = "0.3.0", features = ["trace"] }
 tower = "0.4.12"
 rand = "0.8.5"
 parking_lot = { version = "0.12.0" }

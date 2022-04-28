@@ -35,9 +35,7 @@ impl Display for MessageType {
 }
 
 impl MessageType {
-    /// Parse a str to convert it in MessageType
-    ///
-    /// If str cannot be convert None is return
+    /// Parse a str to convert it in `MessageType`
     ///
     /// # Examples
     ///
@@ -89,6 +87,10 @@ pub struct Message {
 impl Message {
     /// Create a new `Message` with all needed values.
     ///
+    /// # Errors
+    /// Return an error if :
+    /// * content is empty
+    ///
     /// # Examples
     ///
     /// ```
@@ -130,7 +132,7 @@ pub struct Date(pub DateTime<Utc>);
 impl Date {
     /// Create a new `Date` with a specific `DateTime<Utc>`
     ///
-    /// Prefer use Date::now() for current Date
+    /// Prefer use `Date::now()` for current Date
     pub fn new(date: DateTime<Utc>) -> Self {
         Self(date)
     }
@@ -176,7 +178,7 @@ impl Date {
         Self(DateTime::from(date))
     }
 
-    /// Create a new `Date` with minimal DateTime
+    /// Create a new `Date` with minimal `DateTime`
     pub fn null() -> Self {
         Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
     }

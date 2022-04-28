@@ -45,6 +45,7 @@ pub fn server_routes() -> Router {
         )
 }
 
+/// ```ignore
 /// ChannelId:
 ///     /api/server/:serverid/channel/:channelid/
 ///         - GET / -> Give info of channel
@@ -54,6 +55,7 @@ pub fn server_routes() -> Router {
 ///             - /description -> Update description of channel
 ///         - GET /messages -> Give message of channel
 ///         - POST /messages -> Post a message into channel
+/// ```
 pub fn channelid() -> Router {
     axum::Router::new()
         .route("/create", axum::routing::post(create_channel))

@@ -10,6 +10,10 @@ use reqwest::StatusCode;
 
 use crate::handlers::basic::BasicValues;
 
+/// Create a new direct message
+///
+/// # Errors
+/// This function will return an error if body isn't valid or if the target isn't exist
 pub async fn create_direct_message<'a>(
     headers: HeaderMap,
     Path(target_user): Path<String>,
@@ -23,9 +27,10 @@ pub async fn create_direct_message<'a>(
         ));
     }
 
-    let id = target_user
-        .parse::<i32>()
-        .map_err(|_| FydiaResponse::TextError("Bad user id"))?;
+    let id = target_user.parse::<i32>().map_err(|error| {
+        error!("{error}");
+        FydiaResponse::TextError("Bad user id")
+    })?;
 
     let target = UserId::new(id)
         .get_user(&database)
@@ -33,7 +38,8 @@ pub async fn create_direct_message<'a>(
         .ok_or(FydiaResponse::TextError("Bad user id"))?;
 
     let dm = DirectMessage::new(vec![user.id, target.id]);
-    dm.insert(&database).await.map_err(|_| {
+    dm.insert(&database).await.map_err(|error| {
+        error!("{error}");
         FydiaResponse::TextErrorWithStatusCode(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Cannot insert in database",

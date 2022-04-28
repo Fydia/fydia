@@ -55,10 +55,10 @@ async fn connected(
         while let Some(Ok(e)) = stream.next().await {
             if std::mem::discriminant(&e) == std::mem::discriminant(&Message::Close(None)) {
                 if let Err(e) = sender.send(ChannelMessage::Kill) {
-                    error!(e.to_string());
+                    error!("{e}");
                 };
             } else if let Err(e) = sender.send(ChannelMessage::WebsocketMessage(e)) {
-                error!(e.to_string());
+                error!("{e}");
             };
         }
     });
@@ -68,19 +68,19 @@ async fn connected(
             match channelmessage {
                 ChannelMessage::WebsocketMessage(e) => {
                     if let Err(error) = sink.send(e).await {
-                        error!(error.to_string());
+                        error!("{error}");
                     }
                 }
                 ChannelMessage::Message(e) => {
                     let json = serde_json::to_string(&e);
 
                     if json.is_err() {
-                        error!(format!("{:?}", json));
+                        error!("{:?}", json);
                     }
 
                     if let Ok(msg) = json {
                         if let Err(error) = sink.send(Message::Text(msg)).await {
-                            error!(error);
+                            error!("{error}");
                         }
                     }
                 }
@@ -95,6 +95,11 @@ async fn connected(
     });
 }
 
+/// Convert a json to Websocket Message
+///
+/// # Errors
+/// Return an error if:
+/// * serialize isn't possible
 pub fn to_websocketmessage<T>(msg: &T) -> Result<Message, String>
 where
     T: Serialize,

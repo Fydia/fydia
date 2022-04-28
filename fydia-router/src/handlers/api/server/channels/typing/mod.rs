@@ -10,6 +10,11 @@ use crate::handlers::{
     basic::BasicValues,
 };
 
+/// Start typing
+///
+/// # Errors
+/// Return an error if typingmanager is unreachable
+/// or if serverid, channelid or the token isn't valid
 pub async fn start_typing<'a>(
     Extension(database): Extension<DbConnection>,
     Extension(typingmanager): Extension<Arc<TypingManagerChannel>>,
@@ -25,13 +30,19 @@ pub async fn start_typing<'a>(
         .start_typing(user.id, channel.id, server.id)
         .map(|_| FydiaResponse::Text(""))
         .map_err(|error| {
-            error!(error);
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Can't start typing",
             )
         })
 }
+
+/// Stop typing
+///
+/// # Errors
+/// Return an error if typingmanager is unreachable
+/// or if serverid, channelid or the token isn't valid
 pub async fn stop_typing<'a>(
     Extension(database): Extension<DbConnection>,
     Extension(typingmanager): Extension<Arc<TypingManagerChannel>>,
@@ -47,10 +58,10 @@ pub async fn stop_typing<'a>(
         .stop_typing(user.id, channel.id, server.id)
         .map(|_| FydiaResponse::Text(""))
         .map_err(|error| {
-            error!(error);
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Can't start typing",
+                "Can't stop typing",
             )
         })
 }

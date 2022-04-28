@@ -5,6 +5,10 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
+/// Join a vocal channel
+///
+/// # Errors
+/// Return an error if channelid isn't valid or if channel is text
 pub async fn join_channel<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
@@ -18,6 +22,6 @@ pub async fn join_channel<'a>(
     if channel.channel_type.is_voice() {
         Ok(FydiaResponse::Text("Vocal Channel"))
     } else {
-        Ok(FydiaResponse::Text("Text Channel"))
+        Err(FydiaResponse::TextError("Text Channel"))
     }
 }

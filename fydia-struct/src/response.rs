@@ -27,10 +27,10 @@ pub struct ResponseFormat {
     body: Value,
 }
 
-/// FydiaResult type alias for Result with FydiaResponse
+/// `FydiaResult` type alias for Result with `FydiaResponse`
 pub type FydiaResult<'a> = Result<FydiaResponse<'a>, FydiaResponse<'a>>;
 
-/// FydiaResponse is the abstract struct to make a HTTP Response
+/// `FydiaResponse` is the abstract struct to make a HTTP Response
 #[allow(missing_docs)]
 #[derive(Debug)]
 pub enum FydiaResponse<'a> {
@@ -86,41 +86,39 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
             }
 
             let body = body::Full::from(string);
-            return response.body(body::boxed(body)).unwrap();
+            response.body(body::boxed(body)).unwrap()
         };
 
         match self {
             FydiaResponse::Text(text) => {
-                let value = json!(format!("{}", text));
-                return build_response(FydiaStatus::Ok, value, response);
+                let value = json!(text);
+                build_response(FydiaStatus::Ok, value, response)
             }
             FydiaResponse::TextError(text) => {
-                let value = json!(format!("{}", text));
-                return build_response(FydiaStatus::Error, value, response);
+                let value = json!(text);
+                build_response(FydiaStatus::Error, value, response)
             }
-            FydiaResponse::TextErrorWithStatusCode(text, statuscode) => {
-                let value = json!(format!("{}", text));
+            FydiaResponse::TextErrorWithStatusCode(statuscode, text) => {
+                let value = json!(text);
                 let builder = response.status(statuscode);
-                return build_response(FydiaStatus::Ok, value, builder);
+                build_response(FydiaStatus::Ok, value, builder)
             }
             FydiaResponse::String(text) => {
-                let value = json!(format!("{}", text));
-                return build_response(FydiaStatus::Ok, value, response);
+                let value = json!(text);
+                build_response(FydiaStatus::Ok, value, response)
             }
             FydiaResponse::StringError(text) => {
-                let value = json!(format!("{}", text));
-                return build_response(FydiaStatus::Error, value, response);
+                let value = json!(text);
+                build_response(FydiaStatus::Error, value, response)
             }
             FydiaResponse::StringWithStatusCode(statuscode, text) => {
-                let value = json!(format!("{}", text));
+                let value = json!(text);
                 let builder = response.status(statuscode);
-                return build_response(FydiaStatus::Ok, value, builder);
+                build_response(FydiaStatus::Ok, value, builder)
             }
-            FydiaResponse::Json(value) => {
-                return build_response(FydiaStatus::Ok, value, response);
-            }
+            FydiaResponse::Json(value) => build_response(FydiaStatus::Ok, value, response),
             FydiaResponse::Bytes(bytes) => {
-                return response.body(body::boxed(body::Full::from(bytes))).unwrap();
+                response.body(body::boxed(body::Full::from(bytes))).unwrap()
             }
             FydiaResponse::BytesWithContentType(bytes, contenttype) => {
                 if let Some(headers) = response.headers_mut() {
@@ -131,7 +129,7 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
                     }
                 }
 
-                return response.body(body::boxed(body::Full::from(bytes))).unwrap();
+                response.body(body::boxed(body::Full::from(bytes))).unwrap()
             }
         }
     }

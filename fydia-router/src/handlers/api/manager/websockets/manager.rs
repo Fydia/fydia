@@ -34,7 +34,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
     async fn get_channels_of_user(&self, user: &UserInfo) -> Result<Vec<WbSender>, String> {
         let (sender, receiver) = oneshot::channel::<Vec<WbSender>>();
         if let Err(e) = self.0.send(WbManagerMessage::Get(user.clone(), sender)) {
-            error!(e.to_string());
+            error!("{}", e.to_string());
         }
 
         receiver.await.map_err(|error| error.to_string())
@@ -43,7 +43,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
     async fn get_new_channel(&self, user: &UserInfo) -> Option<WbChannel> {
         let (sender, receiver) = oneshot::channel::<Result<WbChannel, String>>();
         if let Err(e) = self.0.send(WbManagerMessage::Insert(user.clone(), sender)) {
-            error!(e.to_string());
+            error!("{}", e.to_string());
         }
 
         receiver.await.ok()?.ok()
@@ -56,7 +56,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
             wbsender.clone(),
             sender,
         )) {
-            error!(error.to_string());
+            error!("{}", error.to_string());
         }
 
         receiver.await.map_err(|error| error.to_string())?
@@ -77,7 +77,7 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
             let channels = self.get_channels_of_user(i).await?;
             channels.par_iter().for_each(|i| {
                 if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                    error!(e.to_string());
+                    error!("{}", e.to_string());
                 }
             });
         }

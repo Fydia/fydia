@@ -7,6 +7,12 @@ use openssl::{
     rsa::{Padding, Rsa},
 };
 
+/// Decrypt body with RSA private key
+///
+/// # Errors
+/// Return an error if :
+/// * body cannot decrypted
+/// * body cannot convert as String
 pub fn decrypt(rsa: &Rsa<Private>, string: &[u8]) -> Result<String, String> {
     let mut buf = vec![0; rsa.size() as usize];
     rsa.private_decrypt(string, &mut buf, Padding::PKCS1)
@@ -15,6 +21,12 @@ pub fn decrypt(rsa: &Rsa<Private>, string: &[u8]) -> Result<String, String> {
     String::from_utf8(buf).map_err(|error| error.to_string())
 }
 
+/// Decrypt body with RSA public key
+///
+/// # Errors
+/// Return an error if :
+/// * body cannot decrypted
+/// * body cannot convert as String
 pub fn public_decrypt(rsa: &Rsa<Public>, string: &[u8]) -> Result<String, String> {
     let mut buf = vec![0; rsa.size() as usize];
     rsa.public_decrypt(string, &mut buf, Padding::PKCS1)
@@ -23,9 +35,15 @@ pub fn public_decrypt(rsa: &Rsa<Public>, string: &[u8]) -> Result<String, String
     String::from_utf8(buf).map_err(|error| error.to_string())
 }
 
+/// Decrypt body
+///
+/// # Errors
+/// Return an error if :
+/// * body cannot decrypted
+/// * body cannot convert as String
 pub fn aes_decrypt(
     rsa: &PrivateKey,
-    body: (Iv, AesKeyEncrypt, EncryptedBody),
+    body: &(Iv, AesKeyEncrypt, EncryptedBody),
 ) -> Result<String, String> {
     let decrypted = decrypt(rsa, &body.1 .0)?;
     let aes_key = decrypted.split_at(32).0.to_string();

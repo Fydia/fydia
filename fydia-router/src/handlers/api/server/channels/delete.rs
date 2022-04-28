@@ -7,6 +7,12 @@ use http::{HeaderMap, StatusCode};
 
 use crate::handlers::basic::BasicValues;
 
+/// Delete a channel in a server
+///
+/// # Errors
+/// Return an error if:
+/// * serverid, channelid, token isn't valid
+/// * database is unreachable
 pub async fn delete_channel<'a>(
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
@@ -21,10 +27,11 @@ pub async fn delete_channel<'a>(
         .delete_channel(&database)
         .await
         .map(|_| FydiaResponse::Text("Channel deleted"))
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot delete the channel (SQL Server Error)",
+                "Cannot delete the channel",
             )
         })
 }

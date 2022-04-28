@@ -20,9 +20,15 @@ use http::{HeaderMap, StatusCode};
 use crate::handlers::{
     api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},
     basic::BasicValues,
-    get_json,
+    get_json, get_json_value_from_body,
 };
 
+/// Change content of a message
+///
+/// # Errors
+/// Return an error if :
+/// * channelid, serverid isn't valid
+/// * body isn't valid
 pub async fn update_message<'a>(
     body: Bytes,
     headers: HeaderMap,
@@ -48,10 +54,7 @@ pub async fn update_message<'a>(
         return Err(FydiaResponse::TextError("You can't edit this message"));
     }
 
-    let body =
-        String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::TextError("Body error"))?;
-
-    let value = serde_json::from_str(&body).map_err(|_| FydiaResponse::TextError("JSON error"))?;
+    let value = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 
     let content = get_json("content", &value)?.to_string();
 
@@ -63,10 +66,16 @@ pub async fn update_message<'a>(
     let userinfos = &channel
         .get_user_of_channel(&executor)
         .await
-        .map_err(|_| FydiaResponse::TextError("Cannot get user"))?
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Cannot get user")
+        })?
         .to_userinfo(&executor)
         .await
-        .map_err(|_| FydiaResponse::TextError("Cannot post message"))?;
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Cannot post message")
+        })?;
 
     wbsocket
         .send(
@@ -80,7 +89,8 @@ pub async fn update_message<'a>(
             userinfos,
         )
         .await
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Cannot delete message",

@@ -8,6 +8,11 @@ use fydia_struct::{
 };
 use http::StatusCode;
 
+/// Create a new user
+///
+/// # Errors
+/// This function will return an error if database is unreachable or if body
+/// isn't valid
 pub async fn create_user<'a>(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
@@ -23,7 +28,8 @@ pub async fn create_user<'a>(
         .insert_user(&database)
         .await
         .map(|_| FydiaResponse::Text("Register successfully"))
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error",

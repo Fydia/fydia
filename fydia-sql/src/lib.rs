@@ -2,7 +2,7 @@
 #![deny(clippy::expect_used)]
 
 #[macro_use]
-extern crate logger;
+extern crate log;
 
 pub mod connection;
 pub mod entity;

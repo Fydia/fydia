@@ -73,7 +73,7 @@ impl ManagerReceiverTrait for TypingStruct {
                         .start_typing(database, wb, typing, channelid, user, serverid)
                         .await
                     {
-                        error!(error);
+                        error!("{error}");
                     };
                 }
             }
@@ -84,7 +84,7 @@ impl ManagerReceiverTrait for TypingStruct {
                         .stop_typing(database, wb, channelid, user, serverid)
                         .await
                     {
-                        error!(error);
+                        error!("{error}");
                     };
                 };
             }
@@ -96,6 +96,11 @@ impl ManagerReceiverTrait for TypingStruct {
 pub struct TypingInner(RwLock<HashMap<ChannelId, HashMap<UserId, Task>>>);
 
 impl TypingInner {
+    /// Renew a typing task
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * `ChannelId` isn't in hashmap
     pub async fn renew_typing(
         &mut self,
         typingmanager: &Arc<TypingManagerChannel>,
@@ -112,7 +117,11 @@ impl TypingInner {
 
         Ok(())
     }
-
+    /// Stop Typing
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * [`self::renew_typing`] return an error
     pub async fn start_typing(
         &mut self,
         database: &DbConnection,
@@ -176,6 +185,12 @@ impl TypingInner {
         false
     }
 
+    /// Stop Typing
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * `ChannelId` isn't in hashmap
+    /// * `UserId` isn't in hashmap
     pub async fn stop_typing(
         &mut self,
         database: &DbConnection,
@@ -275,7 +290,7 @@ impl Task {
             loop {
                 if instant.elapsed().as_secs() == 10 {
                     if let Err(error) = value.0.stop_typing(value.1, value.2, value.3) {
-                        error!(error);
+                        error!("{error}");
                     }
 
                     return;
@@ -302,15 +317,44 @@ impl Task {
 pub type TypingManagerChannel = ManagerChannel<TypingMessage>;
 
 pub trait TypingManagerChannelTrait {
+    /// Set websocket manager
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * typing manager is unreachable
     fn set_websocketmanager(&self, wbsocket: &Arc<WebsocketManagerChannel>) -> Result<(), String>;
+
+    /// Set a reference to self
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * typing manager is unreachable
     fn set_selfmanager(&self, selfmanager: &Arc<TypingManagerChannel>) -> Result<(), String>;
+
+    /// Set database
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * typing manager is unreachable
     fn set_database(&self, dbconnection: &DbConnection) -> Result<(), String>;
+
+    /// Start typing task
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * typing manager is unreachable
     fn start_typing(
         &self,
         userid: UserId,
         channelid: ChannelId,
         serverid: ServerId,
     ) -> Result<(), String>;
+
+    /// Stop typing task
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * typing manager is unreachable
     fn stop_typing(
         &self,
         userid: UserId,

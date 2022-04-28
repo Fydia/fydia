@@ -7,6 +7,11 @@ use argon2::{
 
 use fydia_utils::OsRng;
 
+/// Hash `T` with argon2
+///
+/// # Errors
+/// Return an error if :
+/// * `T` value cannot be hashed
 pub fn hash<T: Into<String>>(to_hash: T) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);
 

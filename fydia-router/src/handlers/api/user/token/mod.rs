@@ -5,12 +5,17 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
+/// Return a 200 OK if token is valid
+///
+/// # Errors
+/// This function will return an error if token isn't valid
 pub async fn verify<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    BasicValues::get_user(&headers, &database)
-        .await
-        .map(|_| FydiaResponse::Text(""))
-        .map_err(|_| FydiaResponse::TextError(""))
+    if let Err(res) = BasicValues::get_user(&headers, &database).await {
+        return Err(res);
+    }
+
+    Ok(FydiaResponse::Text(""))
 }

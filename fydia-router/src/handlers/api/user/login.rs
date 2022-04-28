@@ -1,4 +1,4 @@
-use crate::handlers::get_json;
+use crate::handlers::{get_json, get_json_value_from_body};
 use axum::body::Bytes;
 use axum::extract::Extension;
 use fydia_sql::impls::user::SqlUser;
@@ -8,21 +8,16 @@ use fydia_struct::{
     user::User,
 };
 use http::StatusCode;
-use serde_json::value;
 
+/// Return a token
+///
+/// # Errors
+/// This function return an error if body isn't valid or if user isn't exists
 pub async fn user_login<'a>(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    let body = body.to_vec();
-    if body.is_empty() {
-        return Err(FydiaResponse::TextError("Bad Body"));
-    }
-    let body_string =
-        String::from_utf8(body).map_err(|_| FydiaResponse::TextError("Body error"))?;
-
-    let json = serde_json::from_str::<value::Value>(body_string.as_str())
-        .map_err(|_| FydiaResponse::TextError("Json error"))?;
+    let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 
     let email = get_json("email", &json)?;
     let password = get_json("password", &json)?;
@@ -31,7 +26,8 @@ pub async fn user_login<'a>(
         .await
         .ok_or(FydiaResponse::TextError("User not exists"))?;
 
-    user.update_token(&database).await.map_err(|_| {
+    user.update_token(&database).await.map_err(|error| {
+        error!("{error}");
         FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Database Error")
     })?;
 

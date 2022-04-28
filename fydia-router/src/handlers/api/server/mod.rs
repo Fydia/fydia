@@ -11,6 +11,10 @@ pub mod join;
 pub mod picture;
 pub mod roles;
 
+/// Return requested server
+///
+/// # Errors
+/// This function will return if the token or serverid isn't valid
 pub async fn get_server<'a>(
     headers: HeaderMap,
     Path(serverid): Path<String>,

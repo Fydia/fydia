@@ -7,6 +7,10 @@ use fydia_struct::{
 };
 use http::{HeaderMap, StatusCode};
 
+/// Send a new message in dm
+///
+/// # Errors
+/// This function will return an error if dm isn't exists
 pub async fn post_message_dm<'a>(
     _headers: HeaderMap,
     Path(dm_id): Path<String>,

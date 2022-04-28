@@ -3,7 +3,7 @@
 use fydia_crypto::{PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 
-/// `RsaData` contains PrivateKey and PublicKey of Instance
+/// `RsaData` contains `PrivateKey` and `PublicKey` of Instance
 #[derive(Clone, Debug)]
 pub struct RsaData(pub PrivateKey, pub PublicKey);
 
@@ -120,6 +120,11 @@ impl Instance {
     }
 
     /// Get the Public key of Instance.
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * key cannot be read
+    /// * key cannot be get from targeted server
     pub fn get_public_key(&self) -> Result<PublicKey, String> {
         let request = reqwest::blocking::get(format!("{}/api/instance/public_key", self.format()))
             .map_err(|f| f.to_string())?;

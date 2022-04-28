@@ -18,6 +18,12 @@ use crate::handlers::{
     basic::BasicValues,
 };
 
+/// Delete a requested message
+///
+/// # Errors
+/// Return an error if:
+/// * serverid, channelid, messageid, token isn't valid
+/// * The owner user and token user is different
 pub async fn delete_message<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
@@ -52,10 +58,14 @@ pub async fn delete_message<'a>(
                 .map_err(FydiaResponse::StringError)?
                 .to_userinfo(&executor)
                 .await
-                .map_err(|_| FydiaResponse::TextError("Can't delete"))?,
+                .map_err(|error| {
+                    error!("{error}");
+                    FydiaResponse::TextError("Can't delete")
+                })?,
         )
         .await
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("{error}");
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Cannot delete message",

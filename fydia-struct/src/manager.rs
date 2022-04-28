@@ -44,7 +44,7 @@ impl<T: std::default::Default + Debug + ManagerReceiverTrait + std::marker::Send
             }
 
             while let Some(message) = receiver.recv().await {
-                value.on_receiver(message).await
+                value.on_receiver(message).await;
             }
         });
         if let Ok(sender) = receiver.await {
@@ -55,6 +55,6 @@ impl<T: std::default::Default + Debug + ManagerReceiverTrait + std::marker::Send
     }
 }
 
-/// ManagerChannel contains channel to communicate with Manager
+/// `ManagerChannel` contains channel to communicate with Manager
 #[derive(Debug, Clone)]
 pub struct ManagerChannel<T>(pub Arc<UnboundedSender<T>>);

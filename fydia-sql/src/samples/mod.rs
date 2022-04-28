@@ -11,20 +11,27 @@ use crate::{
     sqlpool::DbConnection,
 };
 
+/// Create default tables in database
+///
+/// # Errors
+/// Return an error if:
+/// * Database is unreachable
+/// * Any tables errors
 pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 
-    let mut user = match User::get_user_by_email_and_password("user@sample.com", "user", db).await {
-        Some(user) => user,
-        None => {
-            let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
-            user.token = Some(String::from("default_token"));
-            if let Err(error) = user.insert_user_and_update(db).await {
-                error!(error);
-            }
-
-            user
+    let mut user = if let Some(user) =
+        User::get_user_by_email_and_password("user@sample.com", "user", db).await
+    {
+        user
+    } else {
+        let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
+        user.token = Some(String::from("default_token"));
+        if let Err(error) = user.insert_user_and_update(db).await {
+            error!("{error}");
         }
+
+        user
     };
 
     let mut server = if let Ok(server) =
@@ -38,7 +45,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         server.id = ServerId::new("server_default_id");
 
         if let Err(error) = server.insert_server(db).await {
-            error!(error);
+            error!("{error}");
         }
 
         server
@@ -48,7 +55,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
 
     if !user.servers.is_join(&ServerId::new("server_default_id")) {
         if let Err(error) = server.join(&mut user, db).await {
-            error!(error);
+            error!("{error}");
         }
     }
 
@@ -66,7 +73,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         channel.id = ChannelId::new("channel_default_id");
 
         if let Err(error) = server.insert_channel(&channel, db).await {
-            error!(error);
+            error!("{error}");
         }
     }
 
@@ -85,12 +92,12 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
                 )?;
 
                 if let Err(error) = message.insert_message(db).await {
-                    error!(error);
+                    error!("{error}");
                 }
             }
         }
     }
 
-    success!("Sample are insert in database");
+    info!("Sample are insert in database");
     Ok(())
 }

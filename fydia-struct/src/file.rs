@@ -15,7 +15,7 @@ const PREFIX: &str = "./storage/";
 /// `FileDescriptor` is used to describe a file.
 ///
 /// When a User send a file message in a Channel,
-/// the file will be stock with a random name and FileDescriptor is here to
+/// the file will be stock with a random name and `FileDescriptor` is here to
 /// back name of the file and date too.
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,6 +55,10 @@ impl FileDescriptor {
     }
 
     /// Serialize `FileDescriptor` in Json and return a `Result<String, String>`
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * `FileDescriptor` cannot be serialized
     ///
     ///# Examples
     ///```
@@ -108,7 +112,10 @@ impl File {
 
     /// Create the `File` and the directory if it does not exist.
     ///
-    /// Return an `Err(String)` if cannot create a directory or the `File`
+    /// # Errors
+    /// Return an error if :
+    /// * directory cannot be create
+    /// * file cannot be created
     pub fn create(&self) -> Result<(), String> {
         drop(std::fs::create_dir(PREFIX).map_err(|error| error.to_string()));
         std::fs::File::create(&self.path)
@@ -119,8 +126,13 @@ impl File {
     /// Create the `File` with the `FileDescriptor`
     /// and the directory if it does not exist.
     ///
-    /// Return an `Err(String)` if cannot create a directory, the `File`, or `FileDescriptor`
-    pub fn create_with_description(&self, file_descriptor: FileDescriptor) -> Result<(), String> {
+    /// # Errors
+    /// Return an error if :
+    /// * directory cannot be create
+    /// * file cannot be created
+    /// * `FileDescriptor` cannot be created
+    /// * buffer cannot be written
+    pub fn create_with_description(&self, file_descriptor: &FileDescriptor) -> Result<(), String> {
         self.create()?;
 
         let mut file =
@@ -133,7 +145,10 @@ impl File {
 
     /// Create the `File` and write buffer of `[u8]`
     ///
-    /// Return an `Err(String)` if cannot create `File` or write data
+    /// # Errors
+    /// Return an error if :
+    /// * file cannot be created
+    /// * buffer cannot be written
     pub fn create_and_write(&self, bytes: &[u8]) -> Result<(), String> {
         self.create()?;
         self.write(bytes)
@@ -141,7 +156,10 @@ impl File {
 
     /// Write a buffer of `[u8]` to `File`
     ///
-    /// Return an `Err(String)` if cannot write buffer
+    /// # Errors
+    /// Return an error if :
+    /// * file cannot be created
+    /// * file cannot be written
     pub fn write(&self, bytes: &[u8]) -> Result<(), String> {
         let mut file = OpenOptions::new()
             .write(true)
@@ -168,6 +186,10 @@ impl File {
     }
 
     /// Takes a buffer to write the value of file
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * file cannot be read
     pub fn read_file(&self, buf: &mut [u8]) -> Result<(), String> {
         let mut file = std::fs::File::open(&self.path).map_err(|f| f.to_string())?;
         file.read(buf)
@@ -176,6 +198,10 @@ impl File {
     }
 
     /// Reads the file and returns its value as `Vec<u8>`
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * file cannot be read
     pub fn get_value(&self) -> Result<Vec<u8>, String> {
         let file = std::fs::File::open(&self.path).map_err(|f| f.to_string())?;
         let mut buf = BufReader::new(file);
@@ -183,15 +209,21 @@ impl File {
     }
 
     /// Reads the file and returns its value as `Stream<u8>`
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * file cannot be read
     pub fn async_get_value(&self) -> Result<impl Stream<Item = Result<u8, io::Error>>, String> {
         let file = std::fs::File::open(&self.path).map_err(|f| f.to_string())?;
         let buf = BufReader::new(file);
         Ok(stream::iter(buf.bytes()))
     }
 
-    /// Get the FileDescription of the `File`
+    /// Get the `FileDescription` of the `File`
     ///
-    /// Returns `Err(String)` if FileDescription of this file doesn't exist.
+    /// # Errors
+    /// Return an error if :
+    /// * `FileDescription` isn't exist or doesn't exist
     pub fn get_description(&self) -> Result<FileDescriptor, String> {
         let value = self.get_value_of_description()?;
         let string = String::from_utf8(value).map_err(|f| f.to_string())?;
@@ -201,8 +233,9 @@ impl File {
 
     /// Return value of `FileDescription` as `Vec<u8>`
     ///
-    /// Returns `Err(String)` if FileDescription of this file doesn't exist
-    /// or if reads is impossible.
+    /// # Errors
+    /// Return an error if :
+    /// * `FileDescription` isn't exist or doesn't exist
     pub fn get_value_of_description(&self) -> Result<Vec<u8>, String> {
         let desc = self
             .description
@@ -216,8 +249,9 @@ impl File {
 
     /// Return value of `FileDescription` as `Stream<u8>`
     ///
-    /// Returns `Err(String)` if FileDescription of this file doesn't exist
-    /// or if reads is impossible.
+    /// # Errors
+    /// Return an error if:
+    /// * `FileDescription` cannot be read or doesn't exist
     pub fn async_get_value_of_description(
         &self,
     ) -> Result<impl Stream<Item = Result<u8, io::Error>>, String> {

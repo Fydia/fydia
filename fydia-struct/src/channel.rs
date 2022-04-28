@@ -9,8 +9,8 @@ use crate::{
     server::ServerId,
     user::{User, UserId},
 };
-/// ChannelType reprensent which type of channel is.
-/// Voice, Text or DirectMessage
+/// `ChannelType` reprensent which type of channel is.
+/// Voice, Text or `DirectMessage`
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChannelType {
@@ -59,7 +59,7 @@ impl ChannelType {
     }
 }
 
-/// DirectMessage reprensent a DM.
+/// `DirectMessage` represent a DM.
 ///
 /// Inner of this struct is id of user or user.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,7 +79,7 @@ pub enum DirectMessageInner {
 }
 
 impl DirectMessage {
-    /// Take a `Vec<UserId>` to return a DirectMessage
+    /// Take a `Vec<UserId>` to return a `DirectMessage`
     ///
     /// # Examples
     ///
@@ -103,9 +103,9 @@ impl DirectMessage {
 
 /// `ParentId` represents the parent of `Channel`
 ///
-/// DirectMessage contains `DirectMessage` with `Vec<User>` or `Vec<UserId>`
+/// `DirectMessage` variant contains `DirectMessage` with `Vec<User>` or `Vec<UserId>`
 ///
-/// ServerId contains `ServerId`
+/// `ServerId` variant contains `ServerId`
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ParentId {
@@ -116,7 +116,11 @@ pub enum ParentId {
 }
 
 impl ParentId {
-    /// Serialize `ParentId` in Json and return a `Result<String, String>`
+    /// Serialize `ParentId` in Json
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * `ParentId` cannot be serialized
     ///
     /// # Examples
     /// ```
@@ -139,7 +143,7 @@ impl ParentId {
     }
 }
 
-/// ChannelId is Id of a Channel
+/// `ChannelId` is Id of a Channel
 ///
 /// Can be used to get a Channel and pass a channel in function without all data.
 ///
@@ -208,11 +212,13 @@ pub struct Channel {
 
 impl Channel {
     /// Take name, description as a `T` value that impl `Into<String>`
-    /// and channel_type as `ChannelType` to return `Channel`
+    /// and `channel_type` as `ChannelType` to return `Channel`
     ///
     /// `Channel.id` is generate randomly.
     ///
-    /// Return `Err(String)` when `name` is empty
+    /// # Errors
+    /// Return an error if:
+    /// * name is empty
     ///
     ///# Examples
     ///```
@@ -246,12 +252,14 @@ impl Channel {
         })
     }
     /// Take name, description as a `T` value that implements `Into<String>`
-    /// and channel_type as `ChannelType` and parent_id as `ParentId`
+    /// and `channel_type` as `ChannelType` and `parent_id` as `ParentId`
     /// to return `Channel`
     ///
     /// `Channel.id` is generate randomly.
     ///
-    /// Return `Err(String)` when `name` is empty
+    /// # Errors
+    /// Return an error if :
+    /// * name is empty
     ///
     ///# Examples
     ///```

@@ -8,6 +8,10 @@ use fydia_struct::{
 
 use http::{HeaderMap, StatusCode};
 
+/// Get messages of a dm
+///
+/// # Errors
+/// This function will return an error if dm does not exist
 pub async fn get_message_dm<'a>(
     _headers: HeaderMap,
     Path(dm_id): Path<String>,

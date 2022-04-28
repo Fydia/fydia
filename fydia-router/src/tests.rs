@@ -55,7 +55,9 @@ mod tests {
 
     pub async fn get_router() -> Router {
         let config = get_sqlite();
-        let db = super::super::get_database_connection(&config.database).await;
+        let db = super::super::get_database_connection(&config.database)
+            .await
+            .unwrap();
         super::super::get_axum_router(
             db,
             &config.instance,
@@ -63,7 +65,9 @@ mod tests {
             *&config.server.port as u16,
         )
         .await
+        .unwrap()
     }
+
     type Websocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
     const IP: &str = "127.0.0.1:8000";

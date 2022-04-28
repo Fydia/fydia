@@ -7,6 +7,11 @@ use openssl::pkey::{Private, Public};
 use openssl::rsa::{Padding, Rsa};
 use openssl::symm::Cipher;
 
+/// Encrypt with public key
+///
+/// # Errors
+/// Return an error if :
+/// * `T` value cannot be encrypted
 pub fn encrypt<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
@@ -16,6 +21,11 @@ pub fn encrypt<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>,
     }
 }
 
+/// Encrypt with private key
+///
+/// # Errors
+/// Return an error if :
+/// * `T` value cannot be encrypted
 pub fn private_encrypt<'a, T: Into<Cow<'a, str>>>(
     rsa: &Rsa<Private>,
     string: T,
@@ -39,6 +49,10 @@ pub fn private_encrypt<'a, T: Into<Cow<'a, str>>>(
 ///              KEY(16..48)         |              BODY(48..n)     |
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// ```
+///
+/// # Errors
+/// Return an error if :
+/// * `T` value cannot be encrypted
 pub fn aes_encrypt<T: Into<String>>(
     rsa: &PublicKey,
     string: T,

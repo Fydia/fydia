@@ -62,6 +62,11 @@ impl WebsocketInner {
         }
     }
 
+    /// Inser a websocket channel
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * User doesn't exist
     pub fn insert_channel(&mut self, user: &UserInfo) -> Result<WbChannel, String> {
         let mut wbchannel = self.wb_channel.write();
 
@@ -76,6 +81,12 @@ impl WebsocketInner {
         Ok(channel)
     }
 
+    /// Remove a websocket channel
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * wbsender doesn't exist
+    /// * User doesn't exist
     pub fn remove(&mut self, user: &UserInfo, websocket_channel: &WbSender) -> Result<(), String> {
         let index = self
             .get_sender_index(user, websocket_channel)

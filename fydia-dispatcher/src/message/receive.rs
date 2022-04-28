@@ -22,7 +22,7 @@ pub async fn receive_message(headers: &HeaderMap, body: &[u8], rsa: &RsaData) ->
         let body = &body[528..];
         let decrypted = fydia_crypto::decrypt::aes_decrypt(
             &rsa.0,
-            (
+            &(
                 Iv(iv_string),
                 AesKeyEncrypt(aeskey.to_vec()),
                 EncryptedBody(body.to_vec()),

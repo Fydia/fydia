@@ -11,9 +11,9 @@ pub mod routes;
 pub mod tests;
 
 #[macro_use]
-extern crate logger;
+extern crate log;
+
 use crate::handlers::api::manager::typing::TypingManagerChannelTrait;
-use crate::routes::federation::federation_routes;
 use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
@@ -23,7 +23,7 @@ use axum::response::IntoResponse;
 use axum::{extract::Extension, Router};
 use client::client_router;
 use fydia_config::{Config, DatabaseConfig, InstanceConfig};
-use fydia_crypto::key::private_to_public;
+use fydia_crypto::key::{private_to_public, Private, Rsa};
 use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::DbConnection;
@@ -31,68 +31,86 @@ use fydia_struct::instance::{Instance, RsaData};
 use handlers::api::manager::typing::TypingManagerChannel;
 use handlers::api::manager::websockets::manager::WebsocketManagerChannel;
 use http::Response;
-use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::trace::{OnRequest, OnResponse, TraceLayer};
 use tracing::Span;
 
-pub async fn get_database_connection(config: &DatabaseConfig) -> DbConnection {
+/// Create a connection with a database
+///
+/// # Errors
+/// This function will return an error if the connection isn't possible
+pub async fn get_database_connection(config: &DatabaseConfig) -> Result<DbConnection, String> {
     info!("Waiting database");
     let database = Arc::new(get_connection(config).await) as DbConnection;
-    success!("Database connected");
+    info!("Database connected");
     info!("Init database");
     if let Err(e) = create_tables(&database).await {
-        error!(format!("Error: {}", e));
-        exit(0);
+        error!("Error: {}", e);
+        return Err("Database initialization error".to_string());
     }
-    success!("Init successfully");
 
-    database
+    info!("Init successfully");
+
+    Ok(database)
 }
 
-pub async fn get_axum_router_from_config(config: Config) -> axum::Router {
-    info!(format!(
+/// Generate a axum router from Config
+///
+/// # Errors
+/// This function will return an error if `get_axum_router` return an error
+/// or if `get_database_connection` return an error
+pub async fn get_axum_router_from_config(config: Config) -> Result<axum::Router, String> {
+    info!(
         "Fydia - {}({})",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH")
-    ));
+    );
     get_axum_router(
-        get_database_connection(&config.database).await,
+        get_database_connection(&config.database).await?,
         &config.instance,
         &config.format_ip(),
         config.server.port as u16,
     )
     .await
 }
+/// Generate RSA private key
+///
+/// # Errors
+/// This function will return an error if cannot generate rsa key
+pub fn generate_key() -> Result<Rsa<Private>, String> {
+    info!("Try to generate RSA keys");
+    if let Ok(key) = fydia_crypto::key::generate::generate_key() {
+        info!("RSA keys are successfully generated");
+        Ok(key)
+    } else {
+        error!("Can't generate RSA keys");
+        Err("Cannot generate RSA keys".to_string())
+    }
+}
 
+/// Generate a axum router from arguments
+///
+/// # Errors
+/// This function will return an error if cannot generate rsa key, if cannot set
+/// websocketmanager, typingmanager and database in typingmanager
 pub async fn get_axum_router(
     database: DbConnection,
     instance: &InstanceConfig,
     formated_ip: &str,
     port: u16,
-) -> axum::Router {
+) -> Result<axum::Router, String> {
     #[cfg(not(test))]
     #[cfg(debug_assertions)]
     if let Err(error) = fydia_sql::samples::insert_samples(&database).await {
-        error!(error);
+        error!("{}", error);
     }
 
-    info!("Try to generate RSA keys");
-    let privatekey = match fydia_crypto::key::generate::generate_key() {
-        Ok(key) => {
-            success!("RSA keys are successfully generated");
-            key
-        }
-        Err(_) => {
-            error!("Can't generate RSA keys");
-            exit(0);
-        }
-    };
-    success!(format!("Ip is : {}", instance.domain));
-    info!(format!("Listen on: http://{}", formated_ip));
-    let public_key = if let Some(public_key) = private_to_public(&privatekey) {
+    info!("Ip is : {}", instance.domain);
+    info!("Listen on: http://{}", formated_ip);
+    let private_key = generate_key()?;
+    let public_key = if let Some(public_key) = private_to_public(&private_key) {
         public_key
     } else {
         panic!("Public key error");
@@ -103,30 +121,30 @@ pub async fn get_axum_router(
     let typing_manager =
         Arc::new(crate::handlers::api::manager::typing::TypingManager::spawn().await);
     if let Err(error) = typing_manager.set_websocketmanager(&websocket_manager) {
-        error!(error);
-        exit(1);
+        error!("{}", error);
+        return Err(String::from("Cannot set websocket manager"));
     };
     if let Err(error) = typing_manager.set_selfmanager(&typing_manager) {
-        error!(error);
-        exit(1)
+        error!("{}", error);
+        return Err(String::from("Cannot set typing manager"));
     }
 
     if let Err(error) = typing_manager.set_database(&database) {
-        error!(error);
-        exit(1)
+        error!("{}", error);
+        return Err(String::from("Cannot set database"));
     }
 
-    get_router(
+    Ok(get_router(
         database,
         Arc::new(Instance::new(
             fydia_struct::instance::Protocol::HTTP,
             &instance.domain,
             port,
         )),
-        Arc::new(RsaData(privatekey, public_key)),
+        Arc::new(RsaData(private_key, public_key)),
         websocket_manager,
         typing_manager,
-    )
+    ))
 }
 
 pub fn get_router(
@@ -143,8 +161,7 @@ pub fn get_router(
             axum::Router::new()
                 .nest("/instance", instance_routes())
                 .nest("/user", user_routes())
-                .nest("/server", server_routes())
-                .nest("/federation", federation_routes()),
+                .nest("/server", server_routes()),
         )
         .fallback(not_found.into_service())
         .layer(Extension(database))
@@ -163,17 +180,13 @@ struct Log;
 
 impl OnRequest<Body> for Log {
     fn on_request(&mut self, request: &http::Request<Body>, _: &tracing::Span) {
-        logger::info!(format!("{} {}", request.method(), request.uri()));
+        info!("{} {}", request.method(), request.uri());
     }
 }
 
 impl<B> OnResponse<B> for Log {
     fn on_response(self, response: &Response<B>, latency: Duration, _: &Span) {
-        logger::info!(format!(
-            "({}ms) => {}",
-            latency.as_millis(),
-            response.status(),
-        ));
+        info!("({}ms) => {}", latency.as_millis(), response.status(),);
     }
 }
 

@@ -6,6 +6,10 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
+/// Join a server
+///
+/// # Errors
+/// Return an error if serverid doesn't exist
 pub async fn join<'a>(
     headers: HeaderMap,
     Path(server_id): Path<String>,
@@ -22,5 +26,8 @@ pub async fn join<'a>(
         .join(&mut user, &database)
         .await
         .map(|_| FydiaResponse::Text("Server joined"))
-        .map_err(|_| FydiaResponse::TextError("Cannot join"))
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Cannot join")
+        })
 }

@@ -1,3 +1,4 @@
+/*
 use std::sync::Arc;
 
 use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
@@ -74,5 +75,8 @@ pub async fn send_test_message<'a>(Extension(keys): Extension<Arc<RsaData>>) -> 
     )
     .await
     .map(|_| FydiaResponse::Text(""))
-    .map_err(|_| FydiaResponse::TextError("Error when send message"))
-}
+    .map_err(|error| {
+        error!(error);
+        FydiaResponse::TextError("Error when send message")
+    })
+}*/

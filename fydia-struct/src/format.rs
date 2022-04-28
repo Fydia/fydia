@@ -13,7 +13,7 @@ impl UserFormat {
     /// Take a generic type that implement `Into<String>`
     /// and return a `Option<UserFormat>`
     ///
-    /// Option is None when String cannot be convert as UserFormat
+    /// Option is None when String cannot be convert as `UserFormat`
     ///
     ///# Examples
     ///```
@@ -81,7 +81,7 @@ impl ServerFormat {
     /// Take a generic type that implement `Into<String>`
     /// and return a `Option<ServerFormat>`
     ///
-    /// Option is None when String cannot be convert as ServerFormat
+    /// Option is None when String cannot be convert as `ServerFormat`
     ///
     ///# Examples
     ///```
@@ -154,7 +154,7 @@ impl ChannelFormat {
     /// Take a generic type that implement `Into<String>`
     /// and return a `Option<ChannelFormat>`
     ///
-    /// Option is None when String cannot be convert as ChannelFormat
+    /// Option is None when String cannot be convert as `ChannelFormat`
     ///
     /// # Examples
     ///```

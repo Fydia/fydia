@@ -11,6 +11,11 @@ use http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
+/// Return requested message
+///
+/// # Errors
+/// Return error if:
+/// * serverid, channelid, messageid, token isn't valid
 pub async fn get_message<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,

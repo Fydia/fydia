@@ -22,6 +22,9 @@ pub struct ChannelAccess(pub Vec<String>);
 
 impl ChannelAccess {
     /// Serialize `ChannelAccess` as Json and return a Result<String, Error>
+    ///
+    /// # Errors
+    /// Return an error if `ChannelAccess` isn't serializable
     pub fn to_string(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(&self)
     }

@@ -1,6 +1,4 @@
-use sea_orm::{
-    sea_query::SimpleExpr, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
-};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 
 pub mod channel;
 pub mod emoji;
@@ -12,26 +10,13 @@ pub mod server;
 pub mod token;
 pub mod user;
 
-#[async_trait::async_trait]
-trait DefaultSql {
-    type SelfModel;
-    type ActiveModel;
-    type ResultData;
-
-    async fn get(
-        expr: SimpleExpr,
-        executor: &DatabaseConnection,
-    ) -> Result<Self::ResultData, String>;
-
-    async fn get_by_id(executor: &DatabaseConnection) -> Result<Self::SelfModel, String>;
-    ///
-    async fn insert_model(executor: &DatabaseConnection) -> Result<Self::SelfModel, String>;
-    async fn insert(
-        am: Self::ActiveModel,
-        executor: &DatabaseConnection,
-    ) -> Result<Self::SelfModel, String>;
-}
-
+/// Insert any model in a table
+///
+/// # Errors
+/// Return an error if:
+/// * Database is unreachable
+/// * Table doesn't exist
+/// * Model doesn't exist
 pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
@@ -43,6 +28,12 @@ pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
         .map_err(|error| error.to_string())
 }
 
+/// Update any model
+///
+/// # Errors
+/// Return an error if:
+/// * Database is unreachable
+/// * Model doesn't exist
 pub async fn update<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
@@ -57,6 +48,12 @@ where
         .map_err(|error| error.to_string())
 }
 
+/// Delete any model
+///
+/// # Errors
+/// Return an error if:
+/// * Database is unreachable
+/// * Model doesn't exist
 pub async fn delete<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,

@@ -10,6 +10,10 @@ use http::HeaderMap;
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};
 
+/// Create a new server
+///
+/// # Errors
+/// Return an error if body isn't valid or if database is unreachable
 pub async fn create_server<'a>(
     headers: HeaderMap,
     body: Bytes,
@@ -25,5 +29,8 @@ pub async fn create_server<'a>(
         .insert_server(&database)
         .await
         .map(|_| FydiaResponse::String(server.id.id))
-        .map_err(|_| FydiaResponse::TextError("Cannot join the server"))
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Cannot create the server")
+        })
 }

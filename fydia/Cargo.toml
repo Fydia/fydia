@@ -17,3 +17,6 @@ tokio = { version = "1.17.0", default-features = false, features = [
 reqwest = "0.11.10"
 fydia-router = { path = "../fydia-router" }
 fydia-config = { path = "../fydia-config" }
+log = "0.4.0"
+pretty_env_logger = "0.4"
+chrono = "0.4.19"

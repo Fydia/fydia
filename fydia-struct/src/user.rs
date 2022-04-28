@@ -107,8 +107,10 @@ impl UserId {
         Self(id)
     }
 
-    /// Serialize UserId as Json and return `Ok(String)` if can be serialize
-    /// or `Error(String)` if cannot
+    /// Serialize `UserId` as Json
+    ///
+    /// # Errors
+    /// Return an error if `UserId` cannot be convert as Json
     pub fn to_string(&self) -> Result<String, String> {
         serde_json::to_string(&self).map_err(|f| f.to_string())
     }

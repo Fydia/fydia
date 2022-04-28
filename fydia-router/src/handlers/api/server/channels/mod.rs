@@ -10,6 +10,10 @@ use fydia_sql::{impls::channel::SqlChannel, sqlpool::DbConnection};
 use fydia_struct::channel::{Channel, ChannelId};
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 
+/// Return requested channel
+///
+/// # Errors
+/// Return an error if channelid isn't valid
 pub async fn info_channel<'a>(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,

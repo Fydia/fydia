@@ -2,7 +2,7 @@ use crate::handlers::api::manager::websockets::manager::{
     WbManagerChannelTrait, WebsocketManagerChannel,
 };
 use crate::handlers::basic::BasicValues;
-use crate::handlers::get_json;
+use crate::handlers::{get_json, get_json_value_from_body};
 use axum::body::Bytes;
 use axum::extract::{Extension, Path};
 use chrono::DateTime;
@@ -35,6 +35,13 @@ const CHECK_MIME: [mime::Mime; 3] = [
     mime::TEXT_PLAIN_UTF_8,
 ];
 
+/// Post a new messages in a channel
+///
+/// # Errors
+/// Return an error if:
+/// * Channelid, Serverid isn't valid
+/// * Body is bad
+/// * Content-Type isn't valid
 pub async fn post_messages<'a>(
     body: Bytes,
     headers: HeaderMap,
@@ -52,19 +59,22 @@ pub async fn post_messages<'a>(
         .get(CONTENT_TYPE)
         .ok_or(FydiaResponse::TextError("No Content-Type header found"))?
         .to_str()
-        .map_err(|_| FydiaResponse::TextError("Content-Type error"))?;
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Content-Type error")
+        })?;
 
-    let mime_type =
-        Mime::from_str(content_type).map_err(|_| FydiaResponse::TextError("Bad Content-Type"))?;
+    let mime_type = Mime::from_str(content_type).map_err(|error| {
+        error!("{error}");
+        FydiaResponse::TextError("Bad Content-Type")
+    })?;
 
     if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
-        let body =
-            String::from_utf8(body.to_vec()).map_err(|_| FydiaResponse::TextError("Body error"))?;
-
-        let value =
-            serde_json::from_str(&body).map_err(|_| FydiaResponse::TextError("JSON error"))?;
-
-        let event = json_message(value, &user, &channel.id, &server.id).await?;
+        let json = get_json_value_from_body(&body).map_err(|error| {
+            error!("{error}");
+            FydiaResponse::StringError(error)
+        })?;
+        let event = json_message(json, &user, &channel.id, &server.id).await?;
         return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
@@ -83,6 +93,12 @@ pub async fn post_messages<'a>(
     Err(FydiaResponse::TextError("Content-Type error"))
 }
 
+/// Transform a multipart request to a Message event
+///
+/// # Errors
+/// Return an error if:
+/// * body isn't valid
+/// * Cannot write file
 pub async fn multipart_to_event<'a, 'b>(
     mut multipart: Multipart<'a>,
     user: &User,
@@ -95,13 +111,13 @@ pub async fn multipart_to_event<'a, 'b>(
             if field_name == "file" {
                 let file = File::new();
 
-                file.create_with_description(FileDescriptor::new_with_now(
+                file.create_with_description(&FileDescriptor::new_with_now(
                     field
                         .file_name()
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|| file.get_name()),
+                        .map_or_else(|| file.get_name(), |v| v.to_string()),
                 ))
-                .map_err(|_| {
+                .map_err(|error| {
+                    error!("{error}");
                     FydiaResponse::TextErrorWithStatusCode(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "File creation error",
@@ -111,10 +127,14 @@ pub async fn multipart_to_event<'a, 'b>(
                 let body = field
                     .bytes()
                     .await
-                    .map_err(|_| FydiaResponse::TextError("Body error"))?
+                    .map_err(|error| {
+                        error!("{error}");
+                        FydiaResponse::TextError("Body error")
+                    })?
                     .to_vec();
 
-                file.write(&body).map_err(|_| {
+                file.write(&body).map_err(|error| {
+                    error!("{error}");
                     FydiaResponse::TextErrorWithStatusCode(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "Can't write the file",
@@ -123,7 +143,7 @@ pub async fn multipart_to_event<'a, 'b>(
 
                 break;
             } else if field_name.eq("context") {
-                info!(field.text().await.unwrap_or_default());
+                info!("{}", field.text().await.unwrap_or_default());
             }
         }
     }
@@ -148,6 +168,12 @@ pub async fn multipart_to_event<'a, 'b>(
     Ok(event)
 }
 
+/// Get message from value
+///
+/// # Errors
+/// Return an error if:
+/// * The body isn't valid
+/// * The channelid, serverid isn't valid
 pub async fn json_message<'a>(
     value: Value,
     user: &User,
@@ -206,6 +232,12 @@ pub fn get_boundary(headers: &HeaderMap) -> Option<String> {
     })
 }
 
+/// Send message event
+///
+/// # Errors
+/// Return error if :
+/// * cannot get members of server
+/// * cannot get websocket manager
 pub async fn send_event<'a>(
     event: Event,
     server: Server,
@@ -246,7 +278,7 @@ pub async fn send_event<'a>(
                 .send_with_origin_and_key(&event, &members, Some(&key), None)
                 .await
             {
-                error!(error);
+                error!("{error}");
             };
         });
     }

@@ -15,6 +15,10 @@ use fydia_struct::{
 pub struct BasicValues;
 
 impl BasicValues {
+    /// Return user from token
+    ///
+    /// # Errors
+    /// This function will return an errors if user token isn't correct
     pub async fn get_user<'a>(
         headers: &HeaderMap,
         executor: &DbConnection,
@@ -27,6 +31,11 @@ impl BasicValues {
             .ok_or(FydiaResponse::TextError("Wrong token"))
     }
 
+    /// Return user, server from url parameters
+    ///
+    /// # Errors
+    /// This function will return an errors if serverid or user token isn't correct
+    /// or if the user has not joined the server
     pub async fn get_user_and_server_and_check_if_joined<'a, T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,
@@ -37,7 +46,10 @@ impl BasicValues {
         let server = ServerId::new(serverid)
             .get_server(executor)
             .await
-            .map_err(|_| FydiaResponse::TextError("Server not exists"))?;
+            .map_err(|error| {
+                error!("{error}");
+                FydiaResponse::TextError("Server not exists")
+            })?;
 
         if !user.servers.is_join(&server.id) {
             return Err(FydiaResponse::TextError("Server not exists"));
@@ -46,6 +58,10 @@ impl BasicValues {
         Ok((user, server))
     }
 
+    /// Return user, server from url parameters
+    ///
+    /// # Errors
+    /// This function will return an errors if serverid or user token isn't correct
     pub async fn get_user_and_server<'a, T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,
@@ -56,11 +72,19 @@ impl BasicValues {
         let server = ServerId::new(serverid)
             .get_server(executor)
             .await
-            .map_err(|_| FydiaResponse::TextError("Bad ServerId"))?;
+            .map_err(|error| {
+                error!("{error}");
+                FydiaResponse::TextError("Bad ServerId")
+            })?;
 
         Ok((user, server))
     }
 
+    /// Return user, server and channel from url parameters
+    ///
+    /// # Errors
+    /// This function will return an errors if serverid, channelid isn't correct
+    /// or if the user has not joined the server
     pub async fn get_user_and_server_and_check_if_joined_and_channel<'a, T: Into<String>>(
         headers: &HeaderMap,
         serverid: T,

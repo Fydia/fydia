@@ -57,7 +57,7 @@ impl SqlMembers for Members {
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let acmodel = Model::new_activemodel(userid.clone(), serverid.clone());
+        let acmodel = Model::new_activemodel(userid, serverid.clone());
 
         insert(acmodel, executor).await
     }

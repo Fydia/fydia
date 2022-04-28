@@ -30,6 +30,12 @@ impl Model {
         })
     }
 
+    /// Get model with id
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * Database is unreachable
+    /// * Model doesn't exist with this id
     pub async fn get_model_by_id(id: &str, executor: &DatabaseConnection) -> Result<Self, String> {
         match crate::entity::channels::Entity::find_by_id(id.to_string())
             .one(executor)

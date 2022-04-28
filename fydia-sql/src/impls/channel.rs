@@ -127,7 +127,10 @@ impl SqlChannel for Channel {
         let name = name.into();
         let model = Model::get_model_by_id(&self.id.id, executor)
             .await
-            .map_err(|_| "Can't update name".to_string())?;
+            .map_err(|error| {
+                error!("{error}");
+                "Can't update name".to_string()
+            })?;
 
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
         active_model.name = Set(name.clone());
@@ -148,7 +151,10 @@ impl SqlChannel for Channel {
 
         let model = Model::get_model_by_id(&self.id.id, executor)
             .await
-            .map_err(|_| "Can't update description".to_string())?;
+            .map_err(|error| {
+                error!("{error}");
+                "Can't update description".to_string()
+            })?;
 
         let mut active_model: crate::entity::channels::ActiveModel = model.into();
         active_model.description = Set(Some(description.clone()));
@@ -163,7 +169,10 @@ impl SqlChannel for Channel {
         let active_model: crate::entity::channels::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor)
                 .await
-                .map_err(|_| "Can't find this channel".to_string())?
+                .map_err(|error| {
+                    error!("{error}");
+                    "Can't find this channel".to_string()
+                })?
                 .into();
 
         delete(active_model, executor).await

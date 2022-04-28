@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::process::exit;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum DatabaseType {
@@ -123,14 +122,32 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn read_config<T: Into<String>>(parse: T) -> Self {
-        toml::from_str(parse.into().as_str()).expect("Error")
+    /// Read to a file
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * File cannot be read
+    pub fn read_config<T: Into<String>>(parse: T) -> Result<Self, String> {
+        toml::from_str(parse.into().as_str()).map_err(|error| error.to_string())
     }
-    pub fn write_to<T: Into<String>>(&self, path: T) -> std::io::Result<()> {
-        std::fs::write(path.into().as_str(), self.serialize_to_string().as_str())
+
+    /// Write to a file
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * File cannot be written
+    pub fn write_to<T: Into<String>>(&self, path: T) -> Result<(), String> {
+        std::fs::write(path.into().as_str(), self.serialize_to_string()?.as_str())
+            .map_err(|error| error.to_string())
     }
-    pub fn serialize_to_string(&self) -> String {
-        toml::to_string(self).expect("Error")
+
+    /// Serialize `Config` as JSON
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * `Config` cannot be serialized
+    pub fn serialize_to_string(&self) -> Result<String, String> {
+        toml::to_string(self).map_err(|error| error.to_string())
     }
     pub fn format_ip(&self) -> String {
         format!("{}:{}", self.server.ip, self.server.port)
@@ -140,11 +157,10 @@ impl Config {
 pub fn get_config_or_init() -> Config {
     if let Ok(e) = std::fs::read("config.toml") {
         let read_config = String::from_utf8(e).expect("Error");
-        Config::read_config(read_config)
+        Config::read_config(read_config).expect("Cannot read config")
     } else {
         let config = Config::default();
         config.write_to("config.toml").expect("Error");
-        println!("Change Config with your database config");
-        exit(127);
+        panic!("Change Config with your database config");
     }
 }

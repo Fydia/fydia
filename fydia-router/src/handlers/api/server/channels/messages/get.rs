@@ -5,6 +5,12 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use http::HeaderMap;
 
+/// Return all message of channel
+///
+/// # Errors
+/// Return an error if:
+/// * serverid, channelid, token isn't valid
+/// * database is unreachable
 pub async fn get_messages<'a>(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
@@ -19,5 +25,8 @@ pub async fn get_messages<'a>(
         .get_messages(&database)
         .await
         .map(|value| FydiaResponse::from_serialize(&value))
-        .map_err(|_| FydiaResponse::TextError("Cannot get message"))
+        .map_err(|error| {
+            error!("{error}");
+            FydiaResponse::TextError("Cannot get message")
+        })
 }

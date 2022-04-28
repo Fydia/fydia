@@ -1,8 +1,14 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use openssl::{pkey::Private, rsa::Rsa};
 
-pub fn write(rsa: Rsa<Private>) -> std::io::Result<()> {
+/// Write private key to a file
+///
+/// # Errors
+/// Return an if :
+/// * File cannot be written
+/// * File cannot be created
+pub fn write(rsa: &Rsa<Private>) -> std::io::Result<()> {
     match (rsa.public_key_to_pem(), rsa.private_key_to_pem()) {
         (Ok(publickey), Ok(privatekey)) => {
             std::fs::create_dir("keys/")?;
@@ -24,11 +30,14 @@ pub fn write(rsa: Rsa<Private>) -> std::io::Result<()> {
     }
 }
 
+/// Return Private key
+///
+/// # Errors
+/// Return an if :
+/// * File cannot be read
+/// * File cannot be converted as RSA key
 pub fn read() -> Option<Rsa<Private>> {
-    let mut file = std::fs::File::open("./keys/private.key").ok()?;
-    let mut buf = Vec::new();
-
-    file.read_to_end(&mut buf).ok()?;
+    let buf = std::fs::read("./keys/private.key").ok()?;
 
     Rsa::private_key_from_pem(&buf).ok()
 }

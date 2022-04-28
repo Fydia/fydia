@@ -23,7 +23,7 @@ pub struct Event {
 }
 
 impl Event {
-    /// Take server_id as `ServerId` and content as `EventContent`
+    /// Take `server_id` as `ServerId` and content as `EventContent`
     /// and return `Event`
     ///
     ///# Examples

@@ -22,11 +22,10 @@ pub struct Server {
 }
 
 impl Server {
-    /// Take a `Into<String>` value and UserId and return `Result<Server, String>`
+    /// Take a `Into<String>` value and `UserId` and return `Result<Server, String>`
     ///
-    /// # Error
-    ///
-    /// If name is empty or owner id is negative, an return is return
+    /// # Errors
+    /// Return an error if name is empty or owner id is negative
     pub fn new<T: Into<String>>(name: T, owner: UserId) -> Result<Self, String> {
         let name = name.into();
 
@@ -64,7 +63,7 @@ impl Default for Server {
     }
 }
 
-/// `ServerId` contains a String that represent ServerId
+/// `ServerId` contains a String that represent an id of a server
 #[allow(missing_docs)]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct ServerId {
@@ -88,7 +87,7 @@ impl ServerId {
 pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
-    /// Take a ServerId and check if is already in `Vec<ServerId>`
+    /// Take a `ServerId` and check if is already in `Vec<ServerId>`
     pub fn is_join(&self, server_id: &ServerId) -> bool {
         for i in self.0.iter() {
             if cfg!(debug_assertion) {
@@ -105,7 +104,7 @@ impl Servers {
         false
     }
 
-    /// Take a `Into<String>` and return ServerId if exists in `Vec<ServerId>`
+    /// Take a `Into<String>` and return `ServerId` if exists in `Vec<ServerId>`
     pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
         let server_id = server_id.into();
         for i in self.0.iter() {
@@ -149,8 +148,11 @@ impl Members {
         self.members.push(user);
     }
 
-    /// Remove a `User` in members. Return a Err if `User` doesn't exists
-    pub fn remove(&mut self, user: UserId) -> Result<(), String> {
+    /// Remove a `User` in members
+    ///
+    /// # Errors
+    /// Return an error if user doesn't exist in array
+    pub fn remove(&mut self, user: &UserId) -> Result<(), String> {
         for (n, i) in (&self.members).iter().enumerate() {
             if i.0 == user.0 {
                 self.members.remove(n);
@@ -162,8 +164,10 @@ impl Members {
         Err("Not Found".to_string())
     }
 
-    /// Serialize `Members` as Json and return
-    /// if can be serialize a `Ok(String)` or `Err(String)` if cannot.
+    /// Serialize `Members` as Json
+    ///
+    /// # Errors
+    /// Return an error if `Members` isn't serializable
     pub fn to_string(&self) -> Result<String, String> {
         match serde_json::to_string(&self) {
             Ok(json) => Ok(json),
