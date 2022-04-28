@@ -27,4 +27,4 @@ log = "0.4.16"
 async-trait = "0.1.53"
 serde = "1.0.136"
 serde_json = "1.0.79"
-tokio = { version = "1.17.0", features = ["rt", "macros"] }
+tokio = { version = "1.18.0", features = ["rt", "macros"] }

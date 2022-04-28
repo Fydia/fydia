@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-utils = { path = "../fydia-utils" }
-tokio = { version = "1.17", default-features = false }
+tokio = { version = "1.18", default-features = false }
 async-trait = "0.1.53"
 futures = "0.3.21"
 serde = { version = "1.0.136", features = ["derive"] }
