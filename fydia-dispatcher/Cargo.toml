@@ -16,4 +16,4 @@ reqwest = "0.11.10"
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
-http = "0.2.6"
+http = "0.2.7"

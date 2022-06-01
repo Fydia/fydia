@@ -12,7 +12,7 @@ chrono = "0.4.19"
 futures = "0.3.21"
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-utils = { path = "../fydia-utils" }
-http = "0.2.6"
+http = "0.2.7"
 log = "0.4.17"
 mime = "0.3.16"
 reqwest = { version = "0.11.10", features = ["blocking"] }
