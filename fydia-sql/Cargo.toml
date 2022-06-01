@@ -13,7 +13,7 @@ fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 log = "0.4.16"
 
-sea-orm = { version = "0.7.1", features = [
+sea-orm = { version = "0.8.0", features = [
     "sqlx-all",
     "runtime-tokio-rustls",
     "macros",
