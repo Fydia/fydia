@@ -40,3 +40,158 @@ port = 8000
         headers = []
         body = """{"email":"default@default", "password":"default"}"""
         response = { statuscode = 200, body = "", set_value = [{name = "__TOKEN__", path = "content"}]}
+
+[tests.login_user_empty]
+    [[tests.login_user_empty.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/user/login"
+        headers = []
+        body = """{"email":"", "password":""}"""
+        response = { statuscode = 400, body = """{"status":"Error","""}
+
+[tests.check_token]
+  [[tests.check_token.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/user/token/verify"
+        headers = ["Authorization","__TOKEN__"]
+        body = ""
+        response = { statuscode = 200, body = ""}
+
+
+[tests.check_unvalid_token]
+  [[tests.check_unvalid_token.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/user/token/verify"
+        headers = ["Authorization","THISISANUNVALIDTOKEN"]
+        body = ""
+        response = { statuscode = 400, body = ""}
+
+[tests.get_me]
+  [[tests.get_me.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/user/me"
+        headers = ["Authorization","__TOKEN__"]
+        body = ""
+        response = { statuscode = 200, body = ""}
+
+[tests.get_me_with_unvalid_token]
+  [[tests.get_me_with_unvalid_token.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/user/me"
+        headers = ["Authorization","THISISANUNVALIDTOKEN"]
+        body = ""
+        response = { statuscode = 400, body = ""}
+
+[tests.create_a_server]
+  [[tests.create_a_server.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/server/create"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":"default_name_server"}"""
+        response = { statuscode = 200, body = "", set_value = [{name = "__SERVER__", path = "content"}]}
+
+
+[tests.create_a_server_empty_name]
+  [[tests.create_a_server_empty_name.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/server/create"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":""}"""
+        response = { statuscode = 400, body = ""}
+
+[tests.get_server_info]
+  [[tests.get_server_info.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/server/{__SERVER__}"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":""}"""
+        response = { statuscode = 200, body = ""}
+
+[tests.get_server_info_with_wrong_serverid]
+  [[tests.get_server_info_with_wrong_serverid.req]]
+        type = "http"
+        method = "GET"
+        url = "/api/server/WRONGSERVERID"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":""}"""
+        response = { statuscode = 400, body = ""}
+
+[tests.create_a_channel]
+  [[tests.create_a_channel.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/server/{__SERVER__}/channel/create"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":"channel_default", "type":"TEXT"}"""
+        response = { statuscode = 200, body = "", set_value=[{name = "__CHANNEL__", path="content"}]}
+
+[tests.create_a_channel_without_name]
+  [[tests.create_a_channel_without_name.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/server/{__SERVER__}/channel/create"
+        headers = ["Authorization","__TOKEN__"]
+        body = """{"name":"", "type":"TEXT"}"""
+        response = { statuscode = 400, body = ""}
+
+[tests.create_a_channel_without_token]
+  [[tests.create_a_channel_without_token.req]]
+        type = "http"
+        method = "POST"
+        headers = []
+        url = "/api/server/{__SERVER__}/channel/create"
+        body = """{"name:"name", "type":"TEXT"}"""
+        response = { statuscode = 400, body = ""}
+
+[tests.send_message_on_channel]
+  [[tests.send_message_on_channel.req]]
+        type = "http"
+        method = "POST"
+        headers = ["Authorization","__TOKEN__", "Content-Type", "application/json"]
+        url = "/api/server/{__SERVER__}/channel/{__CHANNEL__}/messages"
+        body = """{"content":"MESSAGE", "type":"TEXT"}"""
+        response = { statuscode = 200, body = ""}
+
+[tests.start_typing]
+  [[tests.start_typing.req]]
+        type = "http"
+        method = "POST"
+        headers = ["Authorization","__TOKEN__"]
+        url = "/api/server/{__SERVER__}/channel/{__CHANNEL__}/typing/start"
+        body = ""
+        response = { statuscode = 200, body = ""}
+
+[tests.stop_typing]
+  [[tests.stop_typing.req]]
+        type = "http"
+        method = "POST"
+        headers = ["Authorization","__TOKEN__"]
+        url = "/api/server/{__SERVER__}/channel/{__CHANNEL__}/typing/stop"
+        body = ""
+        response = { statuscode = 200, body = ""}
+
+[tests.update_channel_name]
+  [[tests.update_channel_name.req]]
+        type = "http"
+        method = "PUT"
+        headers = ["Authorization","__TOKEN__"]
+        url = "/api/server/{__SERVER__}/channel/{__CHANNEL__}/name"
+        body = """{"name":"new_name"}"""
+        response = { statuscode = 200, body = ""}
+
+[tests.update_description_channel]
+  [[tests.update_description_channel.req]]
+        type = "http"
+        method = "PUT"
+        headers = ["Authorization","__TOKEN__"]
+        url = "/api/server/{__SERVER__}/channel/{__CHANNEL__}/description"
+        body = """{"description":"new_name"}"""
+        response = { statuscode = 200, body = ""}

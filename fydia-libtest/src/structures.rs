@@ -1,5 +1,5 @@
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use std::{collections::HashMap, process::exit};
+use std::{collections::HashMap, fmt::Display, process::exit};
 use toml::Value;
 
 #[derive(Debug, Clone)]
@@ -9,28 +9,23 @@ impl Headers {
     pub fn from_value(value: &Value) -> Option<Self> {
         if let Some(headers) = value.get("headers") {
             if let Some(array) = headers.as_array() {
-                let mut buf = HashMap::new();
-                let (mut left, mut right) = (None, None);
-                for (n, i) in array
+                let str_array = array
                     .iter()
-                    .filter_map(|value| value.as_str())
-                    .map(|str| str.to_string())
-                    .enumerate()
-                {
-                    if n % 2 == 0 {
-                        left = Some(i);
-                        if n == 0 {
-                            continue;
-                        };
+                    .filter_map(|f| f.as_str())
+                    .collect::<Vec<&str>>();
 
-                        if left.is_none() || right.is_none() {
-                            continue;
+                let mut buf = HashMap::new();
+
+                for i in 0..str_array.len() {
+                    if i % 2 == 0 {
+                        if let Some(headername_str) = str_array.get(i) {
+                            if let Some(headervalue) = str_array.get(i + 1) {
+                                buf.insert(
+                                    (*headername_str).to_string(),
+                                    (*headervalue).to_string(),
+                                );
+                            }
                         }
-
-                        buf.insert(left.unwrap(), right.unwrap());
-                        (left, right) = (None, None);
-                    } else {
-                        right = Some(i);
                     }
                 }
 
@@ -45,21 +40,23 @@ impl Headers {
         let mut headermap = HeaderMap::new();
 
         for (key, val) in &self.0 {
-            let val = if let Some(val) = setvalue.get(key) {
-                val
+            let mut val = val.clone();
+
+            val = if let Some(value) = setvalue.get(&val) {
+                value.clone()
             } else {
                 val
             };
 
             headermap.insert(
                 HeaderName::from_bytes(key.as_bytes())
-                    .map_err(|err| panic!("{key} is not a valid name: {}", err.to_string()))
-                    .unwrap(),
-                HeaderValue::from_bytes(val.as_bytes()).unwrap(),
+                    .map_err(|err| panic!("{key} is not a valid name: {}", err))
+                    .expect("Header name is unvalid"),
+                HeaderValue::from_bytes(val.as_bytes()).expect("Header value is unvalid"),
             );
         }
 
-        return headermap;
+        headermap
     }
 }
 
@@ -77,24 +74,42 @@ impl Request {
     pub fn from_value(value: &Value) -> Vec<Self> {
         value
             .get("req")
-            .unwrap()
+            .expect("No req in a test")
             .as_array()
-            .unwrap()
+            .expect("Req is not an array")
             .iter()
-            .map(|test| Self::from_value_unique_element(test))
+            .map(Self::from_value_unique_element)
             .collect::<Vec<Self>>()
     }
     fn from_value_unique_element(value: &Value) -> Self {
-        let r#type = value.get("type").unwrap().as_str().unwrap().to_string();
+        let r#type = value
+            .get("type")
+            .expect("No type request")
+            .as_str()
+            .expect("Type Request isn't a str")
+            .to_string();
+
         let method = value
             .get("method")
-            .map(|f| f.as_str().unwrap())
-            .unwrap()
+            .map(|f| f.as_str().expect("method isn't a string"))
+            .expect("Method isn't exists")
             .to_string();
-        let url = value.get("url").unwrap().as_str().unwrap().to_string();
-        let headers = Headers::from_value(value).unwrap();
-        let body = value.get("body").unwrap().as_str().unwrap().to_string();
-        let cmp_response = Response::from_value(&value.get("response").unwrap());
+
+        let url = value
+            .get("url")
+            .expect("No url in the test")
+            .as_str()
+            .expect("Url isn't a str")
+            .to_string();
+        let headers = Headers::from_value(value).expect("Header cannot be convert");
+        let body = value
+            .get("body")
+            .expect("No body")
+            .as_str()
+            .expect("Body isn't a str")
+            .to_string();
+        let cmp_response =
+            Response::from_value(value.get("response").expect("No response to compare"));
 
         Self {
             r#type,
@@ -114,12 +129,20 @@ pub(crate) struct SetValue {
 }
 
 impl SetValue {
-    pub fn from_value(value: &Vec<Value>) -> Vec<Self> {
+    pub fn from_value(value: &[Value]) -> Vec<Self> {
         value
             .iter()
             .map(|value| {
-                let name = value.get("name").unwrap().as_str().unwrap();
-                let json_path = value.get("path").unwrap().as_str().unwrap();
+                let name = value
+                    .get("name")
+                    .expect("No name in a set_value")
+                    .as_str()
+                    .expect("Name isn't a str in a set_value");
+                let json_path = value
+                    .get("path")
+                    .expect("No path in a set_value")
+                    .as_str()
+                    .expect("Path isn't a str in a set_value");
 
                 Self {
                     name: name.to_string(),
@@ -139,13 +162,16 @@ pub(crate) struct Response {
 
 impl Response {
     pub fn from_value(value: &Value) -> Self {
-        let set_values = if let Some(set_values) = value.get("set_value") {
-            Some(SetValue::from_value(set_values.as_array().unwrap()))
-        } else {
-            None
-        };
+        let set_values = value
+            .get("set_value")
+            .map(|value| SetValue::from_value(value.as_array().expect("set_value isn't an array")));
 
-        let body = value.get("body").unwrap().as_str().unwrap().to_string();
+        let body = value
+            .get("body")
+            .expect("No response body")
+            .as_str()
+            .expect("Response body isn't a str")
+            .to_string();
 
         let statuscode = if let Some(toml_value) = value.get("statuscode") {
             toml_value.as_integer().unwrap() as u16
@@ -167,16 +193,27 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub fn to_string(&self) -> String {
-        format!("http://{}:{}", self.url, self.port)
-    }
-
-    pub fn from_value(value: Value) -> Self {
+    pub fn from_value(value: &Value) -> Self {
         let value = value.get("config").unwrap().as_table().unwrap();
         Self {
-            url: value.get("url").unwrap().as_str().unwrap().to_string(),
-            port: value.get("port").unwrap().as_integer().unwrap() as u32,
+            url: value
+                .get("url")
+                .expect("No url in config table")
+                .as_str()
+                .expect("Url in config table isn't a str")
+                .to_string(),
+            port: value
+                .get("port")
+                .expect("No port in config table")
+                .as_integer()
+                .expect("port in config table isn't a integer") as u32,
         }
+    }
+}
+
+impl Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "http://{}:{}", self.url, self.port)
     }
 }
 #[derive(Debug, Clone)]
@@ -198,38 +235,31 @@ impl Test {
         config: &Config,
         setvalue: &HashMap<String, String>,
     ) -> Vec<(String, String)> {
-        let url = format!("{}{}", config.to_string(), self.request.url);
+        let url = url_replace_set_value_name_with_value(
+            format!("{}{}", config, self.request.url),
+            setvalue,
+        );
         let cmp_res = &self.request.cmp_response;
-
-        let res = match self.request.method.to_uppercase().as_str() {
-            "GET" => reqwest::Client::new()
-                .get(&url)
-                .headers(self.request.headers.to_headervalues(setvalue))
-                .body(self.request.body.clone())
-                .send()
-                .await
-                .unwrap(),
-
-            "POST" => reqwest::Client::new()
-                .post(&url)
-                .headers(self.request.headers.to_headervalues(setvalue))
-                .body(self.request.body.clone())
-                .send()
-                .await
-                .unwrap(),
-
-            "DELETE" => reqwest::Client::new()
-                .delete(&url)
-                .headers(self.request.headers.to_headervalues(setvalue))
-                .body(self.request.body.clone())
-                .send()
-                .await
-                .unwrap(),
-
+        let reqbuild = match self.request.method.to_uppercase().as_str() {
+            "GET" => reqwest::Client::new().get(&url),
+            "POST" => reqwest::Client::new().post(&url),
+            "DELETE" => reqwest::Client::new().delete(&url),
+            "PUT" => reqwest::Client::new().put(&url),
             _ => panic!("No method"),
         };
+        info!(
+            "(ReqType = {}) Send a {} request to {}",
+            self.request.r#type, self.request.method, url
+        );
+        let res = reqbuild
+            .headers(self.request.headers.to_headervalues(setvalue))
+            .body(self.request.body.clone())
+            .send()
+            .await
+            .unwrap();
+
         let res_status = res.status().as_u16();
-        let res_body = res.text().await.unwrap();
+        let res_body = res.text().await.expect("Body isn't a string");
 
         if cmp_res.statuscode != res_status {
             error!(
@@ -274,7 +304,10 @@ impl Test {
                     exit(1);
                 }
 
-                let value = value.as_str().unwrap().to_string();
+                let value = value
+                    .as_str()
+                    .expect("Given path not target a string")
+                    .to_string();
 
                 result.push((name, value));
             }
@@ -288,4 +321,27 @@ impl Test {
         );
         exit(1);
     }
+}
+
+pub fn url_replace_set_value_name_with_value(
+    url: String,
+    hashmap: &HashMap<String, String>,
+) -> String {
+    let mut to_replace: Vec<(String, String)> = Vec::new();
+
+    for i in url.split('{') {
+        let mut value_name = i.split('}').collect::<Vec<&str>>()[0];
+        value_name = value_name.trim();
+
+        if let Some(value) = hashmap.get(value_name) {
+            to_replace.push((format!("{{{}}}", value_name), value.clone()));
+        };
+    }
+
+    let mut url = url;
+    for replace in &to_replace {
+        url = url.replace(&replace.0, &replace.1);
+    }
+
+    url
 }
