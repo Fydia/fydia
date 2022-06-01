@@ -6,8 +6,7 @@ use fydia_struct::directmessage::DirectMessage;
 use fydia_struct::response::FydiaResult;
 use fydia_struct::utils::Id;
 use fydia_struct::{format::UserFormat, response::FydiaResponse, user::UserId};
-use http::HeaderMap;
-use reqwest::StatusCode;
+use http::{HeaderMap, StatusCode};
 
 use crate::handlers::basic::BasicValues;
 

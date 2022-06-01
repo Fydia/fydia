@@ -92,7 +92,7 @@ impl Instance {
     /// assert_eq!(instance, Some(Instance {protocol: Protocol::HTTP, domain: "domain.com".to_string(), port: 80}))
     /// ```
     pub fn from<T: Into<String>>(string: T) -> Option<Self> {
-        let url = url::Url::parse(string.into().as_str()).ok()?;
+        let url = reqwest::Url::parse(string.into().as_str()).ok()?;
         let protocol = Protocol::parse(url.scheme());
         if let (Some(domain), Some(port)) = (url.domain(), url.port_or_known_default()) {
             Some(Self {

@@ -3,8 +3,7 @@
 //! This module is related to HTTP Response
 
 use axum::{body, response::IntoResponse};
-use http::{response::Builder, Response};
-use hyper::{header::CONTENT_TYPE, StatusCode};
+use http::{header::CONTENT_TYPE, response::Builder, Response, StatusCode};
 use mime::Mime;
 use serde::Serialize;
 use serde_json::{json, Value};

@@ -128,7 +128,7 @@ impl ServerFormat {
         let (name, domain) = from.split_at(n);
         let domain = domain.trim_start_matches('$');
 
-        let url = url::Url::parse(format!("http://{domain}").as_str()).ok()?;
+        let url = reqwest::Url::parse(format!("http://{domain}").as_str()).ok()?;
         let domain = url.domain()?;
         let port = url.port_or_known_default();
 

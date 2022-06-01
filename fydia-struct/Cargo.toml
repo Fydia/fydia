@@ -13,11 +13,10 @@ futures = "0.3.21"
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-utils = { path = "../fydia-utils" }
 http = "0.2.6"
-hyper = "0.14.18"
 log = "0.4.17"
 mime = "0.3.16"
 reqwest = { version = "0.11.10", features = ["blocking"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = { version = "1.0.79" }
 tokio = { version = "1.17", default-features = false }
-url = "2.2.2"
+

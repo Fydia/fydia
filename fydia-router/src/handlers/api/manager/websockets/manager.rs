@@ -8,7 +8,6 @@ use fydia_struct::{
     manager::{Manager, ManagerChannel},
     user::UserId,
 };
-use rayon::prelude::*;
 
 pub type WbManager = Manager<WebsocketInner>;
 
@@ -75,11 +74,14 @@ impl WbManagerChannelTrait for WebsocketManagerChannel {
     ) -> Result<(), String> {
         for i in user {
             let channels = self.get_channels_of_user(i).await?;
-            channels.par_iter().for_each(|i| {
-                if let Err(e) = i.send(ChannelMessage::Message(Box::new(msg.clone()))) {
-                    error!("{}", e.to_string());
-                }
-            });
+            for channel in channels {
+                let msg = msg.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = channel.send(ChannelMessage::Message(Box::new(msg))) {
+                        error!("{}", e.to_string());
+                    }
+                });
+            }
         }
 
         Ok(())

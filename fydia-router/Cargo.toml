@@ -16,33 +16,23 @@ fydia-crypto = { path = "../fydia-crypto" }
 fydia-dispatcher = { path = "../fydia-dispatcher" }
 tokio = { version = "1.17.0", default-features = false }
 futures = "0.3.21"
-futures-util = "0.3.21"
-time = "0.3.9"
 chrono = "0.4.19"
 axum = { version = "0.5.1", features = ["ws", "headers"] }
 http = "0.2.6"
 log = "0.4.0"
-base64 = "0.13"
 mime = "0.3.16"
 multer = "2.0.2"
 serde_json = "1.0.79"
 serde = "1.0.136"
-reqwest = "0.11.10"
 infer = "0.7.0"
 mime_guess = "2.0.4"
 tracing = "0.1.32"
 tower-http = { version = "0.3.0", features = ["trace"] }
 tower = "0.4.12"
-rand = "0.8.5"
 parking_lot = { version = "0.12.0" }
-hyper = "0.14.18"
 flume = "0.10.12"
 rust-embed = { version = "6.3.0", optional = true }
-rayon = "1.5.1"
+
 
 [dev-dependencies]
-tokio-tungstenite = "0.17.1"
-reqwest = "0.11.10"
-url = "2.2.2"
-env_logger = "0.9.0"
 fydia-libtest = { path = "../fydia-libtest" }

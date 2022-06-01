@@ -6,7 +6,7 @@ use crate::{
     utils::Id,
 };
 use fydia_crypto::password::hash;
-use hyper::HeaderMap;
+use http::HeaderMap;
 use serde::{Deserialize, Serialize};
 
 /// `User` contains all value of user
