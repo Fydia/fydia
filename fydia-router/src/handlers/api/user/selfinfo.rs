@@ -13,7 +13,10 @@ pub async fn get_info_of_self<'a>(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    BasicValues::get_user(&headers, &executor)
-        .await
-        .map(|user| FydiaResponse::from_serialize(&user.to_userinfo()))
+    let value = BasicValues::get_user(&headers, &executor)
+        .await?
+        .self_json_output()
+        .map_err(FydiaResponse::StringError)?;
+
+    Ok(FydiaResponse::from_serialize(value))
 }

@@ -33,8 +33,8 @@ impl Server {
             return Err(String::from("Name server is empty"));
         }
 
-        if owner.0.is_negative() {
-            return Err(String::from("UserId is negative"));
+        if owner.0.is_not_set() {
+            return Err(String::from("UserId is not valid"));
         }
 
         Ok(Self {
@@ -50,13 +50,10 @@ impl Default for Server {
         Self {
             id: ServerId::new(generate_string(30)),
             name: String::new(),
-            owner: UserId::new(-1),
+            owner: UserId::default(),
             icon: String::new(),
             emoji: Vec::new(),
-            members: Members {
-                count: 0,
-                members: Vec::new(),
-            },
+            members: Members::default(),
             roles: Vec::new(),
             channel: Channels::new(),
         }
@@ -123,45 +120,15 @@ impl Servers {
 
 /// `Members` contains number of member and all `User` in a `Server`
 #[allow(missing_docs)]
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct Members {
-    count: i32,
     pub members: Vec<UserId>,
 }
 
 impl Members {
-    /// Return an empty  `Members`
-    pub fn new() -> Self {
-        Self {
-            count: 0,
-            members: Vec::new(),
-        }
-    }
-    /// Return a new `Members` with value given
-    pub fn new_with(count: i32, members: Vec<UserId>) -> Self {
-        Self { count, members }
-    }
-
-    /// Add a new `User` in members
-    pub fn push(&mut self, user: UserId) {
-        self.count += 1;
-        self.members.push(user);
-    }
-
-    /// Remove a `User` in members
-    ///
-    /// # Errors
-    /// Return an error if user doesn't exist in array
-    pub fn remove(&mut self, user: &UserId) -> Result<(), String> {
-        for (n, i) in (&self.members).iter().enumerate() {
-            if i.0 == user.0 {
-                self.members.remove(n);
-                self.count -= 1;
-                return Ok(());
-            }
-        }
-
-        Err("Not Found".to_string())
+    /// Return an `Members` with value given
+    pub fn new(members: Vec<UserId>) -> Self {
+        Self { members }
     }
 
     /// Serialize `Members` as Json
@@ -173,12 +140,6 @@ impl Members {
             Ok(json) => Ok(json),
             Err(e) => Err(e.to_string()),
         }
-    }
-}
-
-impl Default for Members {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

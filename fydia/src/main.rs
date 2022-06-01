@@ -5,6 +5,7 @@ use fydia_config::get_config_or_init;
 use log::{Level, LevelFilter};
 use pretty_env_logger::env_logger::fmt::{Color, Style, StyledValue};
 use std::io::Write;
+
 /// Start function
 #[tokio::main]
 async fn main() -> Result<(), ()> {

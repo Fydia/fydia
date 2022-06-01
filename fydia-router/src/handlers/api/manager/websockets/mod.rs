@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use axum::async_trait;
+use fydia_struct::event::Event;
 use fydia_struct::manager::ManagerReceiverTrait;
-use fydia_struct::{event::Event, user::UserInfo};
+use fydia_struct::user::UserId;
 use parking_lot::RwLock;
 use tokio::sync::mpsc::{UnboundedReceiver as Receiver, UnboundedSender as Sender};
 use tokio::sync::oneshot::Sender as OSSender;
@@ -16,7 +17,7 @@ pub type WbSender = Sender<ChannelMessage>;
 
 #[derive(Debug)]
 pub struct WebsocketInner {
-    wb_channel: RwLock<HashMap<UserInfo, Vec<WbSender>>>,
+    wb_channel: RwLock<HashMap<UserId, Vec<WbSender>>>,
 }
 
 impl Default for WebsocketInner {
@@ -32,7 +33,7 @@ impl WebsocketInner {
         Default::default()
     }
 
-    pub fn get_sender_index(&self, user: &UserInfo, sender: &WbSender) -> Option<usize> {
+    pub fn get_sender_index(&self, user: &UserId, sender: &WbSender) -> Option<usize> {
         let wb_channel = self.wb_channel.read();
         let wb_struct = wb_channel.get(user)?;
         for (n, i) in wb_struct.iter().enumerate() {
@@ -44,18 +45,18 @@ impl WebsocketInner {
         None
     }
 
-    pub fn get_channels(&mut self, user: &UserInfo) -> Vec<WbSender> {
+    pub fn get_channels(&mut self, user: &UserId) -> Vec<WbSender> {
         match self.wb_channel.read().get(user) {
             Some(wbsenders) => wbsenders.clone(),
             None => Vec::new(),
         }
     }
 
-    pub fn get_channel(&mut self, user: &UserInfo, index: usize) -> Option<WbSender> {
+    pub fn get_channel(&mut self, user: &UserId, index: usize) -> Option<WbSender> {
         self.wb_channel.read().get(user)?.get(index).cloned()
     }
 
-    pub fn insert_user(&mut self, user: &UserInfo) {
+    pub fn insert_user(&mut self, user: &UserId) {
         let mut wbchannel = self.wb_channel.write();
         if !wbchannel.contains_key(user) {
             wbchannel.insert(user.clone(), Vec::new());
@@ -67,7 +68,7 @@ impl WebsocketInner {
     /// # Errors
     /// Return an error if:
     /// * User doesn't exist
-    pub fn insert_channel(&mut self, user: &UserInfo) -> Result<WbChannel, String> {
+    pub fn insert_channel(&mut self, user: &UserId) -> Result<WbChannel, String> {
         let mut wbchannel = self.wb_channel.write();
 
         let user = wbchannel
@@ -87,7 +88,7 @@ impl WebsocketInner {
     /// Return an error if:
     /// * wbsender doesn't exist
     /// * User doesn't exist
-    pub fn remove(&mut self, user: &UserInfo, websocket_channel: &WbSender) -> Result<(), String> {
+    pub fn remove(&mut self, user: &UserId, websocket_channel: &WbSender) -> Result<(), String> {
         let index = self
             .get_sender_index(user, websocket_channel)
             .ok_or_else(|| String::from("Wbsender not in Vec"))?;
@@ -116,10 +117,10 @@ pub enum ChannelMessage {
 
 #[derive(Debug)]
 pub enum WbManagerMessage {
-    Get(UserInfo, OSSender<Vec<WbSender>>),
-    GetWithIndex(UserInfo, usize, OSSender<Option<WbSender>>),
-    Insert(UserInfo, OSSender<Result<WbChannel, String>>),
-    Remove(UserInfo, WbSender, OSSender<Result<(), String>>),
+    Get(UserId, OSSender<Vec<WbSender>>),
+    GetWithIndex(UserId, usize, OSSender<Option<WbSender>>),
+    Insert(UserId, OSSender<Result<WbChannel, String>>),
+    Remove(UserId, WbSender, OSSender<Result<(), String>>),
 }
 
 #[async_trait]

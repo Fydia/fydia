@@ -1,10 +1,11 @@
 use axum::extract::{Extension, Path};
-use fydia_sql::impls::{channel::SqlDirectMessages, user::UserFrom};
+use fydia_sql::impls::direct_message::{DirectMessageMembers, SqlDirectMessage};
+use fydia_sql::impls::user::UserFrom;
 use fydia_sql::sqlpool::DbConnection;
+use fydia_struct::directmessage::DirectMessage;
 use fydia_struct::response::FydiaResult;
-use fydia_struct::{
-    channel::DirectMessage, format::UserFormat, response::FydiaResponse, user::UserId,
-};
+use fydia_struct::utils::Id;
+use fydia_struct::{format::UserFormat, response::FydiaResponse, user::UserId};
 use http::HeaderMap;
 use reqwest::StatusCode;
 
@@ -27,7 +28,7 @@ pub async fn create_direct_message<'a>(
         ));
     }
 
-    let id = target_user.parse::<i32>().map_err(|error| {
+    let id = target_user.parse::<u32>().map_err(|error| {
         error!("{error}");
         FydiaResponse::TextError("Bad user id")
     })?;
@@ -37,7 +38,7 @@ pub async fn create_direct_message<'a>(
         .await
         .ok_or(FydiaResponse::TextError("Bad user id"))?;
 
-    let dm = DirectMessage::new(vec![user.id, target.id]);
+    let mut dm = DirectMessage::new(Id::Unset, "New DM channel".to_string(), "".to_string());
     dm.insert(&database).await.map_err(|error| {
         error!("{error}");
         FydiaResponse::TextErrorWithStatusCode(
@@ -45,6 +46,14 @@ pub async fn create_direct_message<'a>(
             "Cannot insert in database",
         )
     })?;
+
+    dm.insert_user(&user.id, &database)
+        .await
+        .map_err(FydiaResponse::StringError)?;
+
+    dm.insert_user(&target.id, &database)
+        .await
+        .map_err(FydiaResponse::StringError)?;
 
     Ok(FydiaResponse::Text(""))
 }

@@ -5,7 +5,11 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
+#[macro_use]
+extern crate log;
+
 pub mod channel;
+pub mod directmessage;
 pub mod emoji;
 pub mod event;
 pub mod file;
@@ -20,6 +24,7 @@ pub mod response;
 pub mod roles;
 pub mod server;
 pub mod user;
+pub mod utils;
 
 #[cfg(test)]
 mod test;

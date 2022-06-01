@@ -6,7 +6,7 @@ use axum::{
 };
 
 use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage, server::SqlMember},
+    impls::{channel::SqlChannel, message::SqlMessage},
     sqlpool::DbConnection,
 };
 use fydia_struct::{
@@ -63,18 +63,12 @@ pub async fn update_message<'a>(
         .await
         .map_err(FydiaResponse::StringError)?;
 
-    let userinfos = &channel
+    let users = &channel
         .get_user_of_channel(&executor)
         .await
         .map_err(|error| {
             error!("{error}");
             FydiaResponse::TextError("Cannot get user")
-        })?
-        .to_userinfo(&executor)
-        .await
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot post message")
         })?;
 
     wbsocket
@@ -86,7 +80,7 @@ pub async fn update_message<'a>(
                     update: Box::new(message),
                 },
             },
-            userinfos,
+            users,
         )
         .await
         .map_err(|error| {

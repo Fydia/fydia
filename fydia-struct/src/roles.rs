@@ -12,7 +12,6 @@ pub struct Role {
     pub server_id: ServerId,
     pub name: String,
     pub color: String,
-    pub channel_access: ChannelAccess,
     pub permission: Permission,
 }
 

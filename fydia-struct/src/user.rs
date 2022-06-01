@@ -3,6 +3,7 @@
 use crate::{
     instance::Instance,
     server::{ServerId, Servers},
+    utils::Id,
 };
 use fydia_crypto::password::hash;
 use hyper::HeaderMap;
@@ -62,17 +63,6 @@ impl User {
         })
     }
 
-    /// Convert `User` to `UserInfo`
-    pub fn to_userinfo(&self) -> UserInfo {
-        UserInfo::new(
-            self.id.clone(),
-            &self.name,
-            &self.email,
-            &self.description.clone().unwrap_or_default(),
-            self.servers.clone(),
-        )
-    }
-
     /// Clone `User` from another `User`
     pub fn take_value_of(&mut self, from: User) {
         self.id = from.id;
@@ -88,23 +78,45 @@ impl User {
     pub fn insert_server(&mut self, server_short_id: &ServerId) {
         self.servers.0.push(server_short_id.clone());
     }
+
+    /// Return JSON Value for get user info
+    ///
+    /// # Errors
+    /// Return an error if:
+    /// * `Id` is unset
+    pub fn self_json_output(&self) -> Result<impl Serialize, String> {
+        #[derive(Serialize)]
+        struct JsonBuf {
+            id: u32,
+            name: String,
+            email: String,
+            description: String,
+        }
+
+        Ok(JsonBuf {
+            id: self.id.0.clone().get_id()?,
+            name: self.name.clone(),
+            email: self.email.clone(),
+            description: self.description.clone().unwrap_or_default(),
+        })
+    }
 }
 
 /// `UserId` contains id of `User`
 #[allow(missing_docs)]
 #[derive(Debug, Hash, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd)]
-pub struct UserId(pub i32);
+pub struct UserId(pub Id<u32>);
 
 impl Default for UserId {
     fn default() -> Self {
-        Self(-1)
+        Self(Id::Unset)
     }
 }
 
 impl UserId {
     /// Return a new `UserId`
-    pub fn new(id: i32) -> Self {
-        Self(id)
+    pub fn new(id: u32) -> Self {
+        Self(Id::Id(id))
     }
 
     /// Serialize `UserId` as Json
@@ -129,38 +141,5 @@ impl Token {
         let token = headers.get(HEADERNAME)?;
 
         Some(Token(token.to_str().ok()?.to_string()))
-    }
-}
-
-/// `UserInfo` is `User` without sensitive information
-#[allow(missing_docs)]
-#[derive(Debug, Hash, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct UserInfo {
-    pub id: UserId,
-    pub name: String,
-    #[serde(skip)]
-    pub email: String,
-    #[serde(skip)]
-    pub description: String,
-    #[serde(skip)]
-    pub servers: Servers,
-}
-
-impl UserInfo {
-    /// Take all value to return `UserInfo`
-    pub fn new<T: Into<String>>(
-        id: UserId,
-        name: T,
-        email: T,
-        description: T,
-        servers: Servers,
-    ) -> Self {
-        Self {
-            id,
-            name: name.into(),
-            email: email.into(),
-            description: description.into(),
-            servers,
-        }
     }
 }

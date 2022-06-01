@@ -10,7 +10,7 @@ use futures::prelude::*;
 use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
-use fydia_struct::user::{Token, UserInfo};
+use fydia_struct::user::{Token, User};
 use serde::Serialize;
 
 use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
@@ -22,26 +22,19 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let token = Token(token.token.unwrap_or_default());
-    let user = token
-        .get_user(&database)
-        .await
-        .map(|user| user.to_userinfo());
+    let user = token.get_user(&database).await;
 
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
 }
 
-async fn connected(
-    socket: WebSocket,
-    wbmanager: Arc<WebsocketManagerChannel>,
-    user: Option<UserInfo>,
-) {
+async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, user: Option<User>) {
     let user = if let Some(user) = user {
         user
     } else {
         return;
     };
 
-    let (sender, mut receiver) = if let Some(channels) = wbmanager.get_new_channel(&user).await {
+    let (sender, mut receiver) = if let Some(channels) = wbmanager.get_new_channel(&user.id).await {
         channels
     } else {
         return;
@@ -85,7 +78,7 @@ async fn connected(
                     }
                 }
                 ChannelMessage::Kill => {
-                    if wbmanager.remove(&user, &sender).await.is_err() {
+                    if wbmanager.remove(&user.id, &sender).await.is_err() {
                         error!("Can't remove");
                     };
                     break;

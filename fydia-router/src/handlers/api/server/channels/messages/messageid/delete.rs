@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Extension, Path};
 use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage, server::SqlMember},
+    impls::{channel::SqlChannel, message::SqlMessage},
     sqlpool::DbConnection,
 };
 use fydia_struct::{
@@ -55,13 +55,7 @@ pub async fn delete_message<'a>(
             &channel
                 .get_user_of_channel(&executor)
                 .await
-                .map_err(FydiaResponse::StringError)?
-                .to_userinfo(&executor)
-                .await
-                .map_err(|error| {
-                    error!("{error}");
-                    FydiaResponse::TextError("Can't delete")
-                })?,
+                .map_err(FydiaResponse::StringError)?,
         )
         .await
         .map_err(|error| {

@@ -6,25 +6,20 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.53"
 fydia-config = { path = "../fydia-config" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
-sqlx = { version = "0.5.11", default-features = false, features = [
-    "runtime-tokio-rustls",
-    "all-databases",
-    "chrono",
-    "time",
-] }
+log = "0.4.16"
 
 sea-orm = { version = "0.7.1", features = [
     "sqlx-all",
     "runtime-tokio-rustls",
     "macros",
 ] }
-futures = "0.3.21"
-log = "0.4.16"
-async-trait = "0.1.53"
-serde = "1.0.136"
-serde_json = "1.0.79"
-tokio = { version = "1.17.0", features = ["rt", "macros"] }
+
+tokio = { version = "1.17.0", default-features = false, features = [
+    "rt",
+    "macros",
+] }

@@ -1,11 +1,9 @@
+use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
 use fydia_sql::impls::channel::SqlChannel;
-
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaMap, FydiaResponse, FydiaResult};
 use http::{HeaderMap, StatusCode};
-
-use crate::handlers::basic::BasicValues;
 
 /// Delete a channel in a server
 ///
@@ -23,15 +21,13 @@ pub async fn delete_channel<'a>(
     )
     .await?;
 
-    channel
-        .delete_channel(&database)
-        .await
-        .map(|_| FydiaResponse::Text("Channel deleted"))
-        .map_err(|error| {
-            error!("{error}");
+    channel.delete_channel(&database).await.fydia_map(
+        |_| FydiaResponse::Text("Channel deleted"),
+        |_| {
             FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Cannot delete the channel",
             )
-        })
+        },
+    )
 }

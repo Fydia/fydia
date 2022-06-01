@@ -6,17 +6,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.53"
+axum = { version = "0.5.0", features = ["headers"] }
+chrono = "0.4.19"
+futures = "0.3.21"
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-utils = { path = "../fydia-utils" }
-tokio = { version = "1.17", default-features = false }
-async-trait = "0.1.53"
-futures = "0.3.21"
+http = "0.2.6"
+hyper = "0.14.18"
+log = "0.4.17"
+mime = "0.3.16"
+reqwest = { version = "0.11.10", features = ["blocking"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = { version = "1.0.79" }
-chrono = "0.4.19"
+tokio = { version = "1.17", default-features = false }
 url = "2.2.2"
-reqwest = { version = "0.11.10", features = ["blocking"] }
-hyper = "0.14.18"
-http = "0.2.6"
-mime = "0.3.16"
-axum = { version = "0.5.0", features = ["headers"] }

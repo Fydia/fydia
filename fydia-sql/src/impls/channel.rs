@@ -6,9 +6,9 @@ use super::{
     server::{SqlServer, SqlServerId},
     update,
 };
-use crate::{entity::channels::Model, impls::user::UserFrom};
+use crate::entity::channels::Model;
 use fydia_struct::{
-    channel::{Channel, ChannelId, ChannelType, DirectMessage, DirectMessageInner, ParentId},
+    channel::{Channel, ChannelId},
     messages::Message,
     server::{Channels, ServerId},
     user::UserId,
@@ -63,7 +63,7 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Vec<UserId>, String> {
         // TODO: Check Permission
-        match &self.parent_id {
+        /* match &self.parent_id {
             ParentId::DirectMessage(directmessage) => match &directmessage.users {
                 DirectMessageInner::Users(users) => Ok(users
                     .iter()
@@ -88,18 +88,21 @@ impl SqlChannel for Channel {
 
                 Ok(members.members)
             }
-        }
+        };*/
+
+        let server = self.parent_id.get_server(executor).await?;
+        let members = server.get_user(executor).await?;
+
+        Ok(members.members)
     }
 
     async fn get_channels_by_server_id(
         server_id: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
-        let parentid = ParentId::ServerId(server_id.clone()).to_string()?;
         let mut channels: Vec<Channel> = Vec::new();
-
         let models = crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.eq(parentid))
+            .filter(crate::entity::channels::Column::ParentId.eq(server_id.id.as_str()))
             .all(executor)
             .await
             .map_err(|f| f.to_string())?;
@@ -203,75 +206,4 @@ pub trait SqlDirectMessages {
     ) -> Result<Vec<Channel>, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
-}
-
-#[async_trait::async_trait]
-impl SqlDirectMessages for DirectMessage {
-    async fn get_by_userid(
-        executor: &DatabaseConnection,
-        userid: UserId,
-    ) -> Result<Vec<Channel>, String> {
-        let user = userid.to_string()?;
-        let vec_model = crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.contains(&user))
-            .all(executor)
-            .await
-            .map_err(|f| f.to_string())?;
-
-        let mut result = Vec::new();
-
-        for model in vec_model {
-            if let Some(channel) = model.to_channel() {
-                result.push(channel);
-            }
-        }
-
-        Ok(result)
-    }
-
-    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let mut dm = self.clone();
-        dm.userid_to_user(executor).await?;
-
-        // Name of participant with a coma
-        let mut name_of_dm = String::new();
-        if let DirectMessageInner::Users(users) = dm.users {
-            for (n, i) in users.iter().enumerate() {
-                if n == 0 {
-                    name_of_dm.push_str(&i.name);
-                }
-
-                name_of_dm.push_str(format!(", {}", i.name).as_str());
-            }
-        }
-
-        let channel = Channel::new_with_parentid(
-            name_of_dm,
-            String::new(),
-            ParentId::DirectMessage(self.clone()),
-            ChannelType::DirectMessage,
-        )?;
-        channel.insert(executor).await
-    }
-    async fn userid_to_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let mut users = Vec::new();
-
-        match &mut self.users {
-            DirectMessageInner::Users(_) => {}
-            DirectMessageInner::UsersId(userids) => {
-                for userid in userids {
-                    let user = userid
-                        .get_user(executor)
-                        .await
-                        .ok_or_else(|| "User not exists".to_string())?;
-
-                    users.push(user);
-                }
-
-                self.users = DirectMessageInner::Users(users);
-            }
-        }
-
-        Ok(())
-    }
 }

@@ -5,10 +5,7 @@ use std::fmt::Display;
 use fydia_utils::generate_string;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    server::ServerId,
-    user::{User, UserId},
-};
+use crate::server::ServerId;
 /// `ChannelType` reprensent which type of channel is.
 /// Voice, Text or `DirectMessage`
 #[allow(missing_docs)]
@@ -55,90 +52,6 @@ impl ChannelType {
             "VOICE" => Self::Voice,
             "DIRECT_MESSAGE" => Self::DirectMessage,
             _ => Self::Text,
-        }
-    }
-}
-
-/// `DirectMessage` represent a DM.
-///
-/// Inner of this struct is id of user or user.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DirectMessage {
-    /// Users of direct message
-    pub users: DirectMessageInner,
-}
-
-/// This is the inner of [`DirectMessage`]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum DirectMessageInner {
-    /// List of [User](`fydia-struct::user::User`)
-    Users(Vec<User>),
-    /// List of [UserId](`fydia-struct::user::UserId`)
-    UsersId(Vec<UserId>),
-}
-
-impl DirectMessage {
-    /// Take a `Vec<UserId>` to return a `DirectMessage`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fydia_struct::user::UserId;
-    /// use fydia_struct::channel::DirectMessage;
-    /// use fydia_struct::channel::DirectMessageInner;
-    ///
-    /// let direct_message = DirectMessage::new(vec![UserId::default(), UserId::default()]);
-    ///
-    /// if let DirectMessageInner::UsersId(inner) = direct_message.users {
-    ///     assert_eq!(inner, vec![UserId::default(), UserId::default()]);
-    /// }
-    /// ```
-    pub fn new(users: Vec<UserId>) -> Self {
-        Self {
-            users: DirectMessageInner::UsersId(users),
-        }
-    }
-}
-
-/// `ParentId` represents the parent of `Channel`
-///
-/// `DirectMessage` variant contains `DirectMessage` with `Vec<User>` or `Vec<UserId>`
-///
-/// `ServerId` variant contains `ServerId`
-#[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum ParentId {
-    #[serde(rename = "direct_message")]
-    DirectMessage(DirectMessage),
-    #[serde(rename = "server_id")]
-    ServerId(ServerId),
-}
-
-impl ParentId {
-    /// Serialize `ParentId` in Json
-    ///
-    /// # Errors
-    /// Return an error if :
-    /// * `ParentId` cannot be serialized
-    ///
-    /// # Examples
-    /// ```
-    /// use fydia_struct::user::UserId;
-    /// use fydia_struct::channel::ParentId;
-    /// use fydia_struct::channel::DirectMessage;
-    ///
-    ///let parent_id = ParentId::DirectMessage(DirectMessage::new(vec![
-    ///    UserId::default(),
-    ///    UserId::default(),
-    ///])).to_string().unwrap();
-    ///
-    /// assert_eq!(parent_id, r#"{"direct_message":{"users":[{"id":-1},{"id":-1}]}}"#)
-    /// ```
-    pub fn to_string(&self) -> Result<String, String> {
-        match serde_json::to_string(self) {
-            Ok(string) => Ok(string),
-            Err(error) => Err(error.to_string()),
         }
     }
 }
@@ -204,7 +117,7 @@ impl ChannelId {
 pub struct Channel {
     pub id: ChannelId,
     #[serde(flatten)]
-    pub parent_id: ParentId,
+    pub parent_id: ServerId,
     pub name: String,
     pub description: String,
     pub channel_type: ChannelType,
@@ -252,7 +165,7 @@ impl Channel {
         })
     }
     /// Take name, description as a `T` value that implements `Into<String>`
-    /// and `channel_type` as `ChannelType` and `parent_id` as `ParentId`
+    /// and `channel_type` as `ChannelType` and `parent_id` as `ServerId`
     /// to return `Channel`
     ///
     /// `Channel.id` is generate randomly.
@@ -263,24 +176,24 @@ impl Channel {
     ///
     ///# Examples
     ///```
-    /// use fydia_struct::channel::{Channel, ChannelType, ParentId};
+    /// use fydia_struct::channel::{Channel, ChannelType};
     /// use fydia_struct::server::ServerId;
     ///
-    /// let channel = Channel::new_with_parentid("name", "desc",ParentId::ServerId(ServerId::new(String::new())), ChannelType::Text);
+    /// let channel = Channel::new_with_serverid("name", "desc",ServerId::new(String::new()), ChannelType::Text);
     ///```
     /// ## Error
     /// ```should_panic
-    ///  use fydia_struct::channel::{Channel, ChannelType, ParentId};
+    ///  use fydia_struct::channel::{Channel, ChannelType};
     ///  use fydia_struct::server::ServerId;
     ///
     ///  // This will be panic because there is no name
-    ///  let channel = Channel::new_with_parentid("", "desc", ParentId::ServerId(ServerId::new(String::new())), ChannelType::Text).unwrap();
+    ///  let channel = Channel::new_with_serverid("", "desc", ServerId::new(String::new()), ChannelType::Text).unwrap();
     /// ```
     ///
-    pub fn new_with_parentid<T: Into<String>>(
+    pub fn new_with_serverid<T: Into<String>>(
         name: T,
         description: T,
-        parent_id: ParentId,
+        parent_id: ServerId,
         channel_type: ChannelType,
     ) -> Result<Self, String> {
         let mut channel = Self::new(name, description, channel_type)?;
@@ -295,7 +208,7 @@ impl Default for Channel {
     fn default() -> Self {
         Self {
             id: ChannelId::new(generate_string(15)),
-            parent_id: ParentId::ServerId(ServerId::new(String::new())),
+            parent_id: ServerId::new(String::new()),
             name: String::new(),
             description: String::new(),
             channel_type: ChannelType::Text,

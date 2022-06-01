@@ -1,6 +1,7 @@
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 
 pub mod channel;
+pub mod direct_message;
 pub mod emoji;
 pub mod members;
 pub mod message;

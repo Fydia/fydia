@@ -10,7 +10,6 @@ use fydia_crypto::password::verify_password;
 use fydia_struct::user::Token;
 use fydia_struct::user::User;
 use fydia_struct::user::UserId;
-use fydia_struct::user::UserInfo;
 use fydia_utils::generate_string;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
@@ -29,7 +28,7 @@ pub trait SqlUser {
     ) -> Option<Self>
     where
         Self: Sized;
-    async fn get_user_by_id(id: i32, executor: &DatabaseConnection) -> Option<Self>
+    async fn get_user_by_id(id: u32, executor: &DatabaseConnection) -> Option<Self>
     where
         Self: Sized;
     async fn get_user_by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
@@ -80,7 +79,7 @@ impl SqlUser for User {
         }
     }
 
-    async fn get_user_by_id(id: i32, executor: &DatabaseConnection) -> Option<Self> {
+    async fn get_user_by_id(id: u32, executor: &DatabaseConnection) -> Option<Self> {
         Model::get_model_by_id(id, executor)
             .await
             .ok()?
@@ -99,7 +98,7 @@ impl SqlUser for User {
     }
 
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let model = Model::get_model_by_id(self.id.0, executor).await?;
+        let model = Model::get_model_by_id(self.id.0.get_id_cloned()?, executor).await?;
         let user_of_db = model.to_user(executor).await?;
 
         self.take_value_of(user_of_db);
@@ -109,7 +108,9 @@ impl SqlUser for User {
     async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let token = generate_string(30);
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(self.id.0, executor).await?.into();
+            Model::get_model_by_id(self.id.0.get_id_cloned()?, executor)
+                .await?
+                .into();
         active_model.token = Set(token.clone());
 
         update(active_model, executor).await?;
@@ -125,7 +126,9 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         let name = name.into();
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(self.id.0, executor).await?.into();
+            Model::get_model_by_id(self.id.0.get_id_cloned()?, executor)
+                .await?
+                .into();
 
         active_model.name = Set(name.clone());
 
@@ -142,7 +145,9 @@ impl SqlUser for User {
     ) -> Result<(), String> {
         let clear_password = clear_password.into();
         let mut active_model: UserActiveModel =
-            Model::get_model_by_id(self.id.0, executor).await?.into();
+            Model::get_model_by_id(self.id.0.get_id_cloned()?, executor)
+                .await?
+                .into();
 
         let password = hash(clear_password)?;
         active_model.password = Set(password.clone());
@@ -175,7 +180,7 @@ impl SqlUser for User {
     }
 
     async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let model = Model::get_model_by_id(self.id.0, executor).await?;
+        let model = Model::get_model_by_id(self.id.0.get_id_cloned()?, executor).await?;
         let active_model: UserActiveModel = model.into();
 
         delete(active_model, executor).await
@@ -193,24 +198,17 @@ pub trait UserFrom {
 #[async_trait]
 impl UserFrom for UserId {
     async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.0, executor).await
-    }
-}
-
-#[async_trait]
-impl UserFrom for UserInfo {
-    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.id.0, executor).await
+        User::get_user_by_id(self.0.get_id_cloned().ok()?, executor).await
     }
 }
 
 #[async_trait]
 pub trait UserInfoSql {
-    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo>;
+    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<User>;
 }
 #[async_trait]
 impl UserInfoSql for UserId {
-    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<UserInfo> {
-        self.get_user(&executor).await.map(|f| f.to_userinfo())
+    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<User> {
+        self.get_user(&executor).await
     }
 }

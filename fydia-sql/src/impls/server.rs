@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
 use fydia_struct::{
-    channel::{Channel, ParentId},
+    channel::Channel,
     server::{Members, Server, ServerId},
-    user::{User, UserId, UserInfo},
+    user::{User, UserId},
 };
 use sea_orm::{DatabaseConnection, Set};
 
@@ -102,7 +102,7 @@ impl SqlServer for Server {
 
         user.insert_server(&self.id);
 
-        self.members.push(user.id.clone());
+        self.members.members.push(user.id.clone());
 
         Ok(())
     }
@@ -112,10 +112,6 @@ impl SqlServer for Server {
         channel: &Channel,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        if let ParentId::DirectMessage(_) = channel.parent_id {
-            return Err(String::from("Bad type of Channel"));
-        }
-
         let active_channel = crate::entity::channels::ActiveModel::try_from(channel)?;
 
         insert(active_channel, executor).await?;
@@ -140,31 +136,60 @@ impl SqlServerId for ServerId {
 
 #[async_trait::async_trait]
 pub trait SqlMember {
-    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String>;
+    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String>;
+    async fn all_exists(&self, executor: &DatabaseConnection) -> bool;
 }
 
 #[async_trait::async_trait]
 impl SqlMember for Members {
-    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String> {
+    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
         let mut result = Vec::new();
+
         for i in &self.members {
             let user = i
                 .get_user(executor)
                 .await
-                .ok_or_else(|| String::from("User not exists"))?
-                .to_userinfo();
+                .ok_or_else(|| String::from("User not exists"))?;
+
             result.push(user);
         }
 
         Ok(result)
     }
+
+    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
+        for i in &self.members {
+            if i.get_user(executor)
+                .await
+                .ok_or_else(|| String::from("User not exists"))
+                .is_err()
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 #[async_trait::async_trait]
 impl SqlMember for Vec<UserId> {
-    async fn to_userinfo(&self, executor: &DatabaseConnection) -> Result<Vec<UserInfo>, String> {
-        let members = Members::new_with(self.len() as i32, self.clone());
+    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
+        let members = Members::new(self.clone());
 
-        members.to_userinfo(executor).await
+        members.to_users(executor).await
+    }
+
+    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
+        for i in self {
+            if i.get_user(executor)
+                .await
+                .ok_or_else(|| String::from("User not exists"))
+                .is_err()
+            {
+                return false;
+            };
+        }
+
+        return true;
     }
 }

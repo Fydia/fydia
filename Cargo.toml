@@ -8,12 +8,14 @@ members = [
     "fydia-config",
     "fydia-crypto",
     "fydia-dispatcher",
+    "fydia-libtest",
 ]
 
 [profile.release]
 panic = 'abort'
 lto = "thin"
 opt-level = 3
+incremental = false
 
 [profile.dev]
 incremental = true

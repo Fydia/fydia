@@ -5,7 +5,7 @@
 extern crate log;
 
 pub mod connection;
-pub mod entity;
+pub(crate) mod entity;
 pub mod impls;
 
 #[cfg(debug_assertions)]

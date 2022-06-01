@@ -32,7 +32,7 @@ impl Event {
     ///use fydia_struct::server::ServerId;
     ///use fydia_struct::event::Event;
     ///
-    ///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
+    ///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete { message_id: String::new() });
     ///```
     pub fn new(server_id: ServerId, content: EventContent) -> Self {
         Self { server_id, content }

@@ -8,7 +8,6 @@ use crate::handlers::api::manager::websockets::manager::{
 use axum::async_trait;
 use flume::Sender;
 use fydia_sql::impls::channel::{SqlChannel, SqlChannelId};
-use fydia_sql::impls::server::SqlMember;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::event::{Event, EventContent};
 use fydia_struct::manager::{Manager, ManagerChannel, ManagerReceiverTrait};
@@ -248,8 +247,6 @@ fn send_websocket_message(
             .get_channel(&database)
             .await?
             .get_user_of_channel(&database)
-            .await?
-            .to_userinfo(&database)
             .await?;
 
         websocket

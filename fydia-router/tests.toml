@@ -1,0 +1,42 @@
+[config]
+url = "127.0.0.1"
+port = 8000
+
+[tests.create_a_user]
+    [[tests.create_a_user.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/user/create"
+        headers = []
+        body = """{"name":"default","email":"default@default", "password":"default"}"""
+        response = { statuscode = 200, body = """{"status":"Ok","content":"Register successfully"}"""}
+
+
+[tests.create_a_user_without_email]
+    [[tests.create_a_user_without_email.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/user/create"
+        headers = []
+        body = """{"name":"default", "password": "default"}"""
+        response = { statuscode = 400, body = """{"status":"Error","content":"No `email` in JSON"}"""}
+
+
+[tests.create_a_user_empty]
+    [[tests.create_a_user_empty.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/user/create"
+        headers = []
+        body = """{"name":"","email":"", "password":""}"""
+        response = { statuscode = 400, body = """{"status":"Error","content":"""}
+
+
+[tests.login_user]
+    [[tests.login_user.req]]
+        type = "http"
+        method = "POST"
+        url = "/api/user/login"
+        headers = []
+        body = """{"email":"default@default", "password":"default"}"""
+        response = { statuscode = 200, body = "", set_value = [{name = "__TOKEN__", path = "content"}]}

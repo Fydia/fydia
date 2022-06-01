@@ -38,18 +38,20 @@ impl SqlMembers for Members {
                 .map(|i| i.to_userid())
                 .collect();
 
-        Ok(Members::new_with(model.len() as i32, model))
+        Ok(Members::new(model))
     }
 
     async fn get_servers_by_usersid(
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<ServerId>, String> {
-        Ok(Model::get_models_by(Column::Userid.eq(userid.0), executor)
-            .await?
-            .iter()
-            .map(|i| i.to_server())
-            .collect())
+        Ok(
+            Model::get_models_by(Column::Userid.eq(userid.0.get_id_cloned()?), executor)
+                .await?
+                .iter()
+                .map(|i| i.to_server())
+                .collect(),
+        )
     }
 
     async fn insert(
@@ -57,7 +59,7 @@ impl SqlMembers for Members {
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let acmodel = Model::new_activemodel(userid, serverid.clone());
+        let acmodel = Model::new_activemodel(userid, serverid.clone())?;
 
         insert(acmodel, executor).await
     }

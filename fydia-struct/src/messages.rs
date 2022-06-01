@@ -1,8 +1,8 @@
 //! This module related to message
 
 use crate::channel::ChannelId;
-use crate::user::UserInfo;
-use chrono::{DateTime, Datelike, FixedOffset, NaiveDateTime, Timelike, Utc};
+use crate::user::User;
+use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use fydia_utils::generate_string;
 use serde::de::{Error, Unexpected, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -81,7 +81,7 @@ pub struct Message {
     #[serde(rename = "channel")]
     pub channel_id: ChannelId,
     #[serde(rename = "author")]
-    pub author_id: UserInfo,
+    pub author_id: User,
 }
 
 impl Message {
@@ -104,7 +104,7 @@ impl Message {
         message_type: MessageType,
         edited: bool,
         timestamp: Date,
-        author_id: UserInfo,
+        author_id: User,
         channel_id: ChannelId,
     ) -> Result<Self, String> {
         let content = content.into();
@@ -231,17 +231,4 @@ impl<'de> Visitor<'de> for Date {
             Err(de::Error::invalid_type(Unexpected::Str("Error"), &self))
         }
     }
-}
-
-/// Format `DateTime<Utc>` as "%F %T" and return String
-pub fn datetime_to_sqltime(date: DateTime<Utc>) -> String {
-    format!(
-        "{:0>#4}-{:0>#2}-{:0>#2} {:0>#2}:{:0>#2}:{:0>#2}",
-        date.date().year(),
-        date.date().month(),
-        date.date().day(),
-        date.time().hour(),
-        date.time().minute(),
-        date.time().second()
-    )
 }

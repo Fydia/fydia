@@ -8,7 +8,7 @@ use axum::extract::{Extension, Path};
 use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
-use fydia_sql::impls::server::{SqlMember, SqlServer};
+use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
@@ -74,7 +74,7 @@ pub async fn post_messages<'a>(
             error!("{error}");
             FydiaResponse::StringError(error)
         })?;
-        let event = json_message(json, &user, &channel.id, &server.id).await?;
+        let event = json_message(json, user, &channel.id, &server.id).await?;
         return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
@@ -85,7 +85,7 @@ pub async fn post_messages<'a>(
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
-        let event = multipart_to_event(multer, &user.clone(), &channel.id, &server.id).await?;
+        let event = multipart_to_event(multer, user.clone(), &channel.id, &server.id).await?;
 
         return send_event(event, server, &rsa, wbsocket, database).await;
     }
@@ -101,7 +101,7 @@ pub async fn post_messages<'a>(
 /// * Cannot write file
 pub async fn multipart_to_event<'a, 'b>(
     mut multipart: Multipart<'a>,
-    user: &User,
+    user: User,
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse<'b>> {
@@ -153,7 +153,7 @@ pub async fn multipart_to_event<'a, 'b>(
         MessageType::FILE,
         false,
         Date::new(DateTime::from(SystemTime::now())),
-        user.to_userinfo(),
+        user,
         channelid.clone(),
     )
     .map_err(FydiaResponse::StringError)?;
@@ -176,7 +176,7 @@ pub async fn multipart_to_event<'a, 'b>(
 /// * The channelid, serverid isn't valid
 pub async fn json_message<'a>(
     value: Value,
-    user: &User,
+    user: User,
     channelid: &ChannelId,
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse<'a>> {
@@ -191,7 +191,7 @@ pub async fn json_message<'a>(
         messagetype,
         false,
         Date::new(DateTime::from(SystemTime::now())),
-        user.to_userinfo(),
+        user,
         channelid.clone(),
     )
     .map_err(FydiaResponse::StringError)?;
@@ -246,16 +246,7 @@ pub async fn send_event<'a>(
     database: DbConnection,
 ) -> FydiaResult<'a> {
     let members = match server.get_user(&database).await {
-        Ok(members) => {
-            if let Ok(userinfos) = members.to_userinfo(&database).await {
-                userinfos
-            } else {
-                return Err(FydiaResponse::TextErrorWithStatusCode(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Cannot get users of the server",
-                ));
-            }
-        }
+        Ok(members) => members.members,
         Err(_) => {
             return Err(FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -275,7 +266,7 @@ pub async fn send_event<'a>(
         let key = rsa.clone();
         tokio::spawn(async move {
             if let Err(error) = wbsocket
-                .send_with_origin_and_key(&event, &members, Some(&key), None)
+                .send_with_origin_and_key(&event, members.as_slice(), Some(&key), None)
                 .await
             {
                 error!("{error}");
