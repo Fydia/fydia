@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1.53"
-axum = { version = "0.5.0", features = ["headers"] }
+axum = { version = "0.5.4", features = ["headers"] }
 chrono = "0.4.19"
 futures = "0.3.21"
 fydia-crypto = { path = "../fydia-crypto" }
