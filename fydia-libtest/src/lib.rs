@@ -4,7 +4,6 @@ use structures::{Config, Test};
 use toml::Value;
 
 mod structures;
-mod tests;
 
 #[macro_use]
 extern crate log;
