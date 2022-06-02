@@ -3,8 +3,6 @@ name = "fydia-sql"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 async-trait = "0.1.53"
 fydia-config = { path = "../fydia-config" }
@@ -13,10 +11,12 @@ fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 log = "0.4.16"
 
-sea-orm = { version = "0.7.1", features = [
-    "sqlx-all",
+sea-orm = { version = "0.8.0", default-features=false, features = [
+    "sqlx-mysql",
+    "sqlx-postgres",
+    "sqlx-sqlite",
     "runtime-tokio-rustls",
-    "macros",
+    "macros"
 ] }
 
 tokio = { version = "1.17.0", default-features = false, features = [
