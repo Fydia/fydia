@@ -5,11 +5,15 @@ use crate::emoji::Emoji;
 use crate::roles::Role;
 use crate::{channel::Channel, user::UserId};
 use fydia_utils::generate_string;
-use serde::{Deserialize, Serialize};
+use fydia_utils::{
+    serde::{Deserialize, Serialize},
+    serde_json,
+};
 
 /// `Server` contains all value of server
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Server {
     pub id: ServerId,
     pub name: String,
@@ -63,6 +67,7 @@ impl Default for Server {
 /// `ServerId` contains a String that represent an id of a server
 #[allow(missing_docs)]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct ServerId {
     pub id: String,
 }
@@ -81,6 +86,7 @@ impl ServerId {
 
 /// `Servers` contains all server of an `User`
 #[derive(Default, Hash, Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Eq)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Servers(pub Vec<ServerId>);
 
 impl Servers {
@@ -121,6 +127,7 @@ impl Servers {
 /// `Members` contains number of member and all `User` in a `Server`
 #[allow(missing_docs)]
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Members {
     pub members: Vec<UserId>,
 }
@@ -145,6 +152,7 @@ impl Members {
 
 /// `Channels` contains all channel of a `Server`
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Channels(pub Vec<Channel>);
 
 impl Channels {

@@ -11,7 +11,7 @@ use fydia_struct::{
     file::File,
     response::{FydiaResponse, FydiaResult},
 };
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 use mime::Mime;
 
 use crate::handlers::basic::BasicValues;

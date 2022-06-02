@@ -7,7 +7,7 @@ use fydia_struct::{
     messages::Message,
     response::{FydiaResponse, FydiaResult},
 };
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 

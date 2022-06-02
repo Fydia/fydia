@@ -4,14 +4,17 @@ use crate::channel::ChannelId;
 use crate::user::User;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use fydia_utils::generate_string;
-use serde::de::{Error, Unexpected, Visitor};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use fydia_utils::serde::{
+    de::{self, Error, Unexpected, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 /// `MessageType` reprensent the type of Message.
 /// This enum is used in the Message Json$
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum MessageType {
     TEXT,
     FILE,
@@ -72,6 +75,7 @@ impl Default for MessageType {
 /// Message contains all value of a message.
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Message {
     pub id: String,
     pub content: String,

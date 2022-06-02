@@ -1,6 +1,6 @@
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 
-use http::StatusCode;
+use fydia_utils::http::StatusCode;
 
 /// Delete a dm
 ///

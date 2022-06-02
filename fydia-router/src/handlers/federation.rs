@@ -14,7 +14,7 @@ use fydia_struct::messages::{Date, Message, MessageType};
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use fydia_struct::server::ServerId;
 use fydia_struct::user::UserInfo;
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 pub async fn event_handler<'a>(
     headers: HeaderMap,

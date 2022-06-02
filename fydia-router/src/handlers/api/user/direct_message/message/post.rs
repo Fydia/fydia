@@ -5,7 +5,7 @@ use fydia_struct::{
     messages::Message,
     response::{FydiaResponse, FydiaResult},
 };
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 
 /// Send a new message in dm
 ///

@@ -15,7 +15,7 @@ use fydia_struct::{
     messages::{Message, MessageType},
     response::{FydiaResponse, FydiaResult},
 };
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 
 use crate::handlers::{
     api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},

@@ -3,13 +3,14 @@
 use std::fmt::Display;
 
 use fydia_utils::generate_string;
-use serde::{Deserialize, Serialize};
+use fydia_utils::serde::{Deserialize, Serialize};
 
 use crate::server::ServerId;
 /// `ChannelType` reprensent which type of channel is.
 /// Voice, Text or `DirectMessage`
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum ChannelType {
     Voice,
     Text,
@@ -68,6 +69,7 @@ impl ChannelType {
 /// assert_eq!(channel_id.id, String::from("THISISACHANNELI"))
 /// ```
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct ChannelId {
     /// Id of Channel
     pub id: String,
@@ -114,6 +116,7 @@ impl ChannelId {
 ///
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Channel {
     pub id: ChannelId,
     #[serde(flatten)]

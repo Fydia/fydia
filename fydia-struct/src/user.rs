@@ -6,12 +6,16 @@ use crate::{
     utils::Id,
 };
 use fydia_crypto::password::hash;
-use http::HeaderMap;
-use serde::{Deserialize, Serialize};
+use fydia_utils::http::HeaderMap;
+use fydia_utils::{
+    serde::{Deserialize, Serialize},
+    serde_json,
+};
 
 /// `User` contains all value of user
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Default)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct User {
     pub id: UserId,
     pub name: String,
@@ -86,6 +90,7 @@ impl User {
     /// * `Id` is unset
     pub fn self_json_output(&self) -> Result<impl Serialize, String> {
         #[derive(Serialize)]
+        #[serde(crate = "fydia_utils::serde")]
         struct JsonBuf {
             id: u32,
             name: String,
@@ -105,6 +110,7 @@ impl User {
 /// `UserId` contains id of `User`
 #[allow(missing_docs)]
 #[derive(Debug, Hash, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct UserId(pub Id<u32>);
 
 impl Default for UserId {

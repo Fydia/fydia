@@ -2,7 +2,10 @@
 
 use futures::prelude::*;
 use fydia_utils::generate_string;
-use serde::{Deserialize, Serialize};
+use fydia_utils::{
+    serde::{Deserialize, Serialize},
+    serde_json,
+};
 use std::{
     fs::OpenOptions,
     io::{self, BufRead, BufReader, Read, Write},
@@ -19,6 +22,7 @@ const PREFIX: &str = "./storage/";
 /// back name of the file and date too.
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct FileDescriptor {
     pub name: String,
     pub date: Date,

@@ -5,7 +5,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use fydia_struct::server::Server;
 
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};

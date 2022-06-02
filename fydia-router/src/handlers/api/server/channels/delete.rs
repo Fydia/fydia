@@ -3,7 +3,7 @@ use axum::extract::{Extension, Path};
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaMap, FydiaResponse, FydiaResult};
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 
 /// Delete a channel in a server
 ///

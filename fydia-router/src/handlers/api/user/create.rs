@@ -6,7 +6,7 @@ use fydia_struct::{
     response::{FydiaResponse, FydiaResult},
     user::User,
 };
-use http::StatusCode;
+use fydia_utils::http::StatusCode;
 
 /// Create a new user
 ///

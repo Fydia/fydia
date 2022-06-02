@@ -1,5 +1,7 @@
 //! This module is related to Formatted representation of User, Server, Channel
 
+use url::Url;
+
 /// `UserFormat` used to represent a `User` as a String over Instance
 #[allow(missing_docs)]
 #[derive(Debug, Default, PartialEq)]
@@ -56,7 +58,7 @@ impl UserFormat {
 
         let (username, domain) = from.split_at(n);
         let domain = domain.trim_start_matches('@');
-        let url = reqwest::Url::parse(format!("http://{domain}").as_str()).ok()?;
+        let url = Url::parse(format!("http://{domain}").as_str()).ok()?;
         let domain = url.domain()?;
         let port = url.port_or_known_default();
 
@@ -128,7 +130,7 @@ impl ServerFormat {
         let (name, domain) = from.split_at(n);
         let domain = domain.trim_start_matches('$');
 
-        let url = reqwest::Url::parse(format!("http://{domain}").as_str()).ok()?;
+        let url = Url::parse(format!("http://{domain}").as_str()).ok()?;
         let domain = url.domain()?;
         let port = url.port_or_known_default();
 
@@ -205,7 +207,7 @@ impl ChannelFormat {
 
         let (servername, domain) = part.split_at(n);
         let domain = domain.trim_start_matches('$');
-        let url = reqwest::Url::parse(format!("http://{domain}").as_str()).ok()?;
+        let url = Url::parse(format!("http://{domain}").as_str()).ok()?;
         let domain = url.domain()?;
 
         Some(Self {

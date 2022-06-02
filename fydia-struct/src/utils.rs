@@ -1,8 +1,9 @@
 //! Usefull data structure
-use serde::{Deserialize, Serialize};
+use fydia_utils::serde::{Deserialize, Serialize};
 
 /// Enum to add a state of Id of a structure
 #[derive(Debug, PartialEq, PartialOrd, Eq, Clone, Hash, Serialize, Deserialize)]
+#[serde(crate = "fydia_utils::serde")]
 #[serde(untagged)]
 pub enum Id<T> {
     /// Id of structure

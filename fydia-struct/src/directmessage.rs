@@ -1,12 +1,13 @@
 //! `DirectMessage`
 
-use serde::Serialize;
+use fydia_utils::serde::Serialize;
 
 use crate::utils::Id;
 
 /// `DirectMessage` is the struct that reprensent a direct message
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct DirectMessage {
     pub id: Id<u32>,
     pub name: String,

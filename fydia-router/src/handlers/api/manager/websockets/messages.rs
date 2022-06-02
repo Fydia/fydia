@@ -11,7 +11,7 @@ use fydia_sql::impls::token::SqlToken;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
 use fydia_struct::user::{Token, User};
-use serde::Serialize;
+use fydia_utils::{serde::Serialize, serde_json};
 
 use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
 

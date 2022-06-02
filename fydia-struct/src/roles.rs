@@ -2,11 +2,15 @@
 
 use crate::permission::Permission;
 use crate::server::ServerId;
-use serde::{Deserialize, Serialize};
+use fydia_utils::{
+    serde::{Deserialize, Serialize},
+    serde_json,
+};
 
 /// `Role` contains all value of roles
 #[allow(missing_docs)]
 #[derive(Clone, Deserialize, Serialize, Debug)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Role {
     pub id: i32,
     pub server_id: ServerId,
@@ -17,6 +21,7 @@ pub struct Role {
 
 /// `ChannelAccess` contains all channel can be accessed by a `Role`
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct ChannelAccess(pub Vec<String>);
 
 impl ChannelAccess {

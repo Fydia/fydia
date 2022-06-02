@@ -1,8 +1,8 @@
 //! This module is related to federation and instance
 
 use fydia_crypto::{PrivateKey, PublicKey};
-use serde::{Deserialize, Serialize};
-
+use fydia_utils::serde::{Deserialize, Serialize};
+use url::Url;
 /// `RsaData` contains `PrivateKey` and `PublicKey` of Instance
 #[derive(Clone, Debug)]
 pub struct RsaData(pub PrivateKey, pub PublicKey);
@@ -10,6 +10,7 @@ pub struct RsaData(pub PrivateKey, pub PublicKey);
 /// Enum to know if Instance is in HTTP or HTTPS
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum Protocol {
     HTTP,
     HTTPS,
@@ -53,6 +54,7 @@ impl Protocol {
 /// `Instance` represents a Instance of Fydia
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Instance {
     pub protocol: Protocol,
     pub domain: String,
@@ -92,7 +94,7 @@ impl Instance {
     /// assert_eq!(instance, Some(Instance {protocol: Protocol::HTTP, domain: "domain.com".to_string(), port: 80}))
     /// ```
     pub fn from<T: Into<String>>(string: T) -> Option<Self> {
-        let url = reqwest::Url::parse(string.into().as_str()).ok()?;
+        let url = Url::parse(string.into().as_str()).ok()?;
         let protocol = Protocol::parse(url.scheme());
         if let (Some(domain), Some(port)) = (url.domain(), url.port_or_known_default()) {
             Some(Self {
@@ -117,22 +119,6 @@ impl Instance {
     /// ```
     pub fn format(&self) -> String {
         format!("{}{}:{}", self.protocol.format(), self.domain, self.port)
-    }
-
-    /// Get the Public key of Instance.
-    ///
-    /// # Errors
-    /// Return an error if :
-    /// * key cannot be read
-    /// * key cannot be get from targeted server
-    pub fn get_public_key(&self) -> Result<PublicKey, String> {
-        let request = reqwest::blocking::get(format!("{}/api/instance/public_key", self.format()))
-            .map_err(|f| f.to_string())?;
-        let text = request.text().map_err(|f| f.to_string())?;
-        let key = fydia_crypto::pem::get_key_from_string(text)
-            .ok_or_else(|| "Can't read the key".to_string())?;
-
-        Ok(key)
     }
 }
 

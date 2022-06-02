@@ -2,11 +2,12 @@
 
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
+use fydia_utils::serde::{Deserialize, Serialize};
 
 /// `Permission` contains all permission as enum
 #[allow(missing_docs)]
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum Permission {
     Admin = (1 << 2),
     Write = (1 << 1),

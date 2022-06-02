@@ -2,7 +2,7 @@ use fydia_sql::{
     impls::{channel::SqlChannelId, server::SqlServerId, token::SqlToken},
     sqlpool::DbConnection,
 };
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 use fydia_struct::{
     channel::{Channel, ChannelId},

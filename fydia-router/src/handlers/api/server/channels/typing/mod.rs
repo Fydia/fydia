@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Extension, Path};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 
 use crate::handlers::{
     api::manager::typing::{TypingManagerChannel, TypingManagerChannelTrait},

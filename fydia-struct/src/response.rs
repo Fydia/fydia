@@ -3,13 +3,16 @@
 //! This module is related to HTTP Response
 
 use axum::{body, response::IntoResponse};
-use http::{header::CONTENT_TYPE, response::Builder, Response, StatusCode};
+use fydia_utils::http::{header::CONTENT_TYPE, response::Builder, Response, StatusCode};
+use fydia_utils::{
+    serde::Serialize,
+    serde_json::{self, json, Value},
+};
 use mime::Mime;
-use serde::Serialize;
-use serde_json::{json, Value};
 
 #[allow(missing_docs)]
 #[derive(Debug, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum FydiaStatus {
     Ok,
     Error,
@@ -17,6 +20,7 @@ pub enum FydiaStatus {
 
 #[allow(missing_docs)]
 #[derive(Debug, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct ResponseFormat {
     status: FydiaStatus,
     #[serde(rename(serialize = "content"))]

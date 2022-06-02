@@ -4,7 +4,7 @@ use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::directmessage::DirectMessage;
 use fydia_struct::response::FydiaResponse;
 use fydia_struct::response::FydiaResult;
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 

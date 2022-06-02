@@ -13,13 +13,11 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 rustflags = [
     "-C",
     "link-arg=-fuse-ld=/usr/local/bin/zld",
-    "-Zshare-generics=y",
     "-Csplit-debuginfo=unpacked",
 ]
 
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
-rustflags = ["-Zshare-generics=y"]
 
 
 [target.'cfg(all())']

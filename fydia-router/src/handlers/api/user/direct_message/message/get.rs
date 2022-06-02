@@ -6,7 +6,7 @@ use fydia_struct::{
     response::{FydiaResponse, FydiaResult},
 };
 
-use http::{HeaderMap, StatusCode};
+use fydia_utils::http::{HeaderMap, StatusCode};
 
 /// Get messages of a dm
 ///

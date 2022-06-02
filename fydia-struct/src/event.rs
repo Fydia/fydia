@@ -3,7 +3,7 @@
 use crate::channel::ChannelId;
 use crate::server::ServerId;
 use crate::{messages::Message, user::UserId};
-use serde::{Deserialize, Serialize};
+use fydia_utils::serde::{Deserialize, Serialize};
 
 /// `Event` represent the message by websocket.
 ///
@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 ///```
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Event {
     pub server_id: ServerId,
     pub content: EventContent,
@@ -41,6 +42,7 @@ impl Event {
 
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 #[serde(tag = "type")]
 pub enum EventContent {
     Message {

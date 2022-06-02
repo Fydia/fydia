@@ -9,14 +9,14 @@ flutter_client = ["fydia-router/flutter_client"]
 
 
 [dependencies]
-axum = "0.5.1"
-tokio = { version = "1.17.0", default-features = false, features = [
+axum = "0.5.6"
+tokio = { version = "1.18.2", default-features = false, features = [
     "rt",
     "macros",
 ] }
 reqwest = "0.11.10"
 fydia-router = { path = "../fydia-router" }
 fydia-config = { path = "../fydia-config" }
-log = "0.4.0"
-pretty_env_logger = "0.4"
+log = "0.4.17"
+pretty_env_logger = "0.4.0"
 chrono = "0.4.19"

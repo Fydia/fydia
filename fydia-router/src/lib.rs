@@ -28,9 +28,9 @@ use fydia_sql::connection::get_connection;
 use fydia_sql::setup::create_tables;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::instance::{Instance, RsaData};
+use fydia_utils::http::{self, Response};
 use handlers::api::manager::typing::TypingManagerChannel;
 use handlers::api::manager::websockets::manager::WebsocketManagerChannel;
-use http::Response;
 use std::sync::Arc;
 use std::time::Duration;
 use tower::ServiceBuilder;
@@ -226,7 +226,7 @@ mod client {
         response::{Html, IntoResponse, Response},
         routing, Router,
     };
-    use http::{header, StatusCode};
+    use fydia_utils::http::{header, StatusCode};
     use rust_embed::RustEmbed;
 
     /// Return index client

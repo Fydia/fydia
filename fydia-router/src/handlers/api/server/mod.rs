@@ -2,7 +2,7 @@ use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
-use http::HeaderMap;
+use fydia_utils::http::HeaderMap;
 
 pub mod channels;
 pub mod create;

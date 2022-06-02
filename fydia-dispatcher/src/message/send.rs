@@ -3,6 +3,8 @@ use fydia_crypto::PublicKey;
 use fydia_struct::event::Event;
 use fydia_struct::instance::{Instance, RsaData};
 use fydia_utils::generate_string;
+use fydia_utils::serde_json;
+
 pub fn encrypt_message(rsa_origin: &RsaData, key: &PublicKey, message: &Event) -> Vec<u8> {
     let json = serde_json::to_string(&message).unwrap();
     let (iv, aeskey, body) = fydia_crypto::encrypt::aes_encrypt(key, json).unwrap();

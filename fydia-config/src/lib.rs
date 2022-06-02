@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
+use fydia_utils::serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(crate = "fydia_utils::serde")]
 pub enum DatabaseType {
     Mysql,
     PgSql,
@@ -8,6 +9,7 @@ pub enum DatabaseType {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct DatabaseConfig {
     pub database_type: DatabaseType,
     pub ip: String,
@@ -65,6 +67,7 @@ impl Default for DatabaseConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct ServerConfig {
     pub ip: String,
     pub port: i16,
@@ -86,6 +89,7 @@ impl Default for ServerConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct InstanceConfig {
     pub domain: String, // URL OR IP
 }
@@ -105,6 +109,7 @@ impl InstanceConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Config {
     pub instance: InstanceConfig,
     pub server: ServerConfig,
