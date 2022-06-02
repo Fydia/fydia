@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["federation_routes","All routes related to the fedaration"]]});

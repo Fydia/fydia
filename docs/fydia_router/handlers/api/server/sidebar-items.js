@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["get_server",""]],"mod":[["channels",""],["create",""],["info",""],["join",""],["picture",""],["roles",""]]});

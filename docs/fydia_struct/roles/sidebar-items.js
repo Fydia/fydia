@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ChannelAccess","`ChannelAccess` contains all channel can be accessed by a `Role`"],["Role","`Role` contains all value of roles"]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"trait":[["WbManagerChannelTrait",""]],"type":[["WbManager",""],["WebsocketManagerChannel",""]]});

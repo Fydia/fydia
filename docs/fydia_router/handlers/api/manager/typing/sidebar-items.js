@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["TypingMessage",""]],"struct":[["Task",""],["TaskValue",""],["TypingInner",""],["TypingStruct",""],["UserTyping",""]],"trait":[["TypingManagerChannelTrait",""]],"type":[["TypingManager",""],["TypingManagerChannel",""]]});

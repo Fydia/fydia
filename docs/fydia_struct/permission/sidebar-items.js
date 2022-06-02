@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Permission","`Permission` contains all permission as enum"]]});

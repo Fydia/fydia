@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["FydiaResponseBody","FydiaResponseBody used to know which type of data is in FydiaResponse"],["FydiaStatus","FydiaStatus is used to know if something have failed"]],"struct":[["FydiaResponse","FydiaResponse is an easy struct to do HTTP response"]],"type":[["FydiaResult","FydiaResult is Result with a FydiaResult as Ok and Err"]]});

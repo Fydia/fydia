@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["EventContent",""]],"struct":[["Event","`Event` represent the message by websocket."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["info_channel",""]],"mod":[["create",""],["delete",""],["messages",""],["typing",""],["update",""],["vocal",""]]});

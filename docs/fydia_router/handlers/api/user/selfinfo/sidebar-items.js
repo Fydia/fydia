@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["get_info_of_self",""]]});

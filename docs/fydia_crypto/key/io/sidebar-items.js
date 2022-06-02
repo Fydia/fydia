@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["read",""],["write",""]]});

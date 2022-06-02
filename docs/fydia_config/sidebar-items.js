@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["DatabaseType",""]],"fn":[["get_config_or_init",""]],"struct":[["Config",""],["DatabaseConfig",""],["InstanceConfig",""],["ServerConfig",""]]});

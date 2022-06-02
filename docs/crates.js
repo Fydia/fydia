@@ -1,1 +1,0 @@
-window.ALL_CRATES = ["fydia","fydia_config","fydia_crypto","fydia_dispatcher","fydia_router","fydia_sql","fydia_struct","fydia_utils"];

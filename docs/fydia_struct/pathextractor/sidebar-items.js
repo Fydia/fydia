@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ChannelExtractor","Path Extractor for path with /api/server/{}/channel/{}"],["DmExtractor","Path Extractor for path with"],["ServerExtractor","Path Extractor for path with /api/server/{} "],["UserExtractor","Path Extractor for path with"]]});

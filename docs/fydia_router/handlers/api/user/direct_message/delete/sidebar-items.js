@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["delete_direct_message",""]]});

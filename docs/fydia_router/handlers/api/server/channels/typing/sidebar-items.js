@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["start_typing",""],["stop_typing",""]]});

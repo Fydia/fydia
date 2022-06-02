@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["encrypt_message",""],["send_message",""]]});
