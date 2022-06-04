@@ -1,4 +1,9 @@
-use std::{collections::HashMap, time::Instant};
+use std::{
+    collections::HashMap,
+    process::exit,
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 use structures::{Config, Test};
 use toml::Value;
@@ -73,14 +78,21 @@ impl Tests {
     pub async fn run(&mut self) {
         warn!("Start Test");
         let mut set_values = HashMap::new();
+
         let test_lenght = self.tests.len();
         warn!("Will run {test_lenght} test(s)");
+
         for (n, test) in self.tests.iter().enumerate() {
             warn!("[{}/{test_lenght}] Running {}", n + 1, test.name);
+
             let inst = Instant::now();
+            let task_kill_too_long = tokio::spawn(kill_after_five_seconds());
+
             for (key, val) in test.run(&self.config, &set_values).await {
                 set_values.insert(key.trim().to_string(), val);
             }
+
+            task_kill_too_long.abort();
 
             warn!(
                 "[{}/{test_lenght}] Passed in {}ms",
@@ -89,4 +101,10 @@ impl Tests {
             );
         }
     }
+}
+
+pub async fn kill_after_five_seconds() {
+    sleep(Duration::from_secs(5));
+    error!("Too long");
+    exit(1);
 }

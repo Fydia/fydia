@@ -235,6 +235,11 @@ impl Test {
         config: &Config,
         setvalue: &HashMap<String, String>,
     ) -> Vec<(String, String)> {
+        if self.request.r#type.to_uppercase() != "HTTP" {
+            error!("Unknow type of test");
+            panic!("");
+        }
+
         let url = url_replace_set_value_name_with_value(
             format!("{}{}", config, self.request.url),
             setvalue,
