@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-async-trait = "0.1.53"
+async-trait = "0.1.56"
 fydia-config = { path = "../fydia-config" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-struct = { path = "../fydia-struct" }
