@@ -26,6 +26,7 @@ async fn main() -> Result<(), ()> {
         .filter(Some("fydia"), LevelFilter::Info)
         .filter(Some("fydia-router"), LevelFilter::Info)
         .init();
+
     let mut config = get_config_or_init();
     if config.instance.domain.is_empty() {
         let req = reqwest::Client::new()
