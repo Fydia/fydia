@@ -1,4 +1,3 @@
-use entity::channels::Column;
 use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType},
     instance::Instance,
@@ -15,26 +14,50 @@ use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlU
 
 #[async_trait::async_trait]
 pub trait BasicModel {
+    type Entity: EntityTrait;
     type StructSelf;
-    type Output;
 
     async fn to_struct(&self, db: &DbConnection) -> Result<Self::StructSelf, String>;
+
     async fn get_model_by(
         simpl: &[SimpleExpr],
         executor: &DbConnection,
-    ) -> Result<Self::Output, String>;
+    ) -> Result<<Self::Entity as EntityTrait>::Model, String> {
+        let mut find = <Self::Entity>::find();
+
+        for i in simpl.iter() {
+            find = find.filter(i.clone().into_condition());
+        }
+
+        Ok(find
+            .one(executor)
+            .await
+            .map_err(|err| err.to_string())?
+            .ok_or_else(|| String::from("Model doesn't exists"))?)
+    }
+
     async fn get_models_by(
         simpl: &[SimpleExpr],
         executor: &DbConnection,
-    ) -> Result<Vec<Self::Output>, String>;
+    ) -> Result<Vec<<Self::Entity as EntityTrait>::Model>, String> {
+        let mut find = <Self::Entity>::find();
 
-    async fn get_model_by_id(id: &str, executor: &DbConnection) -> Result<Self::Output, String>;
+        for i in simpl {
+            find = find.filter(i.clone().into_condition());
+        }
+
+        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
+    }
+    async fn get_model_by_id(
+        id: &str,
+        executor: &DbConnection,
+    ) -> Result<<Self::Entity as EntityTrait>::Model, String>;
 }
 
 #[async_trait::async_trait]
 impl BasicModel for entity::channels::Model {
     type StructSelf = fydia_struct::channel::Channel;
-    type Output = Self;
+    type Entity = entity::channels::Entity;
 
     async fn to_struct(&self, _: &DbConnection) -> Result<Self::StructSelf, String> {
         let channel_type = ChannelType::from_int(self.channel_type);
@@ -49,44 +72,19 @@ impl BasicModel for entity::channels::Model {
             description: self.description.clone().unwrap_or_default(),
         })
     }
-    async fn get_model_by(
-        simpl: &[SimpleExpr],
+
+    async fn get_model_by_id(
+        id: &str,
         executor: &DbConnection,
-    ) -> Result<Self::Output, String> {
-        let mut find = entity::channels::Entity::find();
-
-        for i in simpl.iter() {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find
-            .one(executor)
-            .await
-            .map_err(|err| err.to_string())?
-            .ok_or_else(|| String::from("Model doesn't exists"))?)
-    }
-    async fn get_models_by(
-        simpl: &[SimpleExpr],
-        executor: &DbConnection,
-    ) -> Result<Vec<Self::Output>, String> {
-        let mut find = entity::channels::Entity::find();
-
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
-    }
-
-    async fn get_model_by_id(id: &str, executor: &DbConnection) -> Result<Self::Output, String> {
-        Self::get_model_by(&[Column::Id.eq(id)], executor).await
+    ) -> Result<<Self::Entity as EntityTrait>::Model, String> {
+        Self::get_model_by(&[entity::channels::Column::Id.eq(id)], executor).await
     }
 }
 
 #[async_trait::async_trait]
 impl BasicModel for entity::server::Model {
     type StructSelf = fydia_struct::server::Server;
-    type Output = Self;
+    type Entity = entity::server::Entity;
 
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let id = ServerId::new(self.id.clone());
@@ -106,36 +104,11 @@ impl BasicModel for entity::server::Model {
             emoji: Vec::new(),
         })
     }
-    async fn get_model_by(
-        simpl: &[SimpleExpr],
+
+    async fn get_model_by_id(
+        id: &str,
         executor: &DbConnection,
-    ) -> Result<Self::Output, String> {
-        let mut find = entity::server::Entity::find();
-
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find
-            .one(executor)
-            .await
-            .map_err(|err| err.to_string())?
-            .ok_or_else(|| String::from("Model doesn't exists"))?)
-    }
-    async fn get_models_by(
-        simpl: &[SimpleExpr],
-        executor: &DbConnection,
-    ) -> Result<Vec<Self::Output>, String> {
-        let mut find = entity::server::Entity::find();
-
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
-    }
-
-    async fn get_model_by_id(id: &str, executor: &DbConnection) -> Result<Self::Output, String> {
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
         Self::get_model_by(&[entity::server::Column::Id.eq(id)], executor).await
     }
 }
@@ -143,7 +116,8 @@ impl BasicModel for entity::server::Model {
 #[async_trait::async_trait]
 impl BasicModel for entity::user::Model {
     type StructSelf = fydia_struct::user::User;
-    type Output = Self;
+    type Entity = entity::user::Entity;
+
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let servers = Members::get_servers_by_usersid(&UserId::new(self.id), executor).await?;
 
@@ -158,41 +132,20 @@ impl BasicModel for entity::user::Model {
             servers: Servers(servers),
         })
     }
-    async fn get_model_by(simpl: &[SimpleExpr], executor: &DbConnection) -> Result<Self, String> {
-        let mut find = entity::user::Entity::find();
 
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find
-            .one(executor)
-            .await
-            .map_err(|err| err.to_string())?
-            .ok_or_else(|| String::from("Model doesn't exists"))?)
-    }
-    async fn get_models_by(
-        simpl: &[SimpleExpr],
+    async fn get_model_by_id(
+        id: &str,
         executor: &DbConnection,
-    ) -> Result<Vec<Self>, String> {
-        let mut find = entity::user::Entity::find();
-
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
-    }
-
-    async fn get_model_by_id(id: &str, executor: &DbConnection) -> Result<Self::Output, String> {
-        Self::get_model_by(&[Column::Id.eq(id)], executor).await
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+        Self::get_model_by(&[entity::user::Column::Id.eq(id)], executor).await
     }
 }
 
 #[async_trait::async_trait]
 impl BasicModel for entity::messages::Model {
     type StructSelf = fydia_struct::messages::Message;
-    type Output = Self;
+    type Entity = entity::messages::Entity;
+
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let author_id = User::get_user_by_id(self.author_id, executor)
             .await
@@ -211,33 +164,11 @@ impl BasicModel for entity::messages::Model {
             author_id,
         })
     }
-    async fn get_model_by(simpl: &[SimpleExpr], executor: &DbConnection) -> Result<Self, String> {
-        let mut find = entity::messages::Entity::find();
 
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find
-            .one(executor)
-            .await
-            .map_err(|err| err.to_string())?
-            .ok_or_else(|| String::from("Model doesn't exists"))?)
-    }
-    async fn get_models_by(
-        simpl: &[SimpleExpr],
+    async fn get_model_by_id(
+        id: &str,
         executor: &DbConnection,
-    ) -> Result<Vec<Self>, String> {
-        let mut find = entity::messages::Entity::find();
-
-        for i in simpl {
-            find = find.filter(i.clone().into_condition());
-        }
-
-        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
-    }
-
-    async fn get_model_by_id(id: &str, executor: &DbConnection) -> Result<Self, String> {
-        Self::get_model_by(&[Column::Id.eq(id)], executor).await
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+        Self::get_model_by(&[entity::messages::Column::Id.eq(id)], executor).await
     }
 }
