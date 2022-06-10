@@ -83,7 +83,7 @@ impl ManagerReceiverTrait for TypingStruct {
                         .stop_typing(database, wb, channelid, user, serverid)
                         .await
                     {
-                        error!("{error}");
+                        warn!("{error}");
                     };
                 };
             }
