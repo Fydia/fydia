@@ -12,9 +12,9 @@ use crate::server::ServerId;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(crate = "fydia_utils::serde")]
 pub enum ChannelType {
-    Voice,
-    Text,
-    DirectMessage,
+    Voice = 0,
+    Text = 1,
+    DirectMessage = 2,
 }
 
 impl ChannelType {
@@ -52,6 +52,23 @@ impl ChannelType {
         match toparse.into().to_uppercase().as_str() {
             "VOICE" => Self::Voice,
             "DIRECT_MESSAGE" => Self::DirectMessage,
+            _ => Self::Text,
+        }
+    }
+
+    /// Take a `u32` to return a `ChannelType`
+    ///
+    /// # Examples
+    /// ```
+    /// use fydia_struct::channel::ChannelType;
+    ///
+    /// let channel_type = ChannelType::from_int(0);
+    /// assert_eq!(channel_type, ChannelType::Voice)
+    /// ```
+    pub fn from_int(toparse: u32) -> Self {
+        match toparse {
+            0 => Self::Voice,
+            2 => Self::DirectMessage,
             _ => Self::Text,
         }
     }

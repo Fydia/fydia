@@ -1,20 +1,21 @@
 use std::convert::TryFrom;
 
 use super::{
+    basic_model::BasicModel,
     delete, insert,
     message::SqlMessage,
     server::{SqlServer, SqlServerId},
     update,
 };
-use crate::entity::channels::Model;
+
+use entity::channels::Model;
 use fydia_struct::{
     channel::{Channel, ChannelId},
     messages::Message,
     server::{Channels, ServerId},
     user::UserId,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-
+use sea_orm::{ColumnTrait, DatabaseConnection, Set};
 #[async_trait::async_trait]
 pub trait SqlChannel {
     async fn get_channel_by_id(
@@ -51,9 +52,7 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Channel, String> {
         match Model::get_model_by_id(&id.id, executor).await {
-            Ok(model) => model
-                .to_channel()
-                .ok_or_else(|| "Cannot convert model to channel".to_string()),
+            Ok(model) => model.to_struct(executor).await,
             _ => Err("This Channel doesn't exists".to_string()),
         }
     }
@@ -63,33 +62,6 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Vec<UserId>, String> {
         // TODO: Check Permission
-        /* match &self.parent_id {
-            ParentId::DirectMessage(directmessage) => match &directmessage.users {
-                DirectMessageInner::Users(users) => Ok(users
-                    .iter()
-                    .map(|user| user.id.clone())
-                    .collect::<Vec<UserId>>()),
-
-                DirectMessageInner::UsersId(usersid) => {
-                    let mut vec = Vec::new();
-
-                    for i in usersid {
-                        if let Some(user) = i.get_user(executor).await {
-                            vec.push(user.id);
-                        }
-                    }
-
-                    Ok(vec)
-                }
-            },
-            ParentId::ServerId(serverid) => {
-                let server = serverid.get_server(executor).await?;
-                let members = server.get_user(executor).await?;
-
-                Ok(members.members)
-            }
-        };*/
-
         let server = self.parent_id.get_server(executor).await?;
         let members = server.get_user(executor).await?;
 
@@ -101,14 +73,14 @@ impl SqlChannel for Channel {
         executor: &DatabaseConnection,
     ) -> Result<Channels, String> {
         let mut channels: Vec<Channel> = Vec::new();
-        let models = crate::entity::channels::Entity::find()
-            .filter(crate::entity::channels::Column::ParentId.eq(server_id.id.as_str()))
-            .all(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        let models = Model::get_models_by(
+            &[entity::channels::Column::ParentId.eq(server_id.id.as_str())],
+            executor,
+        )
+        .await?;
 
         for model in models {
-            if let Some(channel) = model.to_channel() {
+            if let Ok(channel) = model.to_struct(executor).await {
                 channels.push(channel);
             }
         }
@@ -117,7 +89,7 @@ impl SqlChannel for Channel {
     }
 
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_channel = crate::entity::channels::ActiveModel::try_from(self.clone())?;
+        let active_channel = entity::channels::ActiveModel::try_from(self.clone())?;
 
         insert(active_channel, executor).await
     }
@@ -135,7 +107,7 @@ impl SqlChannel for Channel {
                 "Can't update name".to_string()
             })?;
 
-        let mut active_model: crate::entity::channels::ActiveModel = model.into();
+        let mut active_model: entity::channels::ActiveModel = model.clone().into();
         active_model.name = Set(name.clone());
 
         update(active_model, executor).await?;
@@ -159,7 +131,7 @@ impl SqlChannel for Channel {
                 "Can't update description".to_string()
             })?;
 
-        let mut active_model: crate::entity::channels::ActiveModel = model.into();
+        let mut active_model: entity::channels::ActiveModel = model.clone().into();
         active_model.description = Set(Some(description.clone()));
 
         update(active_model, executor).await?;
@@ -169,7 +141,7 @@ impl SqlChannel for Channel {
     }
 
     async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_model: crate::entity::channels::ActiveModel =
+        let active_model: entity::channels::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor)
                 .await
                 .map_err(|error| {

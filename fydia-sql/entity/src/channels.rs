@@ -2,10 +2,7 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::{
-    channel::{Channel, ChannelId, ChannelType},
-    server::ServerId,
-};
+use fydia_struct::channel::Channel;
 use sea_orm::{entity::prelude::*, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -19,38 +16,7 @@ pub struct Model {
     pub name: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
-    pub channel_type: Option<String>,
-}
-
-impl Model {
-    pub fn to_channel(&self) -> Option<Channel> {
-        let channel_type = self.channel_type.as_ref().map(ChannelType::from_string)?;
-        let parent_id = ServerId::new(self.parent_id.clone());
-
-        Some(Channel {
-            id: ChannelId::new(self.id.clone()),
-            name: self.name.clone(),
-            parent_id,
-            channel_type,
-            description: self.description.clone().unwrap_or_default(),
-        })
-    }
-
-    /// Get model with id
-    ///
-    /// # Errors
-    /// Return an error if:
-    /// * Database is unreachable
-    /// * Model doesn't exist with this id
-    pub async fn get_model_by_id(id: &str, executor: &DatabaseConnection) -> Result<Self, String> {
-        match crate::entity::channels::Entity::find_by_id(id.to_string())
-            .one(executor)
-            .await
-        {
-            Ok(Some(model)) => Ok(model),
-            _ => Err(String::from("No Model with this id")),
-        }
-    }
+    pub channel_type: u32,
 }
 
 impl TryFrom<Channel> for ActiveModel {
@@ -62,7 +28,7 @@ impl TryFrom<Channel> for ActiveModel {
             parent_id: Set(channel.parent_id.id),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),
-            channel_type: Set(Some(channel.channel_type.to_string())),
+            channel_type: Set(channel.channel_type as u32),
         })
     }
 }

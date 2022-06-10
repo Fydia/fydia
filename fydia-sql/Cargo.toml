@@ -11,15 +11,18 @@ fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 log = "0.4.16"
 
-sea-orm = { version = "0.8.0", default-features=false, features = [
+sea-orm = { version = "0.8.0", default-features = false, features = [
     "sqlx-mysql",
     "sqlx-postgres",
     "sqlx-sqlite",
     "runtime-tokio-rustls",
-    "macros"
+    "macros",
 ] }
 
 tokio = { version = "1.17.0", default-features = false, features = [
     "rt",
     "macros",
 ] }
+
+entity = { path = "entity" }
+migration = { path = "migration" }

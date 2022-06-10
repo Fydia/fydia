@@ -3,7 +3,7 @@ use fydia_struct::{
     instance::Instance,
     messages::{Date, Message},
     server::{Server, ServerId},
-    user::User,
+    user::{Token, User},
 };
 
 use crate::{
@@ -21,7 +21,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 
     let mut user = if let Some(user) =
-        User::get_user_by_email_and_password("user@sample.com", "user", db).await
+        User::get_user_by_token(&Token("default_token".to_string()), db).await
     {
         user
     } else {
@@ -99,5 +99,6 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     }
 
     info!("Sample are insert in database");
+
     Ok(())
 }

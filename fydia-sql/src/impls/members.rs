@@ -4,7 +4,7 @@ use fydia_struct::{
 };
 use sea_orm::{ColumnTrait, DatabaseConnection};
 
-use crate::entity::members::*;
+use entity::members::*;
 
 use super::insert;
 

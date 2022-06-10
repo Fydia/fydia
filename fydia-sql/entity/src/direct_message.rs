@@ -22,6 +22,11 @@ pub struct Model {
 impl Model {
     const MESSAGE: &'static str = "No DirectMessage with this expr";
 
+    /// Return max id of `DirectMessage` Id
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * Database is unreachable
     pub async fn get_max_id(executor: &DatabaseConnection) -> Result<u32, String> {
         return Ok(Model::get_model_by(Expr::col(Column::Id).max(), executor)
             .await?
@@ -72,6 +77,12 @@ impl Model {
             _ => Err(Self::MESSAGE.to_string()),
         }
     }
+
+    /// Return Model from a `DirectMessage`
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * Database is unreachable
     pub async fn from(dm: DirectMessage, executor: &DatabaseConnection) -> Result<Model, String> {
         Ok(Model {
             id: Model::get_max_id(executor).await? + 1,

@@ -1,4 +1,3 @@
-use crate::entity;
 use fydia_struct::roles::Role;
 
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
@@ -32,7 +31,7 @@ impl SqlRoles for Role {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Self>, String> {
         let mut result = Vec::new();
-        let query = crate::entity::roles::Entity::find()
+        let query = entity::roles::Entity::find()
             .filter(entity::roles::Column::Serverid.eq(shortid))
             .all(executor)
             .await;

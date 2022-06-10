@@ -7,9 +7,9 @@ use fydia_struct::{
 };
 use sea_orm::{DatabaseConnection, Set};
 
-use crate::entity::server::Model;
+use entity::server::Model;
 
-use super::{delete, insert, members::SqlMembers, update, user::UserFrom};
+use super::{basic_model::BasicModel, delete, insert, members::SqlMembers, update, user::UserFrom};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
@@ -50,7 +50,7 @@ impl SqlServer for Server {
     ) -> Result<Server, String> {
         Model::get_model_by_id(&id.id, executor)
             .await?
-            .to_server(executor)
+            .to_struct(executor)
             .await
     }
 
@@ -61,7 +61,7 @@ impl SqlServer for Server {
             .await
             .ok_or_else(|| "Owner not found ?".to_string())?;
 
-        let active_channel = crate::entity::server::ActiveModel::try_from(self.clone())?;
+        let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
 
         insert(active_channel, executor).await?;
 
@@ -69,7 +69,7 @@ impl SqlServer for Server {
     }
 
     async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_channel = crate::entity::server::ActiveModel::try_from(self.clone())?;
+        let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
 
         delete(active_channel, executor).await
     }
@@ -80,8 +80,9 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
         let name = name.into();
-        let mut active_model: crate::entity::server::ActiveModel =
+        let mut active_model: entity::server::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor).await?.into();
+
         active_model.name = Set(name.clone());
 
         update(active_model, executor).await?;
@@ -92,7 +93,7 @@ impl SqlServer for Server {
     }
 
     async fn update(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let am = crate::entity::server::ActiveModel::try_from(self.clone())?;
+        let am = entity::server::ActiveModel::try_from(self.clone())?;
 
         update(am, executor).await
     }
@@ -112,7 +113,7 @@ impl SqlServer for Server {
         channel: &Channel,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let active_channel = crate::entity::channels::ActiveModel::try_from(channel)?;
+        let active_channel = entity::channels::ActiveModel::try_from(channel)?;
 
         insert(active_channel, executor).await?;
 

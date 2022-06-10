@@ -7,9 +7,9 @@ use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
 
-use crate::entity::messages::Model;
+use entity::messages::Model;
 
-use super::{delete, insert};
+use super::{basic_model::BasicModel, delete, insert};
 
 #[async_trait::async_trait]
 pub trait SqlMessage {
@@ -41,17 +41,14 @@ impl SqlMessage for Message {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
-        let mut query = crate::entity::messages::Entity::find()
-            .filter(crate::entity::messages::Column::AuthorId.eq(id))
-            .order_by(
-                crate::entity::messages::Column::Timestamp,
-                sea_orm::Order::Asc,
-            )
+        let mut query = entity::messages::Entity::find()
+            .filter(entity::messages::Column::AuthorId.eq(id))
+            .order_by(entity::messages::Column::Timestamp, sea_orm::Order::Asc)
             .paginate(executor, 50);
 
         while let Ok(Some(e)) = query.fetch_and_next().await {
             for i in e {
-                if let Ok(message) = i.to_message(executor).await {
+                if let Ok(message) = i.to_struct(executor).await {
                     messages.push(message);
                 }
             }
@@ -65,17 +62,14 @@ impl SqlMessage for Message {
         executor: &DatabaseConnection,
     ) -> Result<Vec<Message>, String> {
         let mut messages = Vec::new();
-        let query = crate::entity::messages::Entity::find()
-            .filter(crate::entity::messages::Column::ChannelId.eq(channel_id.id))
-            .order_by(
-                crate::entity::messages::Column::Timestamp,
-                sea_orm::Order::Asc,
-            )
+        let query = entity::messages::Entity::find()
+            .filter(entity::messages::Column::ChannelId.eq(channel_id.id))
+            .order_by(entity::messages::Column::Timestamp, sea_orm::Order::Asc)
             .paginate(executor, 50);
 
         if let Ok(models) = query.fetch().await {
             for i in models {
-                if let Ok(message) = i.to_message(executor).await {
+                if let Ok(message) = i.to_struct(executor).await {
                     messages.push(message);
                 }
             }
@@ -90,11 +84,11 @@ impl SqlMessage for Message {
     ) -> Result<Message, String> {
         let message = Model::get_model_by_id(message_id, executor).await?;
 
-        message.to_message(executor).await
+        message.to_struct(executor).await
     }
 
     async fn insert_message(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
+        let active_model = entity::messages::ActiveModel::try_from(self.clone())?;
 
         insert(active_model, executor).await
     }
@@ -104,10 +98,10 @@ impl SqlMessage for Message {
         content: &str,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let model = crate::entity::messages::ActiveModel::try_from(self.clone())?;
+        let model = entity::messages::ActiveModel::try_from(self.clone())?;
 
-        crate::entity::messages::Entity::update(model)
-            .filter(crate::entity::messages::Column::Id.eq(self.id.as_str()))
+        entity::messages::Entity::update(model)
+            .filter(entity::messages::Column::Id.eq(self.id.as_str()))
             .exec(executor)
             .await
             .map_err(|f| f.to_string())?;
@@ -119,7 +113,7 @@ impl SqlMessage for Message {
 
     async fn delete_message(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model = Model::get_model_by_id(&self.id, executor).await?;
-        let active_model: crate::entity::messages::ActiveModel = model.into();
+        let active_model: entity::messages::ActiveModel = model.clone().into();
         delete(active_model, executor).await?;
 
         // Poisoning struct to not be used after

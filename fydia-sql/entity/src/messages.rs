@@ -2,13 +2,7 @@
 
 use std::convert::TryFrom;
 
-use crate::impls::user::SqlUser;
-use fydia_struct::messages::Date;
-use fydia_struct::{
-    channel::ChannelId,
-    messages::{Message, MessageType},
-    user::User,
-};
+use fydia_struct::messages::Message;
 use sea_orm::{entity::prelude::*, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -23,51 +17,6 @@ pub struct Model {
     pub timestamp: DateTime,
     pub channel_id: String,
     pub author_id: u32,
-}
-
-impl Model {
-    /// Convert model to message
-    ///
-    /// # Errors
-    /// Return an error if:
-    /// * Database is unreachable
-    /// * Model doesn't exist
-    /// * Cannot get User
-    /// * Cannot deserialize `message_type`
-    pub async fn to_message(&self, executor: &DatabaseConnection) -> Result<Message, String> {
-        let author_id = User::get_user_by_id(self.author_id, executor)
-            .await
-            .ok_or_else(|| "Error Author_Id".to_string())?;
-
-        let message_type = MessageType::from_string(&self.message_type)
-            .ok_or_else(|| "Error Message_type".to_string())?;
-
-        Ok(Message {
-            id: self.id.clone(),
-            content: self.content.clone().unwrap_or_default(),
-            message_type,
-            edited: self.edited != 0,
-            timestamp: Date::parse_from_naivetime(self.timestamp),
-            channel_id: ChannelId::new(self.channel_id.clone()),
-            author_id,
-        })
-    }
-
-    /// Get model by id
-    ///
-    /// # Errors
-    /// Return an error if:
-    /// * Database is unreachable
-    /// * Model doesn't exist
-    pub async fn get_model_by_id(id: &str, executor: &DatabaseConnection) -> Result<Self, String> {
-        match crate::entity::messages::Entity::find_by_id(id.to_string())
-            .one(executor)
-            .await
-        {
-            Ok(Some(model)) => Ok(model),
-            _ => Err("No Message with this id".to_string()),
-        }
-    }
 }
 
 impl TryFrom<Message> for ActiveModel {

@@ -1,5 +1,6 @@
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 
+pub mod basic_model;
 pub mod channel;
 pub mod direct_message;
 pub mod emoji;
@@ -64,4 +65,12 @@ pub async fn delete<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
         .await
         .map(|_| ())
         .map_err(|error| error.to_string())
+}
+
+#[async_trait::async_trait]
+trait BasisSQL<T: EntityTrait, A: ActiveModelTrait<Entity = T>> {
+    async fn select() -> Self;
+    async fn insert() -> Self;
+    async fn delete() -> Self;
+    async fn update() -> Self;
 }
