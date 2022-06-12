@@ -1,36 +1,66 @@
+# Sources:
+# https://github.com/SeaQL/sea-orm/blob/master/.github/workflows/rust.yml
+#
+#
+
 name: Fydia Builder
 
-on: 
+on:
   push:
-    branches: "main"
+    branches: ["main", "feat/ci"]
 
 jobs:
-  buildflutter:
-    name: Build Fydia with Flutter client
+  clippy-fmt:
+    name: Clippy + Fmt
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy, rustfmt
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: >
+            --all
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: >
+            --all-targets
+            --all
+            
+  build_fydia:
+    name: Build Fydia
     strategy:
       matrix:
         os: [ubuntu-18.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
-      - name: Clone fydiapackages
-        uses: actions/checkout@v1
-        with:
-          ref: "origin/main"
-          repository: "fydia/fydiapackages"
-          path: "./fydia/fydia-router/fydiapackages"
-          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/checkout@v2
+      
       - uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
           override: true
-      - uses: Swatinem/rust-cache@v1
-      - name: Test
-        uses: actions-rs/cargo@v1
+          
+      - uses: actions/cache@v3
         with:
-          command: test
-          args: --tests --release
-      - name: Fydia without Flutter Client
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            Cargo.lock
+            target
+          key: ${{ github.sha }}-${{ github.run_id }}-${{ runner.os }}
+      
+      - name: Fydia
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -44,22 +74,60 @@ jobs:
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+          
+  build_with_flutter:
+    name: "Build fydia with fydia"
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      
+      - name: Clone fydiapackages
+        uses: actions/checkout@v1
+        with:
+          ref: "origin/main"
+          repository: "fydia/fydiapackages"
+          path: "./fydia/fydia-router/fydiapackages"
+          token: ${{ secrets.GH_TOKEN }}
+          
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            Cargo.lock
+            target
+            
+          key: ${{ github.sha }}-${{ github.run_id }}-${{ runner.os }}
+          
       - name: Install Flutter
-        uses: britannio/action-install-flutter@v1 
+        uses: britannio/action-install-flutter@v1
+        
       - name: Fydia with Flutter Client
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p fydia --features flutter_client --release
+          
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
           file: "/home/runner/work/fydia/fydia/target/release/fydia"
+          
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: "Linux-flutter-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+          
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
@@ -67,3 +135,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 1hr
+
