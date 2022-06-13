@@ -1,7 +1,5 @@
 # Sources:
 # https://github.com/SeaQL/sea-orm/blob/master/.github/workflows/rust.yml
-#
-#
 
 name: Fydia Builder
 
@@ -145,9 +143,6 @@ jobs:
             name = ""
             password = ""
             database_name = "Fydia"' >> config.toml
-            pwd 
-            ls -Rha
-            cat config.toml
             chmod +x ./fydia
             ./fydia &
             julia ../fydia-libtest.jl/main.jl
