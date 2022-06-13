@@ -146,7 +146,7 @@ jobs:
           name: "Linux-release"
           path: test-env
       - run: cd test-env
-      - run: echo "
+      - run: echo '
             [instance]
             domain = ""
 
@@ -160,15 +160,14 @@ jobs:
             port = 3306
             name = ""
             password = ""
-            database_name = "Fydia"
-            " >> config.toml
+            database_name = "Fydia"' >> config.toml
       - run: julia ../fydia-libtest.jl/main.jl
  
   delete-artifacts:
+    needs: [build_fydia, build_with_flutter]
     runs-on: ubuntu-latest
     steps:
       - uses: kolpav/purge-artifacts-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           expire-in: 1hr
-
