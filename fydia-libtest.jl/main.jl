@@ -100,7 +100,7 @@ function get_task_from_dict(pair::Pair{String,Any})::Task
 end
 
 function get_tasks_from_file()::Vector{Task}
-    toml = TOML.parsefile("./fydia-router/tests.toml")
+    toml = TOML.parsefile("../fydia-router/tests.toml")
     tests = toml["tests"]
     return [get_task_from_dict(test) for test in tests]
 end
