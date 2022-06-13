@@ -1,36 +1,56 @@
+# Sources:
+# https://github.com/SeaQL/sea-orm/blob/master/.github/workflows/rust.yml
+
 name: Fydia Builder
 
-on: 
+on:
   push:
-    branches: "main"
+    branches: ["main"]
 
 jobs:
-  buildflutter:
-    name: Build Fydia with Flutter client
+  clippy-fmt:
+    name: Clippy + Fmt
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy, rustfmt
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: >
+            --all
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: >
+            --all-targets
+            --all
+            
+  build_fydia:
+    name: Build Fydia
     strategy:
       matrix:
         os: [ubuntu-18.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
-      - name: Clone fydiapackages
-        uses: actions/checkout@v1
-        with:
-          ref: "origin/main"
-          repository: "fydia/fydiapackages"
-          path: "./fydia/fydia-router/fydiapackages"
-          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/checkout@v2
+      
       - uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
           override: true
+          
       - uses: Swatinem/rust-cache@v1
-      - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --tests --release
-      - name: Fydia without Flutter Client
+      
+      - name: Fydia
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -44,23 +64,92 @@ jobs:
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+          
+  build_with_flutter:
+    name: "Build fydia with fydia"
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      
+      - name: Clone fydiapackages
+        uses: actions/checkout@v1
+        with:
+          ref: "origin/main"
+          repository: "fydia/fydiapackages"
+          path: "./fydia/fydia-router/fydiapackages"
+          token: ${{ secrets.GH_TOKEN }}
+          
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          
+      - uses: Swatinem/rust-cache@v1
+          
       - name: Install Flutter
-        uses: britannio/action-install-flutter@v1 
+        uses: britannio/action-install-flutter@v1
+        
       - name: Fydia with Flutter Client
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p fydia --features flutter_client --release
+          
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
           file: "/home/runner/work/fydia/fydia/target/release/fydia"
+          
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: "Linux-flutter-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+  tests_fydia:
+    needs: build_fydia
+    name: "Test fydia"
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: julia-actions/setup-julia@v1
+        with:
+            version: 1.7.3
+            arch: x64
+    
+      - uses: actions/download-artifact@v3
+        with:
+          name: "Linux-release"
+          path: test-env
+      - run: |
+            cd test-env
+            echo '[instance]
+            domain = ""
+
+            [server]
+            ip = "0.0.0.0"
+            port = 8080
+
+            [database]
+            database_type = "Sqlite"
+            ip = "fydia_test"
+            port = 3306
+            name = ""
+            password = ""
+            database_name = "Fydia"' >> config.toml
+            chmod +x ./fydia
+            ./fydia &
+            julia ../fydia-libtest.jl/main.jl
+            killall fydia
+ 
   delete-artifacts:
+    needs: [build_fydia, build_with_flutter]
     runs-on: ubuntu-latest
     steps:
       - uses: kolpav/purge-artifacts-action@v1

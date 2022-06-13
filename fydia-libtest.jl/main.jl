@@ -100,7 +100,7 @@ function get_task_from_dict(pair::Pair{String,Any})::Task
 end
 
 function get_tasks_from_file()::Vector{Task}
-    toml = TOML.parsefile("./fydia-router/tests.toml")
+    toml = TOML.parsefile("../fydia-router/tests.toml")
     tests = toml["tests"]
     return [get_task_from_dict(test) for test in tests]
 end
@@ -292,10 +292,5 @@ end
 
 tests = sort_by_file(get_tasks_from_file())
 
-@async Base.Task(run(Cmd(`./fydia-linux`, detach=true, ignorestatus=true)))
-sleep(3)
-
 run_tests(tests)
-
-run(Cmd(`killall fydia-linux`))
 exit(0)
