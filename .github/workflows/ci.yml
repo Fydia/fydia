@@ -129,8 +129,9 @@ jobs:
         with:
           name: "Linux-release"
           path: test-env
-      - run: cd test-env
-            | echo '[instance]
+      - run: |
+            cd test-env
+            echo '[instance]
             domain = ""
 
             [server]
@@ -144,9 +145,9 @@ jobs:
             name = ""
             password = ""
             database_name = "Fydia"' >> config.toml
-            | pwd 
-            | ls -Rha
-            | julia ../fydia-libtest.jl/main.jl
+            pwd 
+            ls -Rha
+            julia ../fydia-libtest.jl/main.jl
  
   delete-artifacts:
     needs: [build_fydia, build_with_flutter]
