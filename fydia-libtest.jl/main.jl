@@ -106,7 +106,7 @@ function get_tasks_from_file()::Vector{Task}
 end
 
 function sort_by_file(array::Vector{Task})::Vector{Task}
-    file = open("./fydia-router/tests.toml")
+    file = open("../fydia-router/tests.toml")
     s = read(file, String)
     array_unchecked_test = [i for i in split(s, "[tests.") if !contains(i, "req")]
     name_in_sort_array = []
