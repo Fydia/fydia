@@ -148,6 +148,7 @@ jobs:
             pwd 
             ls -Rha
             cat config.toml
+            chmod +x ./fydia
             ./fydia &
             julia ../fydia-libtest.jl/main.jl
             killall fydia
