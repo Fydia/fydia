@@ -292,7 +292,7 @@ end
 
 tests = sort_by_file(get_tasks_from_file())
 
-@async Base.Task(run(Cmd(`./fydia-linux`, detach=true, ignorestatus=true)))
+@async Base.Task(run(Cmd(`./fydia`, detach=true, ignorestatus=true)))
 sleep(3)
 
 run_tests(tests)
