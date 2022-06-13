@@ -15,14 +15,13 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           components: clippy, rustfmt
           override: true
-
+      - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -51,14 +50,7 @@ jobs:
           toolchain: stable
           override: true
           
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            Cargo.lock
-            target
-          key: ${{ github.sha }}-${{ github.run_id }}-${{ runner.os }}
+      - uses: Swatinem/rust-cache@v1
       
       - name: Fydia
         uses: actions-rs/cargo@v1
@@ -98,15 +90,7 @@ jobs:
           toolchain: stable
           override: true
           
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            Cargo.lock
-            target
-            
-          key: ${{ github.sha }}-${{ github.run_id }}-${{ runner.os }}
+      - uses: Swatinem/rust-cache@v1
           
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
@@ -161,7 +145,9 @@ jobs:
             name = ""
             password = ""
             database_name = "Fydia"' >> config.toml
-      - run: julia ../fydia-libtest.jl/main.jl
+      - run: pwd 
+             | ls -Rha
+      - run: julia fydia-libtest.jl/main.jl
  
   delete-artifacts:
     needs: [build_fydia, build_with_flutter]
