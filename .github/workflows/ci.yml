@@ -147,7 +147,10 @@ jobs:
             database_name = "Fydia"' >> config.toml
             pwd 
             ls -Rha
+            cat config.toml
+            ./fydia &
             julia ../fydia-libtest.jl/main.jl
+            killall fydia
  
   delete-artifacts:
     needs: [build_fydia, build_with_flutter]
