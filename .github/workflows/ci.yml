@@ -127,7 +127,43 @@ jobs:
         with:
           name: "Linux-flutter-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
-          
+  tests_fydia:
+    needs: build_fydia
+    name: "Test fydia"
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: julia-actions/setup-julia@v1
+        with:
+            version: 1.7.3
+            arch: x64
+    
+      - uses: actions/download-artifact@v3
+        with:
+          name: "Linux-release"
+          path: test-env
+      - run: cd test-env
+      - run: echo "
+            [instance]
+            domain = ""
+
+            [server]
+            ip = "0.0.0.0"
+            port = 8080
+
+            [database]
+            database_type = "Sqlite"
+            ip = "fydia_test"
+            port = 3306
+            name = ""
+            password = ""
+            database_name = "Fydia"
+            " >> config.toml
+      - run: julia ../fydia-libtest.jl/main.jl
+ 
   delete-artifacts:
     runs-on: ubuntu-latest
     steps:
