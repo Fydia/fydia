@@ -5,7 +5,7 @@ name: Fydia Builder
 
 on:
   push:
-    branches: ["main", "feat/ci"]
+    branches: ["main"]
 
 jobs:
   clippy-fmt:
