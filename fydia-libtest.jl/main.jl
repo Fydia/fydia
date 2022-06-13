@@ -71,7 +71,7 @@ function get_headers_from_value(array::Vector{String})::Dict{String,String}
     return dict_buf
 end
 
-function get_headers_from_value(array)::Dict{String,String}
+function get_headers_from_value(_)::Dict{String,String}
     return Dict()
 end
 
@@ -292,4 +292,10 @@ end
 
 tests = sort_by_file(get_tasks_from_file())
 
+@async Base.Task(run(Cmd(`./fydia-linux`, detach=true, ignorestatus=true)))
+sleep(3)
+
 run_tests(tests)
+
+run(Cmd(`killall fydia-linux`))
+exit(0)
