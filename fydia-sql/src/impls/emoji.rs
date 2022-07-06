@@ -1,5 +1,6 @@
 use fydia_struct::emoji::Emoji;
 use sea_orm::DatabaseConnection;
+use fydia_utils::async_trait;
 
 #[async_trait::async_trait]
 pub trait SqlEmoji {

@@ -1,7 +1,7 @@
 use fydia_struct::roles::Role;
 
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-
+use fydia_utils::async_trait;
 use super::delete;
 
 #[async_trait::async_trait]

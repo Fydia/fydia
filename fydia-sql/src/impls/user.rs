@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-
+use fydia_utils::async_trait;
 use crate::sqlpool::DbConnection;
 use async_trait::async_trait;
 use entity::user::ActiveModel as UserActiveModel;

@@ -3,7 +3,7 @@ use fydia_struct::{
     user::UserId,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection};
-
+use fydia_utils::async_trait;
 use entity::members::*;
 
 use super::insert;

@@ -7,7 +7,7 @@ use fydia_struct::{
     user::{User, UserId},
 };
 use migration::{IntoCondition, SimpleExpr};
-
+use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection as DbConnection, EntityTrait, QueryFilter};
 
 use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlUser};

@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-
+use fydia_utils::async_trait;
 use fydia_struct::{
     channel::Channel,
     server::{Members, Server, ServerId},

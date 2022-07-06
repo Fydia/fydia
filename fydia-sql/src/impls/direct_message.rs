@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use fydia_struct::{directmessage::DirectMessage, server::Members, user::UserId, utils::Id};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
 use {entity::direct_message as dm, entity::direct_message_members as dm_members};
-
+use fydia_utils::async_trait;
 use super::{delete, insert, user::UserFrom};
 #[async_trait::async_trait]
 pub trait DirectMessageMembers {

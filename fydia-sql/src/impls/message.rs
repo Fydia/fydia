@@ -8,7 +8,7 @@ use sea_orm::{
 };
 
 use entity::messages::Model;
-
+use fydia_utils::async_trait;
 use super::{basic_model::BasicModel, delete, insert};
 
 #[async_trait::async_trait]

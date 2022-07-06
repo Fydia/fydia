@@ -1,5 +1,5 @@
 use std::sync::Arc;
-
+use fydia_utils::async_trait;
 use fydia_struct::user::{Token, User};
 use sea_orm::DatabaseConnection;
 

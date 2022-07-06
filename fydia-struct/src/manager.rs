@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::{fmt::Debug, marker::PhantomData, process::exit};
 use tokio::sync::{mpsc::UnboundedSender, oneshot};
+use fydia_utils::async_trait;
 
 /// Trait of Manager.
 ///

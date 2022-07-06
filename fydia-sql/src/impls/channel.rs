@@ -16,6 +16,8 @@ use fydia_struct::{
     user::UserId,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, Set};
+use fydia_utils::async_trait;
+
 #[async_trait::async_trait]
 pub trait SqlChannel {
     async fn get_channel_by_id(
