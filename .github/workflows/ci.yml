@@ -9,7 +9,7 @@ on:
 
 jobs:
   clippy-fmt:
-    name: Clippy + Fmt
+    name: Clippy
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -22,16 +22,9 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
-          command: fmt
-          args: >
-            --all
-
-      - uses: actions-rs/cargo@v1
-        with:
           command: clippy
           args: >
-            --all-targets
-            --all
+            --no-deps
             
   build_fydia:
     name: Build Fydia
