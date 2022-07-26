@@ -18,7 +18,7 @@ sea-orm = { git = "https://github.com/Fydia/sea-orm", default-features = false, 
     "macros",
 ] }
 
-tokio = { version = "1.19.2", default-features = false, features = [
+tokio = { version = "1.20.1", default-features = false, features = [
     "rt",
     "macros",
 ] }
