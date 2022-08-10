@@ -19,4 +19,4 @@ fydia-router = { path = "../fydia-router" }
 fydia-config = { path = "../fydia-config" }
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
-chrono = "0.4.20"
+chrono = "0.4.21"
