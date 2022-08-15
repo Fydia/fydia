@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 axum = { version = "0.5.15", features = ["headers"] }
-chrono = "0.4.20"
+chrono = "0.4.22"
 futures = "0.3.21"
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-utils = { path = "../fydia-utils" }
