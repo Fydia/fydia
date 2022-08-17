@@ -10,6 +10,4 @@ path = "src/lib.rs"
 
 [dependencies]
 entity = { path = "../entity" }
-
-[dependencies.sea-orm-migration]
-git = "https://github.com/Fydia/sea-orm"
+sea-orm-migration = { git = "https://github.com/rheydskey/sea-orm", default-features = false }
