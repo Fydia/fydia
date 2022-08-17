@@ -685,7 +685,6 @@ dependencies = [
  "fydia-router",
  "log",
  "pretty_env_logger",
- "reqwest",
  "tokio",
 ]
 
@@ -694,6 +693,7 @@ name = "fydia-config"
 version = "0.1.0"
 dependencies = [
  "fydia-utils",
+ "reqwest",
  "toml",
 ]
 

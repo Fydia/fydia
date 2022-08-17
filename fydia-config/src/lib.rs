@@ -159,7 +159,7 @@ impl Config {
     }
 }
 
-pub fn get_config_or_init() -> Config {
+fn get_config_or_init() -> Config {
     if let Ok(e) = std::fs::read("config.toml") {
         let read_config = String::from_utf8(e).expect("Error");
         Config::read_config(read_config).expect("Cannot read config")
@@ -168,4 +168,27 @@ pub fn get_config_or_init() -> Config {
         config.write_to("config.toml").expect("Error");
         panic!("Change Config with your database config");
     }
+}
+
+pub fn get_config() -> Config {
+    get_config_or_init();
+
+    if config.instance.domain.is_empty() {
+        let req = reqwest::Client::new()
+            .get("http://ifconfig.io")
+            .header("User-Agent", "curl/7.55.1")
+            .send()
+            .await
+            .map_err(|error| {
+                log::error!("{error}");
+                panic!("Domain is not valid");
+            })?;
+
+        let text = req.text().await.map_err(|error| {
+            log::error!("{error}");
+            panic!("Domain is not valid");
+        })?;
+
+        config.instance.domain = text;
+    };
 }

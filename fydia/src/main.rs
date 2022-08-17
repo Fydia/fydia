@@ -1,7 +1,7 @@
 #![warn(missing_debug_implementations)]
 #![deny(missing_docs)]
 //! Top-level crate of fydia
-use fydia_config::get_config_or_init;
+use fydia_config::get_config;
 use log::{Level, LevelFilter};
 use pretty_env_logger::env_logger::fmt::{Color, Style, StyledValue};
 use std::io::Write;
@@ -27,25 +27,7 @@ async fn main() -> Result<(), ()> {
         .filter(Some("fydia-router"), LevelFilter::Info)
         .init();
 
-    let mut config = get_config_or_init();
-    if config.instance.domain.is_empty() {
-        let req = reqwest::Client::new()
-            .get("http://ifconfig.io")
-            .header("User-Agent", "curl/7.55.1")
-            .send()
-            .await
-            .map_err(|error| {
-                log::error!("{error}");
-                panic!("Domain is not valid");
-            })?;
-
-        let text = req.text().await.map_err(|error| {
-            log::error!("{error}");
-            panic!("Domain is not valid");
-        })?;
-
-        config.instance.domain = text;
-    };
+    let config = get_config();
 
     axum::Server::bind(&(config.format_ip().as_str()).parse().unwrap())
         .serve(
