@@ -27,7 +27,7 @@ async fn main() -> Result<(), ()> {
         .filter(Some("fydia-router"), LevelFilter::Info)
         .init();
 
-    let config = get_config();
+    let config = get_config().await;
 
     axum::Server::bind(&(config.format_ip().as_str()).parse().unwrap())
         .serve(

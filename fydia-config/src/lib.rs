@@ -170,8 +170,8 @@ fn get_config_or_init() -> Config {
     }
 }
 
-pub fn get_config() -> Config {
-    get_config_or_init();
+pub async fn get_config() -> Config {
+    let mut config = get_config_or_init();
 
     if config.instance.domain.is_empty() {
         let req = reqwest::Client::new()
@@ -182,13 +182,20 @@ pub fn get_config() -> Config {
             .map_err(|error| {
                 log::error!("{error}");
                 panic!("Domain is not valid");
-            })?;
+            })
+            .unwrap();
 
-        let text = req.text().await.map_err(|error| {
-            log::error!("{error}");
-            panic!("Domain is not valid");
-        })?;
+        let text = req
+            .text()
+            .await
+            .map_err(|error| {
+                log::error!("{error}");
+                panic!("Domain is not valid");
+            })
+            .unwrap();
 
         config.instance.domain = text;
     };
+
+    return config;
 }
