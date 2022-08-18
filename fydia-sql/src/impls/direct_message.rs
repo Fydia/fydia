@@ -1,26 +1,24 @@
 use std::convert::TryFrom;
 
+use super::{delete, insert, user::UserFrom};
 use fydia_struct::{directmessage::DirectMessage, server::Members, user::UserId, utils::Id};
+use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
 use {entity::direct_message as dm, entity::direct_message_members as dm_members};
-use fydia_utils::async_trait;
-use super::{delete, insert, user::UserFrom};
 #[async_trait::async_trait]
 pub trait DirectMessageMembers {
-    async fn get_members(&self, executor: &DatabaseConnection) -> Result<Members, String>;
-    async fn get_servers_of(
+    async fn members(&self, executor: &DatabaseConnection) -> Result<Members, String>;
+    async fn of_user(
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<DirectMessage>, String>;
-    async fn insert_user(&self, user: &UserId, executor: &DatabaseConnection)
-        -> Result<(), String>;
-    async fn delete_user(&self, user: &UserId, executor: &DatabaseConnection)
-        -> Result<(), String>;
+    async fn add(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn remove(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl DirectMessageMembers for DirectMessage {
-    async fn get_members(&self, executor: &DatabaseConnection) -> Result<Members, String> {
+    async fn members(&self, executor: &DatabaseConnection) -> Result<Members, String> {
         let userids = dm_members::Model::get_models_by(
             dm_members::Column::Directmessage.eq(self.id.get_id_cloned()?),
             executor,
@@ -32,7 +30,7 @@ impl DirectMessageMembers for DirectMessage {
 
         Ok(Members::new(userids))
     }
-    async fn get_servers_of(
+    async fn of_user(
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<DirectMessage>, String> {
@@ -49,24 +47,16 @@ impl DirectMessageMembers for DirectMessage {
 
         Ok(result)
     }
-    async fn insert_user(
-        &self,
-        user: &UserId,
-        executor: &DatabaseConnection,
-    ) -> Result<(), String> {
-        if user.get_user(executor).await.is_none() {
+    async fn add(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String> {
+        if userid.to_user(executor).await.is_none() {
             return Err("User not exists".to_string());
         };
 
-        insert(dm_members::Model::new_activemodel(user, self)?, executor).await
+        insert(dm_members::Model::new_activemodel(userid, self)?, executor).await
     }
 
-    async fn delete_user(
-        &self,
-        user: &UserId,
-        executor: &DatabaseConnection,
-    ) -> Result<(), String> {
-        let members = self.get_members(executor).await?;
+    async fn remove(&self, user: &UserId, executor: &DatabaseConnection) -> Result<(), String> {
+        let members = self.members(executor).await?;
 
         for i in members.members {
             if &i == user {

@@ -21,7 +21,7 @@ pub async fn delete_channel<'a>(
     )
     .await?;
 
-    channel.delete_channel(&database).await.fydia_map(
+    channel.delete(&database).await.fydia_map(
         |_| FydiaResponse::Text("Channel deleted"),
         |_| {
             FydiaResponse::TextErrorWithStatusCode(

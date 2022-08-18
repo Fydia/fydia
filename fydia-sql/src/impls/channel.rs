@@ -12,26 +12,15 @@ use entity::channels::Model;
 use fydia_struct::{
     channel::{Channel, ChannelId},
     messages::Message,
-    server::{Channels, ServerId},
     user::UserId,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, Set};
 use fydia_utils::async_trait;
+use sea_orm::{DatabaseConnection, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
-    async fn get_channel_by_id(
-        id: &ChannelId,
-        executor: &DatabaseConnection,
-    ) -> Result<Channel, String>;
-    async fn get_user_of_channel(
-        &self,
-        executor: &DatabaseConnection,
-    ) -> Result<Vec<UserId>, String>;
-    async fn get_channels_by_server_id(
-        server_id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Channels, String>;
+    async fn by_id(id: &ChannelId, executor: &DatabaseConnection) -> Result<Channel, String>;
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<UserId>, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
         &mut self,
@@ -43,51 +32,25 @@ pub trait SqlChannel {
         description: T,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlChannel for Channel {
-    async fn get_channel_by_id(
-        id: &ChannelId,
-        executor: &DatabaseConnection,
-    ) -> Result<Channel, String> {
+    async fn by_id(id: &ChannelId, executor: &DatabaseConnection) -> Result<Channel, String> {
         match Model::get_model_by_id(&id.id, executor).await {
             Ok(model) => model.to_struct(executor).await,
             _ => Err("This Channel doesn't exists".to_string()),
         }
     }
 
-    async fn get_user_of_channel(
-        &self,
-        executor: &DatabaseConnection,
-    ) -> Result<Vec<UserId>, String> {
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<UserId>, String> {
         // TODO: Check Permission
-        let server = self.parent_id.get_server(executor).await?;
-        let members = server.get_user(executor).await?;
+        let server = self.parent_id.get(executor).await?;
+        let members = server.users(executor).await?;
 
         Ok(members.members)
-    }
-
-    async fn get_channels_by_server_id(
-        server_id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Channels, String> {
-        let mut channels: Vec<Channel> = Vec::new();
-        let models = Model::get_models_by(
-            &[entity::channels::Column::ParentId.eq(server_id.id.as_str())],
-            executor,
-        )
-        .await?;
-
-        for model in models {
-            if let Ok(channel) = model.to_struct(executor).await {
-                channels.push(channel);
-            }
-        }
-
-        Ok(Channels(channels))
     }
 
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
@@ -142,7 +105,7 @@ impl SqlChannel for Channel {
         Ok(())
     }
 
-    async fn delete_channel(&self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_model: entity::channels::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor)
                 .await
@@ -152,29 +115,33 @@ impl SqlChannel for Channel {
                 })?
                 .into();
 
-        delete(active_model, executor).await
+        delete(active_model, executor).await?;
+
+        self = Self::default();
+
+        Ok(())
     }
 
-    async fn get_messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
-        Message::get_messages_by_channel(self.id.clone(), executor).await
+    async fn messages(&self, executor: &DatabaseConnection) -> Result<Vec<Message>, String> {
+        Message::by_channel(self.id.clone(), executor).await
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlChannelId {
-    async fn get_channel(&self, executor: &DatabaseConnection) -> Result<Channel, String>;
+    async fn channel(&self, executor: &DatabaseConnection) -> Result<Channel, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlChannelId for ChannelId {
-    async fn get_channel(&self, executor: &DatabaseConnection) -> Result<Channel, String> {
-        Channel::get_channel_by_id(self, executor).await
+    async fn channel(&self, executor: &DatabaseConnection) -> Result<Channel, String> {
+        Channel::by_id(self, executor).await
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlDirectMessages {
-    async fn get_by_userid(
+    async fn by_userid(
         executor: &DatabaseConnection,
         userid: UserId,
     ) -> Result<Vec<Channel>, String>;

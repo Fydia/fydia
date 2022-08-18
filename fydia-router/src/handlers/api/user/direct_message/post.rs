@@ -33,7 +33,7 @@ pub async fn create_direct_message<'a>(
     })?;
 
     let target = UserId::new(id)
-        .get_user(&database)
+        .to_user(&database)
         .await
         .ok_or(FydiaResponse::TextError("Bad user id"))?;
 
@@ -46,11 +46,11 @@ pub async fn create_direct_message<'a>(
         )
     })?;
 
-    dm.insert_user(&user.id, &database)
+    dm.add(&user.id, &database)
         .await
         .map_err(FydiaResponse::StringError)?;
 
-    dm.insert_user(&target.id, &database)
+    dm.add(&target.id, &database)
         .await
         .map_err(FydiaResponse::StringError)?;
 

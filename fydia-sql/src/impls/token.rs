@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use fydia_utils::async_trait;
 use fydia_struct::user::{Token, User};
+use fydia_utils::async_trait;
 use sea_orm::DatabaseConnection;
+use std::sync::Arc;
 
 use super::user::SqlUser;
 
@@ -13,6 +13,6 @@ pub trait SqlToken {
 #[async_trait::async_trait]
 impl SqlToken for Token {
     async fn get_user(&self, executor: &Arc<DatabaseConnection>) -> Option<User> {
-        User::get_user_by_token(self, executor).await
+        User::by_token(self, executor).await
     }
 }

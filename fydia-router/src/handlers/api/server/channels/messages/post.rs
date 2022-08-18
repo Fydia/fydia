@@ -245,7 +245,7 @@ pub async fn send_event<'a>(
     wbsocket: Arc<WebsocketManagerChannel>,
     database: DbConnection,
 ) -> FydiaResult<'a> {
-    let members = match server.get_user(&database).await {
+    let members = match server.users(&database).await {
         Ok(members) => members.members,
         Err(_) => {
             return Err(FydiaResponse::TextErrorWithStatusCode(
@@ -256,7 +256,7 @@ pub async fn send_event<'a>(
     };
 
     if let EventContent::Message { ref content } = event.content {
-        if content.insert_message(&database).await.is_err() {
+        if content.insert(&database).await.is_err() {
             return Err(FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Cannot send message",

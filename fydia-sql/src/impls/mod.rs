@@ -1,5 +1,5 @@
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 use fydia_utils::async_trait;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 
 pub mod basic_model;
 pub mod channel;

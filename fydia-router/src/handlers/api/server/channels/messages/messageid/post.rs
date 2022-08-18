@@ -42,7 +42,7 @@ pub async fn update_message<'a>(
     )
     .await?;
 
-    let mut message = Message::get_message_by_id(&messageid, &executor)
+    let mut message = Message::by_id(&messageid, &executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 
@@ -59,17 +59,14 @@ pub async fn update_message<'a>(
     let content = get_json("content", &value)?.to_string();
 
     message
-        .update_message(&content, &executor)
+        .update(&content, &executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 
-    let users = &channel
-        .get_user_of_channel(&executor)
-        .await
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot get user")
-        })?;
+    let users = &channel.users(&executor).await.map_err(|error| {
+        error!("{error}");
+        FydiaResponse::TextError("Cannot get user")
+    })?;
 
     wbsocket
         .send(

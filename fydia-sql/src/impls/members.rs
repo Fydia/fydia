@@ -1,21 +1,18 @@
+use entity::members::*;
 use fydia_struct::{
     server::{Members, ServerId},
     user::UserId,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection};
 use fydia_utils::async_trait;
-use entity::members::*;
+use sea_orm::{ColumnTrait, DatabaseConnection};
 
 use super::insert;
 
 #[async_trait::async_trait]
 pub trait SqlMembers {
-    async fn get_users_by_serverid(
-        serverid: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Members, String>;
-    async fn get_servers_by_usersid(
-        serverid: &UserId,
+    async fn users_of(server: &ServerId, executor: &DatabaseConnection) -> Result<Members, String>;
+    async fn servers_of(
+        user: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<ServerId>, String>;
     async fn insert(
@@ -27,12 +24,9 @@ pub trait SqlMembers {
 
 #[async_trait::async_trait]
 impl SqlMembers for Members {
-    async fn get_users_by_serverid(
-        serverid: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Members, String> {
+    async fn users_of(server: &ServerId, executor: &DatabaseConnection) -> Result<Members, String> {
         let model: Vec<UserId> =
-            Model::get_models_by(Column::Serverid.contains(&serverid.id), executor)
+            Model::get_models_by(Column::Serverid.contains(&server.id), executor)
                 .await?
                 .iter()
                 .map(|i| i.to_userid())
@@ -41,7 +35,7 @@ impl SqlMembers for Members {
         Ok(Members::new(model))
     }
 
-    async fn get_servers_by_usersid(
+    async fn servers_of(
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<ServerId>, String> {
@@ -55,11 +49,11 @@ impl SqlMembers for Members {
     }
 
     async fn insert(
-        serverid: &ServerId,
-        userid: &UserId,
+        server: &ServerId,
+        user: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<(), String> {
-        let acmodel = Model::new_activemodel(userid, serverid.clone())?;
+        let acmodel = Model::new_activemodel(user, server.clone())?;
 
         insert(acmodel, executor).await
     }
