@@ -18,7 +18,7 @@ pub async fn info_channel<'a>(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
-    Channel::get_channel_by_id(&ChannelId::new(channelid), &database)
+    Channel::by_id(&ChannelId::new(channelid), &database)
         .await
         .map(FydiaResponse::from_serialize)
         .map_err(FydiaResponse::StringError)

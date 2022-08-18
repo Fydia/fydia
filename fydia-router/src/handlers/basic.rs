@@ -44,7 +44,7 @@ impl BasicValues {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid)
-            .get_server(executor)
+            .get(executor)
             .await
             .map_err(|error| {
                 error!("{error}");
@@ -70,7 +70,7 @@ impl BasicValues {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid)
-            .get_server(executor)
+            .get(executor)
             .await
             .map_err(|error| {
                 error!("{error}");
@@ -95,7 +95,7 @@ impl BasicValues {
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
 
         let channel = ChannelId::new(channelid)
-            .get_channel(executor)
+            .channel(executor)
             .await
             .map_err(FydiaResponse::StringError)?;
 

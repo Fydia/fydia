@@ -22,7 +22,7 @@ pub async fn user_login<'a>(
     let email = get_json("email", &json)?;
     let password = get_json("password", &json)?;
 
-    let mut user = User::get_user_by_email_and_password(email, password, &database)
+    let mut user = User::by_email_and_password(email, password, &database)
         .await
         .ok_or(FydiaResponse::TextError("User not exists"))?;
 

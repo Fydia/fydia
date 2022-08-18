@@ -25,7 +25,7 @@ pub async fn create_user<'a>(
 
     User::new(name, email, password, Instance::default())
         .map_err(FydiaResponse::StringError)?
-        .insert_user(&database)
+        .insert(&database)
         .await
         .map(|_| FydiaResponse::Text("Register successfully"))
         .map_err(|error| {

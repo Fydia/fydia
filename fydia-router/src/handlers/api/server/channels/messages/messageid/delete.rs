@@ -36,7 +36,7 @@ pub async fn delete_message<'a>(
     )
     .await?;
 
-    let mut message = Message::get_message_by_id(&messageid, &executor)
+    let mut message = Message::by_id(&messageid, &executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 
@@ -53,7 +53,7 @@ pub async fn delete_message<'a>(
                 },
             },
             &channel
-                .get_user_of_channel(&executor)
+                .users(&executor)
                 .await
                 .map_err(FydiaResponse::StringError)?,
         )
@@ -67,7 +67,7 @@ pub async fn delete_message<'a>(
         })?;
 
     message
-        .delete_message(&executor)
+        .delete(&executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 

@@ -1,11 +1,11 @@
-use std::convert::TryFrom;
-use fydia_utils::async_trait;
 use fydia_struct::{
     channel::Channel,
     server::{Members, Server, ServerId},
     user::{User, UserId},
 };
+use fydia_utils::async_trait;
 use sea_orm::{DatabaseConnection, Set};
+use std::convert::TryFrom;
 
 use entity::server::Model;
 
@@ -13,13 +13,10 @@ use super::{basic_model::BasicModel, delete, insert, members::SqlMembers, update
 
 #[async_trait::async_trait]
 pub trait SqlServer {
-    async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String>;
-    async fn get_server_by_id(
-        id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Server, String>;
-    async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String>;
+    async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String>;
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
         &mut self,
         name: T,
@@ -40,24 +37,21 @@ pub trait SqlServer {
 
 #[async_trait::async_trait]
 impl SqlServer for Server {
-    async fn get_user(&self, executor: &DatabaseConnection) -> Result<Members, String> {
-        Members::get_users_by_serverid(&self.id, executor).await
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String> {
+        Members::users_of(&self.id, executor).await
     }
 
-    async fn get_server_by_id(
-        id: &ServerId,
-        executor: &DatabaseConnection,
-    ) -> Result<Server, String> {
+    async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String> {
         Model::get_model_by_id(&id.id, executor)
             .await?
             .to_struct(executor)
             .await
     }
 
-    async fn insert_server(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let mut user = self
             .owner
-            .get_user(executor)
+            .to_user(executor)
             .await
             .ok_or_else(|| "Owner not found ?".to_string())?;
 
@@ -68,7 +62,7 @@ impl SqlServer for Server {
         self.join(&mut user, executor).await
     }
 
-    async fn delete_server(&self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
 
         delete(active_channel, executor).await
@@ -125,30 +119,30 @@ impl SqlServer for Server {
 
 #[async_trait::async_trait]
 pub trait SqlServerId {
-    async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String>;
+    async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String>;
 }
 
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
-    async fn get_server(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        Server::get_server_by_id(&ServerId::new(self.id.clone()), executor).await
+    async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String> {
+        Server::by_id(&ServerId::new(self.id.clone()), executor).await
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlMember {
-    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String>;
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool;
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String>;
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool;
 }
 
 #[async_trait::async_trait]
 impl SqlMember for Members {
-    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
         let mut result = Vec::new();
 
-        for i in &self.members {
-            let user = i
-                .get_user(executor)
+        for id in &self.members {
+            let user = id
+                .to_user(executor)
                 .await
                 .ok_or_else(|| String::from("User not exists"))?;
 
@@ -158,9 +152,10 @@ impl SqlMember for Members {
         Ok(result)
     }
 
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
-        for i in &self.members {
-            if i.get_user(executor)
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
+        for id in &self.members {
+            if id
+                .to_user(executor)
                 .await
                 .ok_or_else(|| String::from("User not exists"))
                 .is_err()
@@ -174,15 +169,16 @@ impl SqlMember for Members {
 
 #[async_trait::async_trait]
 impl SqlMember for Vec<UserId> {
-    async fn to_users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
+    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
         let members = Members::new(self.clone());
 
-        members.to_users(executor).await
+        members.users(executor).await
     }
 
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
-        for i in self {
-            if i.get_user(executor)
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
+        for id in self {
+            if id
+                .to_user(executor)
                 .await
                 .ok_or_else(|| String::from("User not exists"))
                 .is_err()

@@ -17,7 +17,7 @@ pub async fn get_message_dm<'a>(
     Path(dm_id): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    let message = Message::get_messages_by_channel(ChannelId::new(dm_id.clone()), &database).await;
+    let message = Message::by_channel(ChannelId::new(dm_id.clone()), &database).await;
     println!("{:?}", message);
 
     Err(FydiaResponse::TextErrorWithStatusCode(

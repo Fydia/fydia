@@ -20,36 +20,34 @@ use crate::{
 pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 
-    let mut user = if let Some(user) =
-        User::get_user_by_token(&Token("default_token".to_string()), db).await
+    let mut user = if let Some(user) = User::by_token(&Token("default_token".to_string()), db).await
     {
         user
     } else {
         let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
+
         user.token = Some(String::from("default_token"));
-        if let Err(error) = user.insert_user_and_update(db).await {
-            error!("{error}");
-        }
+
+        user = user.insert(db).await?;
 
         user
     };
 
-    let mut server = if let Ok(server) =
-        Server::get_server_by_id(&ServerId::new("server_default_id"), db).await
-    {
-        info!("Server already exists");
-        server
-    } else {
-        let mut server = Server::new("server_default", user.id.clone())?;
+    let mut server =
+        if let Ok(server) = Server::by_id(&ServerId::new("server_default_id"), db).await {
+            info!("Server already exists");
+            server
+        } else {
+            let mut server = Server::new("server_default", user.id.clone())?;
 
-        server.id = ServerId::new("server_default_id");
+            server.id = ServerId::new("server_default_id");
 
-        if let Err(error) = server.insert_server(db).await {
-            error!("{error}");
-        }
+            if let Err(error) = server.insert(db).await {
+                error!("{error}");
+            }
 
-        server
-    };
+            server
+        };
 
     user.update_from_database(db).await?;
 
@@ -77,9 +75,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
         }
     }
 
-    if let Ok(message) =
-        Message::get_messages_by_channel(ChannelId::new("channel_default_id"), db).await
-    {
+    if let Ok(message) = Message::by_channel(ChannelId::new("channel_default_id"), db).await {
         if message.len() < 5 {
             for _ in 0..=5 {
                 let message = Message::new(
@@ -91,7 +87,7 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
                     ChannelId::new("channel_default_id"),
                 )?;
 
-                if let Err(error) = message.insert_message(db).await {
+                if let Err(error) = message.insert(db).await {
                     error!("{error}");
                 }
             }

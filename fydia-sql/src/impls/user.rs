@@ -1,6 +1,3 @@
-use std::convert::TryFrom;
-use fydia_utils::async_trait;
-use crate::sqlpool::DbConnection;
 use async_trait::async_trait;
 use entity::user::ActiveModel as UserActiveModel;
 use entity::user::Column;
@@ -11,11 +8,13 @@ use fydia_crypto::password::verify_password;
 use fydia_struct::user::Token;
 use fydia_struct::user::User;
 use fydia_struct::user::UserId;
+use fydia_utils::async_trait;
 use fydia_utils::generate_string;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
 use sea_orm::EntityTrait;
 use sea_orm::Set;
+use std::convert::TryFrom;
 
 use super::basic_model::BasicModel;
 use super::delete;
@@ -23,17 +22,17 @@ use super::update;
 
 #[async_trait]
 pub trait SqlUser {
-    async fn get_user_by_email_and_password(
+    async fn by_email_and_password(
         email: &str,
         password: &str,
         executor: &DatabaseConnection,
     ) -> Option<Self>
     where
         Self: Sized;
-    async fn get_user_by_id(id: u32, executor: &DatabaseConnection) -> Option<Self>
+    async fn by_id(id: u32, executor: &DatabaseConnection) -> Option<Self>
     where
         Self: Sized;
-    async fn get_user_by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
+    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
     where
         Self: Sized;
     async fn update_from_database(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
@@ -48,16 +47,13 @@ pub trait SqlUser {
         clear_password: &str,
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
-    async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn insert_user_and_update(&mut self, executor: &DatabaseConnection)
-        -> Result<(), String>;
-    async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn get_user_message() -> Vec<String>;
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, String>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait]
 impl SqlUser for User {
-    async fn get_user_by_email_and_password(
+    async fn by_email_and_password(
         email: &str,
         password: &str,
         executor: &DatabaseConnection,
@@ -76,7 +72,7 @@ impl SqlUser for User {
         }
     }
 
-    async fn get_user_by_id(id: u32, executor: &DatabaseConnection) -> Option<Self> {
+    async fn by_id(id: u32, executor: &DatabaseConnection) -> Option<Self> {
         Model::get_model_by(&[Column::Id.eq(id)], executor)
             .await
             .ok()?
@@ -85,7 +81,7 @@ impl SqlUser for User {
             .ok()
     }
 
-    async fn get_user_by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self> {
+    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self> {
         Model::get_model_by(&[Column::Token.eq(token.0.as_str())], executor)
             .await
             .ok()?
@@ -154,7 +150,7 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn insert_user(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<Self, String> {
         if self.token.is_none() {
             self.token = Some(generate_string(30));
         }
@@ -167,48 +163,29 @@ impl SqlUser for User {
 
         self.id = UserId::new(db.last_insert_id);
 
-        Ok(())
+        Ok(self)
     }
 
-    async fn insert_user_and_update(
-        &mut self,
-        executor: &DatabaseConnection,
-    ) -> Result<(), String> {
-        self.insert_user(executor).await?;
-        self.update_from_database(executor).await
-    }
-
-    async fn delete_account(&self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model =
             Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor).await?;
         let active_model: UserActiveModel = model.clone().into();
 
-        delete(active_model, executor).await
-    }
+        delete(active_model, executor).await?;
 
-    async fn get_user_message() -> Vec<String> {
-        Vec::new()
+        self = Self::default();
+
+        Ok(())
     }
 }
 #[async_trait]
 pub trait UserFrom {
-    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User>;
+    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User>;
 }
 
 #[async_trait]
 impl UserFrom for UserId {
-    async fn get_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::get_user_by_id(self.0.get_id_cloned().ok()?, executor).await
-    }
-}
-
-#[async_trait]
-pub trait UserInfoSql {
-    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<User>;
-}
-#[async_trait]
-impl UserInfoSql for UserId {
-    async fn to_userinfo_from(&self, executor: DbConnection) -> Option<User> {
-        self.get_user(&executor).await
+    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User> {
+        User::by_id(self.0.get_id_cloned().ok()?, executor).await
     }
 }

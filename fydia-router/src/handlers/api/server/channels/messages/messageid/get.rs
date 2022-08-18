@@ -27,7 +27,7 @@ pub async fn get_message<'a>(
     )
     .await?;
 
-    let message = Message::get_message_by_id(&messageid, &executor)
+    let message = Message::by_id(&messageid, &executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 

@@ -6,11 +6,11 @@ use fydia_struct::{
     server::{Members, Server, ServerId, Servers},
     user::{User, UserId},
 };
-use migration::{IntoCondition, SimpleExpr};
 use fydia_utils::async_trait;
+use migration::{IntoCondition, SimpleExpr};
 use sea_orm::{ColumnTrait, DatabaseConnection as DbConnection, EntityTrait, QueryFilter};
 
-use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlUser};
+use super::{members::SqlMembers, role::SqlRoles, server::SqlServerId, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait BasicModel {
@@ -88,10 +88,10 @@ impl BasicModel for entity::server::Model {
 
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let id = ServerId::new(self.id.clone());
-        let members = Members::get_users_by_serverid(&id, executor).await?;
-        let roles = Role::get_roles_by_server_id(id.id.clone(), executor).await?;
+        let members = Members::users_of(&id, executor).await?;
+        let roles = Role::by_server_id(id.id.clone(), executor).await?;
 
-        let channel = Channel::get_channels_by_server_id(&id, executor).await?;
+        let channel = id.get(executor).await?.channel; //::get_channels_by_server_id(&id, executor).await?;
 
         Ok(Server {
             id,
@@ -119,7 +119,7 @@ impl BasicModel for entity::user::Model {
     type Entity = entity::user::Entity;
 
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
-        let servers = Members::get_servers_by_usersid(&UserId::new(self.id), executor).await?;
+        let servers = Members::servers_of(&UserId::new(self.id), executor).await?;
 
         Ok(User {
             id: UserId::new(self.id),
@@ -147,7 +147,7 @@ impl BasicModel for entity::messages::Model {
     type Entity = entity::messages::Entity;
 
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
-        let author_id = User::get_user_by_id(self.author_id, executor)
+        let author_id = User::by_id(self.author_id, executor)
             .await
             .ok_or_else(|| "Error Author_Id".to_string())?;
 

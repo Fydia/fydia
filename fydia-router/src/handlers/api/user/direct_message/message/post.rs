@@ -18,7 +18,7 @@ pub async fn post_message_dm<'a>(
 ) -> FydiaResult<'a> {
     println!(
         "{:?}",
-        Message::get_messages_by_channel(ChannelId::new(dm_id.clone()), &database).await
+        Message::by_channel(ChannelId::new(dm_id.clone()), &database).await
     );
 
     Err(FydiaResponse::TextErrorWithStatusCode(
