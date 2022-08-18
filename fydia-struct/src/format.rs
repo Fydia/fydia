@@ -4,7 +4,7 @@ use url::Url;
 
 /// `UserFormat` used to represent a `User` as a String over Instance
 #[allow(missing_docs)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct UserFormat {
     pub name: String,
     pub domain: String,
@@ -72,7 +72,7 @@ impl UserFormat {
 
 /// `ServerFormat` used to represent a `Server` as a String over Instance
 #[allow(missing_docs)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ServerFormat {
     pub name: String,
     pub domain: String,
@@ -144,7 +144,7 @@ impl ServerFormat {
 
 /// `ChannelFormat` used to represent a `Channel` as a String over Instance
 #[allow(missing_docs)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ChannelFormat {
     pub channel: String,
     pub server: String,

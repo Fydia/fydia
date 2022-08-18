@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use fydia_struct::channel::Channel;
 use sea_orm::{entity::prelude::*, Set};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "Channels")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

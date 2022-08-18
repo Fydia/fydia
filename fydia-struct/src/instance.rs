@@ -9,7 +9,7 @@ pub struct RsaData(pub PrivateKey, pub PublicKey);
 
 /// Enum to know if Instance is in HTTP or HTTPS
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub enum Protocol {
     HTTP,
@@ -53,7 +53,7 @@ impl Protocol {
 
 /// `Instance` represents a Instance of Fydia
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct Instance {
     pub protocol: Protocol,

@@ -9,7 +9,7 @@ use sea_orm::{
     Set,
 };
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "DirectMessage")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -28,9 +28,9 @@ impl Model {
     /// Return an error if :
     /// * Database is unreachable
     pub async fn get_max_id(executor: &DatabaseConnection) -> Result<u32, String> {
-        return Ok(Model::get_model_by(Expr::col(Column::Id).max(), executor)
+        Ok(Model::get_model_by(Expr::col(Column::Id).max(), executor)
             .await?
-            .id);
+            .id)
     }
 
     /// Get models with any condition

@@ -1,6 +1,6 @@
 use fydia_utils::serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub enum DatabaseType {
     Mysql,
@@ -197,5 +197,5 @@ pub async fn get_config() -> Config {
         config.instance.domain = text;
     };
 
-    return config;
+    config
 }

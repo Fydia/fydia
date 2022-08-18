@@ -3,7 +3,7 @@
 use fydia_struct::{permission::Permission, roles::Role, server::ServerId};
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "Roles")]
 pub struct Model {
     #[sea_orm(primary_key)]

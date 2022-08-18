@@ -3,7 +3,7 @@
 use fydia_struct::{directmessage::DirectMessage, user::UserId, utils::Id};
 use sea_orm::{entity::prelude::*, sea_query::SimpleExpr, Set};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "DirectMessageMembers")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

@@ -14,7 +14,7 @@ use fydia_utils::{
 
 /// `User` contains all value of user
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq, Eq, Default)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct User {
     pub id: UserId,

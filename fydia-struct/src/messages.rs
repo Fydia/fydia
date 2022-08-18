@@ -74,7 +74,7 @@ impl Default for MessageType {
 
 /// Message contains all value of a message.
 #[allow(missing_docs)]
-#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct Message {
     pub id: String,
@@ -130,7 +130,7 @@ impl Message {
 }
 
 /// Date contains a `DateTime<Utc>`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Date(pub DateTime<Utc>);
 
 impl Date {

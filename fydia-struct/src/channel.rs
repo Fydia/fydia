@@ -9,7 +9,7 @@ use crate::server::ServerId;
 /// `ChannelType` reprensent which type of channel is.
 /// Voice, Text or `DirectMessage`
 #[allow(missing_docs)]
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub enum ChannelType {
     Voice = 0,

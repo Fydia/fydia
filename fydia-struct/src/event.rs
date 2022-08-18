@@ -16,7 +16,7 @@ use fydia_utils::serde::{Deserialize, Serialize};
 ///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
 ///```
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct Event {
     pub server_id: ServerId,
@@ -41,7 +41,7 @@ impl Event {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(crate = "fydia_utils::serde")]
 #[serde(tag = "type")]
 pub enum EventContent {
