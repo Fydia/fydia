@@ -132,7 +132,7 @@ impl SqlServerId for ServerId {
 #[async_trait::async_trait]
 pub trait SqlMember {
     async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String>;
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool;
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool;
 }
 
 #[async_trait::async_trait]
@@ -152,7 +152,7 @@ impl SqlMember for Members {
         Ok(result)
     }
 
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in &self.members {
             if id
                 .to_user(executor)
@@ -175,7 +175,7 @@ impl SqlMember for Vec<UserId> {
         members.users(executor).await
     }
 
-    async fn all_exists(&self, executor: &DatabaseConnection) -> bool {
+    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in self {
             if id
                 .to_user(executor)
