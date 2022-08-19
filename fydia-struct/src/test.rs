@@ -6,19 +6,40 @@ mod tests {
     }
 
     mod permission {
-        use crate::permission::Permission;
-        #[cfg(test)]
-        const PERMISSION_TO_TEST: u32 = Permission::Read as u32 | Permission::Write as u32;
+        use crate::{
+            permission::{self, Permission, PermissionValue},
+            user::UserId,
+        };
+        /* #[cfg(test)]
+        const PERMISSION_TO_TEST: u64 =
+            PermissionValue::Read as u64 | PermissionValue::Write as u64;
         #[test]
         pub fn can() {
-            assert_eq!(Permission::can(PERMISSION_TO_TEST, Permission::Read), true);
+            assert_eq!(
+                PermissionValue::can(PERMISSION_TO_TEST, PermissionValue::Read),
+                true
+            );
         }
         #[test]
         pub fn cant() {
             assert_eq!(
-                Permission::can(PERMISSION_TO_TEST, Permission::Admin),
+                PermissionValue::can(PERMISSION_TO_TEST, PermissionValue::Admin),
                 false
             );
+        }*/
+
+        #[test]
+        pub fn cant() {
+            let permission = Permission::user(
+                UserId::new(0),
+                crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
+                PermissionValue::Read as u64 | PermissionValue::Write as u64,
+            );
+            assert!(permission.can_vec(&[
+                PermissionValue::Read,
+                PermissionValue::Write,
+                PermissionValue::Admin
+            ]));
         }
     }
     mod formated {

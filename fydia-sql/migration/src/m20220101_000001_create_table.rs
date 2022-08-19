@@ -109,7 +109,7 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(entity::channels::Column::ParentId)
+                        ColumnDef::new(entity::channels::Column::ServerId)
                             .string_len(30)
                             .not_null(),
                     )
@@ -214,16 +214,6 @@ impl MigrationTrait for Migration {
                             .string_len(25)
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(entity::roles::Column::ChannelAccess)
-                            .text()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(entity::roles::Column::Permission)
-                            .text()
-                            .not_null(),
-                    )
                     .foreign_key(
                         ForeignKey::create()
                             .to(entity::server::Entity, entity::server::Column::Id)
@@ -312,6 +302,86 @@ impl MigrationTrait for Migration {
                             .from(
                                 entity::direct_message_members::Entity,
                                 entity::direct_message_members::Column::Directmessage,
+                            ),
+                    )
+                    .clone(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .if_not_exists()
+                    .table(entity::permission::role::Entity)
+                    .col(
+                        ColumnDef::new(entity::permission::role::Column::Channel)
+                            .string_len(15)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(entity::permission::role::Column::Role)
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(entity::permission::role::Column::Value)
+                            .big_unsigned()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .to(entity::channels::Entity, entity::channels::Column::Id)
+                            .from(
+                                entity::permission::role::Entity,
+                                entity::permission::role::Column::Channel,
+                            ),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .to(entity::roles::Entity, entity::roles::Column::Id)
+                            .from(
+                                entity::permission::role::Entity,
+                                entity::permission::role::Column::Role,
+                            ),
+                    )
+                    .clone(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .if_not_exists()
+                    .table(entity::permission::user::Entity)
+                    .col(
+                        ColumnDef::new(entity::permission::user::Column::User)
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(entity::permission::user::Column::Channel)
+                            .string_len(15)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(entity::permission::user::Column::Value)
+                            .big_unsigned()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .to(entity::user::Entity, entity::user::Column::Id)
+                            .from(
+                                entity::permission::user::Entity,
+                                entity::permission::user::Column::User,
+                            ),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .to(entity::channels::Entity, entity::channels::Column::Id)
+                            .from(
+                                entity::permission::user::Entity,
+                                entity::permission::user::Column::Channel,
                             ),
                     )
                     .clone(),

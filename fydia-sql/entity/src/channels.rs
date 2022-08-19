@@ -6,12 +6,12 @@ use fydia_struct::channel::Channel;
 use sea_orm::{entity::prelude::*, Set};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "Channels")]
+#[sea_orm(table_name = "channels")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     #[sea_orm(column_type = "Text")]
-    pub parent_id: String,
+    pub server_id: String,
     #[sea_orm(column_type = "Text")]
     pub name: String,
     #[sea_orm(column_type = "Text", nullable)]
@@ -25,7 +25,7 @@ impl TryFrom<Channel> for ActiveModel {
     fn try_from(channel: Channel) -> Result<Self, Self::Error> {
         Ok(Self {
             id: Set(channel.id.id.clone()),
-            parent_id: Set(channel.parent_id.id),
+            server_id: Set(channel.parent_id.id),
             name: Set(channel.name.clone()),
             description: Set(Some(channel.description.clone())),
             channel_type: Set(channel.channel_type as u32),
@@ -45,19 +45,11 @@ impl TryFrom<&Channel> for ActiveModel {
 pub enum Relation {
     #[sea_orm(has_many = "super::messages::Entity")]
     Messages,
-    #[sea_orm(has_many = "super::permission::Entity")]
-    Permission,
 }
 
 impl Related<super::messages::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Messages.def()
-    }
-}
-
-impl Related<super::permission::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Permission.def()
     }
 }
 

@@ -8,7 +8,7 @@ use sea_orm::{entity::prelude::*, Set};
 //use crate::impls::{channel::SqlChannel, members::SqlMembers, role::SqlRoles};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "Server")]
+#[sea_orm(table_name = "server")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,

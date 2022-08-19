@@ -4,17 +4,13 @@ use fydia_struct::{permission::Permission, roles::Role, server::ServerId};
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "Roles")]
+#[sea_orm(table_name = "roles")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub serverid: String,
     pub name: String,
     pub color: String,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub channel_access: Option<String>,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub permission: Option<String>,
 }
 
 impl Model {
@@ -24,7 +20,6 @@ impl Model {
             server_id: ServerId::new(self.serverid.clone()),
             name: self.name.clone(),
             color: self.color.clone(),
-            permission: Permission::from_string(self.permission.clone().unwrap_or_default()),
         }
     }
 }
@@ -39,19 +34,11 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Server,
-    #[sea_orm(has_many = "super::permission::Entity")]
-    Permission,
 }
 
 impl Related<super::server::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Server.def()
-    }
-}
-
-impl Related<super::permission::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Permission.def()
     }
 }
 

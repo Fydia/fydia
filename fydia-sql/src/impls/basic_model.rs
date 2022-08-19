@@ -2,6 +2,7 @@ use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType},
     instance::Instance,
     messages::{Message, MessageType},
+    permission::Permission,
     roles::Role,
     server::{Members, Server, ServerId, Servers},
     user::{User, UserId},
@@ -10,7 +11,9 @@ use fydia_utils::async_trait;
 use migration::{IntoCondition, SimpleExpr};
 use sea_orm::{ColumnTrait, DatabaseConnection as DbConnection, EntityTrait, QueryFilter};
 
-use super::{members::SqlMembers, role::SqlRoles, server::SqlServerId, user::SqlUser};
+use super::{
+    channel::SqlChannel, members::SqlMembers, role::SqlRoles, server::SqlServerId, user::SqlUser,
+};
 
 #[async_trait::async_trait]
 pub trait BasicModel {
@@ -62,7 +65,7 @@ impl BasicModel for entity::channels::Model {
     async fn to_struct(&self, _: &DbConnection) -> Result<Self::StructSelf, String> {
         let channel_type = ChannelType::from_int(self.channel_type);
 
-        let parent_id = ServerId::new(self.parent_id.clone());
+        let parent_id = ServerId::new(self.server_id.clone());
 
         Ok(Channel {
             id: ChannelId::new(self.id.clone()),
@@ -170,5 +173,60 @@ impl BasicModel for entity::messages::Model {
         executor: &DbConnection,
     ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
         Self::get_model_by(&[entity::messages::Column::Id.eq(id)], executor).await
+    }
+}
+
+#[async_trait::async_trait]
+impl BasicModel for entity::permission::role::Model {
+    type StructSelf = fydia_struct::permission::Permission;
+    type Entity = entity::permission::role::Entity;
+
+    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+        let role = Role::by_id(self.role, executor).await?;
+        let channel = Channel::by_id(
+            &ChannelId {
+                id: self.channel.clone(),
+            },
+            executor,
+        )
+        .await?;
+
+        Ok(Permission::role(role, channel.id, self.value))
+    }
+
+    async fn get_model_by_id(
+        _: &str,
+        _: &DbConnection,
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+        Err(String::from("Mo primary key"))
+    }
+}
+
+#[async_trait::async_trait]
+impl BasicModel for entity::permission::user::Model {
+    type StructSelf = fydia_struct::permission::Permission;
+    type Entity = entity::permission::user::Entity;
+
+    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+        let user = User::by_id(self.user, executor)
+            .await
+            .ok_or(String::from("User doesn't exists"))?;
+
+        let channel = Channel::by_id(
+            &ChannelId {
+                id: self.channel.clone(),
+            },
+            executor,
+        )
+        .await?;
+
+        Ok(Permission::user(user.id, channel.id, self.value))
+    }
+
+    async fn get_model_by_id(
+        _: &str,
+        _: &DbConnection,
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+        Err(String::from("Mo primary key"))
     }
 }
