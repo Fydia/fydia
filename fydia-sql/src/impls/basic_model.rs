@@ -92,9 +92,8 @@ impl BasicModel for entity::server::Model {
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let id = ServerId::new(self.id.clone());
         let members = Members::users_of(&id, executor).await?;
-        let roles = Role::by_server_id(id.id.clone(), executor).await?;
-
-        let channel = id.get(executor).await?.channel; //::get_channels_by_server_id(&id, executor).await?;
+        let roles = Role::by_server_id(&id.id, executor).await?;
+        let channel = Channel::by_serverid(&id, executor).await?;
 
         Ok(Server {
             id,

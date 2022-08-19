@@ -96,8 +96,7 @@ impl SqlMessage for Message {
         let active_model: entity::messages::ActiveModel = model.clone().into();
         delete(active_model, executor).await?;
 
-        // Poisoning struct to not be used after
-        *self = Message::default();
+        drop(self);
 
         Ok(())
     }

@@ -6,6 +6,35 @@ use fydia_utils::serde::{Deserialize, Serialize};
 
 use crate::{channel::ChannelId, roles::Role, user::UserId};
 
+#[derive(Debug)]
+pub struct Permissions(Vec<Permission>);
+
+impl Permissions {
+    pub fn new(perms: Vec<Permission>) -> Self {
+        Self(perms)
+    }
+
+    pub fn can(&self, pvalue: &PermissionValue) -> bool {
+        for i in &self.0 {
+            if !i.can(&pvalue) {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    pub fn can_vec(&self, pvalues: &[PermissionValue]) -> bool {
+        for i in &self.0 {
+            if !i.can_vec(pvalues) {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
 #[allow(missing_docs)]
 #[derive(Clone, Deserialize, Serialize, Debug)]
 #[serde(crate = "fydia_utils::serde")]
@@ -32,8 +61,8 @@ impl Permission {
         }
     }
 
-    pub fn can(&self, pvalue: PermissionValue) -> bool {
-        let perm = pvalue as u64;
+    pub fn can(&self, pvalue: &PermissionValue) -> bool {
+        let perm = pvalue.to_u64();
         self.value & perm == perm
     }
 
@@ -81,28 +110,6 @@ pub enum PermissionValue {
 }
 
 impl PermissionValue {
-    /// Take a `Into<String>` value and return `Permission`
-    ///
-    /// Default value is `Permission::None`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fydia_struct::permission::Permission;
-    ///
-    /// let perm = Permission::from_string("WRITE");
-    ///
-    /// assert_eq!(perm, Permission::Write);
-    /// ```
-    pub fn from_string<T: Into<String>>(from: T) -> Self {
-        let from: String = from.into();
-        match from.to_ascii_uppercase().as_str() {
-            "WRITE" => PermissionValue::Write,
-            "READ" => PermissionValue::Read,
-            _ => PermissionValue::None,
-        }
-    }
-
     /// Take a u64 represent Permission and a `Permission` to test*
     ///
     /// # Examples
@@ -121,16 +128,5 @@ impl PermissionValue {
 
     fn to_u64(&self) -> u64 {
         return self.clone() as u64;
-    }
-}
-
-impl Display for PermissionValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PermissionValue::Admin => write!(f, "ADMIN"),
-            PermissionValue::Write => write!(f, "WRITE"),
-            PermissionValue::Read => write!(f, "READ"),
-            PermissionValue::None => write!(f, "None"),
-        }
     }
 }

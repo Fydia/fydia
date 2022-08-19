@@ -1,6 +1,6 @@
 use fydia_struct::{
     channel::Channel,
-    server::{Members, Server, ServerId},
+    server::{Channels, Members, Server, ServerId},
     user::{User, UserId},
 };
 use fydia_utils::async_trait;
@@ -9,12 +9,16 @@ use std::convert::TryFrom;
 
 use entity::server::Model;
 
-use super::{basic_model::BasicModel, delete, insert, members::SqlMembers, update, user::UserFrom};
+use super::{
+    basic_model::BasicModel, channel::SqlChannel, delete, insert, members::SqlMembers, update,
+    user::UserFrom,
+};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
     async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String>;
     async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String>;
+    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String>;
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
@@ -46,6 +50,10 @@ impl SqlServer for Server {
             .await?
             .to_struct(executor)
             .await
+    }
+
+    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String> {
+        Channel::by_serverid(&self.id, executor).await
     }
 
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
@@ -125,7 +133,7 @@ pub trait SqlServerId {
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
     async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        Server::by_id(&ServerId::new(self.id.clone()), executor).await
+        Server::by_id(self, executor).await
     }
 }
 

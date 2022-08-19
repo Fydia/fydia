@@ -173,7 +173,7 @@ impl SqlUser for User {
 
         delete(active_model, executor).await?;
 
-        self = Self::default();
+        drop(self);
 
         Ok(())
     }

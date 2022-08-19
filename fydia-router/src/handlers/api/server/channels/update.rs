@@ -20,7 +20,7 @@ pub async fn update_name<'a>(
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
     let (_, _, mut channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &database,
+        &headers, &serverid, &channelid, &database,
     )
     .await?;
 
@@ -52,7 +52,7 @@ pub async fn update_description<'a>(
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
     let (_, _, mut channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &database,
+        &headers, &serverid, &channelid, &database,
     )
     .await?;
 

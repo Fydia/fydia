@@ -26,7 +26,7 @@ pub async fn get_picture_of_server<'a>(
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
     let (_, server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &database)
             .await?;
 
     let value = File::get(server.icon).get_value().map_err(|error| {
@@ -60,7 +60,7 @@ pub async fn post_picture_of_server<'a>(
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
     let (_, mut server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, server_id, &database)
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &database)
             .await?;
 
     if body.len() > MAX_CONTENT_LENGHT {

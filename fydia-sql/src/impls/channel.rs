@@ -12,14 +12,16 @@ use entity::channels::Model;
 use fydia_struct::{
     channel::{Channel, ChannelId},
     messages::Message,
+    server::{Channels, ServerId},
     user::UserId,
 };
 use fydia_utils::async_trait;
-use sea_orm::{DatabaseConnection, Set};
+use sea_orm::{ColumnTrait, DatabaseConnection, Set};
 
 #[async_trait::async_trait]
 pub trait SqlChannel {
     async fn by_id(id: &ChannelId, executor: &DatabaseConnection) -> Result<Channel, String>;
+    async fn by_serverid(id: &ServerId, executor: &DatabaseConnection) -> Result<Channels, String>;
     async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<UserId>, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
@@ -43,6 +45,22 @@ impl SqlChannel for Channel {
             Ok(model) => model.to_struct(executor).await,
             _ => Err("This Channel doesn't exists".to_string()),
         }
+    }
+    async fn by_serverid(id: &ServerId, executor: &DatabaseConnection) -> Result<Channels, String> {
+        let mut channels: Vec<Channel> = Vec::new();
+        let models = Model::get_models_by(
+            &[entity::channels::Column::ServerId.eq(id.id.as_str())],
+            executor,
+        )
+        .await?;
+
+        for model in models {
+            if let Ok(channel) = model.to_struct(executor).await {
+                channels.push(channel);
+            }
+        }
+
+        Ok(Channels(channels))
     }
 
     async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<UserId>, String> {
@@ -117,7 +135,7 @@ impl SqlChannel for Channel {
 
         delete(active_model, executor).await?;
 
-        self = Self::default();
+        drop(self);
 
         Ok(())
     }

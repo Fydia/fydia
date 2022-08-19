@@ -51,7 +51,7 @@ pub async fn post_messages<'a>(
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &database,
+        &headers, &serverid, &channelid, &database,
     )
     .await?;
 

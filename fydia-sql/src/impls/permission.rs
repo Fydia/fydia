@@ -1,29 +1,34 @@
 use std::convert::TryFrom;
 
-use fydia_struct::{channel::ChannelId, permission::Permission, roles::Role, user::UserId};
+use fydia_struct::{
+    channel::ChannelId,
+    permission::{Permission, Permissions},
+    roles::Role,
+    user::UserId,
+};
 use fydia_utils::async_trait::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 use super::{basic_model::BasicModel, delete, insert};
 
 #[async_trait]
-trait PermissionSql {
+pub trait PermissionSql {
     async fn by_role(
         channelid: &ChannelId,
         role: &Role,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String>;
+    ) -> Result<Permissions, String>;
 
     async fn by_user(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String>;
+    ) -> Result<Permissions, String>;
 
     async fn by_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String>;
+    ) -> Result<Permissions, String>;
 
     async fn insert(&self, db: &DatabaseConnection) -> Result<(), String>;
 
@@ -36,7 +41,7 @@ impl PermissionSql for Permission {
         channelid: &ChannelId,
         role: &Role,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String> {
+    ) -> Result<Permissions, String> {
         let result = entity::permission::role::Entity::find()
             .filter(entity::permission::role::Column::Role.eq(role.id))
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
@@ -49,14 +54,14 @@ impl PermissionSql for Permission {
             vec.push(i.to_struct(db).await?);
         }
 
-        Ok(vec)
+        Ok(Permissions::new(vec))
     }
 
     async fn by_user(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String> {
+    ) -> Result<Permissions, String> {
         let result = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::User.eq(user.0.clone().get_id()?))
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
@@ -69,13 +74,13 @@ impl PermissionSql for Permission {
             vec.push(i.to_struct(db).await?);
         }
 
-        Ok(vec)
+        Ok(Permissions::new(vec))
     }
 
     async fn by_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Permission>, String> {
+    ) -> Result<Permissions, String> {
         let result = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
@@ -97,7 +102,7 @@ impl PermissionSql for Permission {
             vec.push(i.to_struct(db).await?);
         }
 
-        Ok(vec)
+        Ok(Permissions::new(vec))
     }
 
     async fn insert(&self, db: &DatabaseConnection) -> Result<(), String> {
