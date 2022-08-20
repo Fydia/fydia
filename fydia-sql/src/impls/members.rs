@@ -55,6 +55,6 @@ impl SqlMembers for Members {
     ) -> Result<(), String> {
         let acmodel = Model::new_activemodel(user, server.clone())?;
 
-        insert(acmodel, executor).await
+        insert(acmodel, executor).await.map(|_| ())
     }
 }

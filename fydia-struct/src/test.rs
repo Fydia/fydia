@@ -7,7 +7,7 @@ mod tests {
 
     mod permission {
         use crate::{
-            permission::{self, Permission, PermissionValue},
+            permission::{self, Permission, PermissionValue, Permissions},
             user::UserId,
         };
         /* #[cfg(test)]
@@ -30,12 +30,23 @@ mod tests {
 
         #[test]
         pub fn cant() {
-            let permission = Permission::user(
-                UserId::new(0),
-                crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
-                PermissionValue::Read as u64 | PermissionValue::Write as u64,
-            );
-            assert!(permission.can_vec(&[
+            let permissions = Permissions::new(vec![
+                Permission::user(
+                    UserId::new(0),
+                    crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
+                    PermissionValue::Read as u64 | PermissionValue::Write as u64,
+                ),
+                Permission::user(
+                    UserId::new(0),
+                    crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
+                    PermissionValue::Admin as u64 | PermissionValue::Write as u64,
+                ),
+            ]);
+
+            let value =
+                permissions.calculate(crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"));
+
+            assert!(value.can_vec(&[
                 PermissionValue::Read,
                 PermissionValue::Write,
                 PermissionValue::Admin

@@ -74,7 +74,7 @@ impl SqlMessage for Message {
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_model = entity::messages::ActiveModel::try_from(self.clone())?;
 
-        insert(active_model, executor).await
+        insert(active_model, executor).await.map(|_| ())
     }
 
     async fn update(&mut self, content: &str, executor: &DatabaseConnection) -> Result<(), String> {

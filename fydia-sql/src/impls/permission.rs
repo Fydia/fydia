@@ -9,7 +9,12 @@ use fydia_struct::{
 use fydia_utils::async_trait::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
-use super::{basic_model::BasicModel, delete, insert};
+use super::{
+    basic_model::BasicModel,
+    channel::SqlChannelId,
+    delete, insert,
+    user::{SqlUser, UserFrom},
+};
 
 #[async_trait]
 pub trait PermissionSql {
@@ -43,7 +48,7 @@ impl PermissionSql for Permission {
         db: &DatabaseConnection,
     ) -> Result<Permissions, String> {
         let result = entity::permission::role::Entity::find()
-            .filter(entity::permission::role::Column::Role.eq(role.id))
+            .filter(entity::permission::role::Column::Role.eq(role.id.get_id_cloned()?))
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
             .await
@@ -70,8 +75,22 @@ impl PermissionSql for Permission {
             .map_err(|error| error.to_string())?;
 
         let mut vec = Vec::new();
+
         for i in result {
             vec.push(i.to_struct(db).await?);
+        }
+
+        let channel = channelid.channel(db).await?;
+
+        let roles = user
+            .to_user(db)
+            .await
+            .ok_or(String::from("No user"))?
+            .roles(&channel.parent_id, db)
+            .await?;
+
+        for i in roles.iter() {
+            vec.append(&mut Self::by_role(channelid, i, db).await?.get());
         }
 
         Ok(Permissions::new(vec))
@@ -123,20 +142,20 @@ impl PermissionSql for Permission {
     }
 
     async fn delete(mut self, db: &DatabaseConnection) -> Result<(), String> {
-        match self.permission_type {
+        match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
-                let am = entity::permission::role::ActiveModel::try_from(self)?;
+                let am = entity::permission::role::ActiveModel::try_from(&self)?;
 
                 delete(am, db).await?;
             }
             fydia_struct::permission::PermissionType::User(_) => {
-                let am = entity::permission::user::ActiveModel::try_from(self)?;
+                let am = entity::permission::user::ActiveModel::try_from(&self)?;
 
                 delete(am, db).await?;
             }
         }
 
-        self = Default::default();
+        drop(self);
 
         Ok(())
     }

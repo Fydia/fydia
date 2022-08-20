@@ -52,7 +52,9 @@ impl DirectMessageMembers for DirectMessage {
             return Err("User not exists".to_string());
         };
 
-        insert(dm_members::Model::new_activemodel(userid, self)?, executor).await
+        insert(dm_members::Model::new_activemodel(userid, self)?, executor)
+            .await
+            .map(|_| ())
     }
 
     async fn remove(&self, user: &UserId, executor: &DatabaseConnection) -> Result<(), String> {

@@ -74,7 +74,7 @@ impl SqlChannel for Channel {
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String> {
         let active_channel = entity::channels::ActiveModel::try_from(self.clone())?;
 
-        insert(active_channel, executor).await
+        insert(active_channel, executor).await.map(|_| ())
     }
 
     async fn update_name<T: Into<String> + Send>(

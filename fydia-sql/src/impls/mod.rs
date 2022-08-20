@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel};
 
 pub mod basic_model;
 pub mod channel;
@@ -22,11 +22,10 @@ pub mod user;
 pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), String> {
+) -> Result<InsertResult<A>, String> {
     T::insert(am)
         .exec(executor)
         .await
-        .map(|_| ())
         .map_err(|error| error.to_string())
 }
 

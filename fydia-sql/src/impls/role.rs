@@ -1,6 +1,7 @@
-use fydia_struct::roles::Role;
+use entity::roles::assignation;
+use fydia_struct::{roles::Role, server::ServerId, user::UserId, utils::Id};
 
-use super::delete;
+use super::{delete, insert};
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -10,7 +11,12 @@ pub trait SqlRoles {
         shortid: &String,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Role>, String>;
-    async fn by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Role, String>;
+    async fn by_id(
+        role_id: u32,
+        shortid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Role, String>;
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
         &mut self,
         name: T,
@@ -22,6 +28,7 @@ pub trait SqlRoles {
         executor: &DatabaseConnection,
     ) -> Result<(), String>;
     async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn add_user(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
@@ -44,9 +51,14 @@ impl SqlRoles for Role {
         Ok(result)
     }
 
-    async fn by_id(role_id: i32, executor: &DatabaseConnection) -> Result<Self, String> {
+    async fn by_id(
+        role_id: u32,
+        shortid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Self, String> {
         let query = entity::roles::Entity::find()
             .filter(entity::roles::Column::Id.eq(role_id))
+            .filter(entity::roles::Column::Serverid.eq(shortid.id.as_str()))
             .one(executor)
             .await;
         match query {
@@ -68,7 +80,7 @@ impl SqlRoles for Role {
         };
 
         match entity::roles::Entity::update(active_model)
-            .filter(entity::messages::Column::Id.eq(self.id))
+            .filter(entity::messages::Column::Id.eq(self.id.get_id_cloned()?))
             .exec(executor)
             .await
         {
@@ -92,7 +104,7 @@ impl SqlRoles for Role {
         };
 
         match entity::roles::Entity::update(active_model)
-            .filter(entity::messages::Column::Id.eq(self.id))
+            .filter(entity::messages::Column::Id.eq(self.id.get_id_cloned()?))
             .exec(executor)
             .await
         {
@@ -103,9 +115,17 @@ impl SqlRoles for Role {
             Err(e) => Err(e.to_string()),
         }
     }
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+        let model = entity::roles::ActiveModel::from(self.clone());
 
+        let result = insert(model, executor).await?;
+
+        self.id = Id::Id(result.last_insert_id);
+
+        Ok(())
+    }
     async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let model = entity::roles::Entity::find_by_id(self.id)
+        let model = entity::roles::Entity::find_by_id(self.id.get_id_cloned()?)
             .one(executor)
             .await
             .map_err(|f| f.to_string())?
@@ -114,5 +134,15 @@ impl SqlRoles for Role {
         let active_model: entity::roles::ActiveModel = model.into();
 
         delete(active_model, executor).await
+    }
+
+    async fn add_user(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String> {
+        let am = assignation::ActiveModel {
+            role_id: Set(self.id.get_id_cloned()?),
+            user_id: Set(userid.0.get_id_cloned()?),
+            server_id: Set(self.server_id.id.clone()),
+        };
+
+        insert(am, executor).await.map(|_| ())
     }
 }

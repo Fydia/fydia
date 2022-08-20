@@ -1,17 +1,24 @@
 //! This module is related to permission
 
-use std::fmt::Display;
-
 use fydia_utils::serde::{Deserialize, Serialize};
 
-use crate::{channel::ChannelId, roles::Role, user::UserId};
+use crate::{
+    channel::ChannelId,
+    roles::{Role, RoleId},
+    user::UserId,
+};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "fydia_utils::serde")]
 pub struct Permissions(Vec<Permission>);
 
 impl Permissions {
     pub fn new(perms: Vec<Permission>) -> Self {
         Self(perms)
+    }
+
+    pub fn get(self) -> Vec<Permission> {
+        self.0
     }
 
     pub fn can(&self, pvalue: &PermissionValue) -> bool {
@@ -33,19 +40,39 @@ impl Permissions {
 
         true
     }
+
+    pub fn calculate(&self, channelid: ChannelId) -> Permission {
+        let mut value = 0;
+        let mut permission_type = None;
+
+        for i in self.0.iter() {
+            if permission_type.is_none() {
+                permission_type = Some(i.permission_type.clone())
+            }
+
+            value |= i.value;
+        }
+
+        Permission {
+            permission_type: permission_type.unwrap(),
+            channelid: channelid,
+            value,
+        }
+    }
 }
 
 #[allow(missing_docs)]
 #[derive(Clone, Deserialize, Serialize, Debug)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct Permission {
+    #[serde(flatten)]
     pub permission_type: PermissionType,
     pub channelid: ChannelId,
     pub value: u64,
 }
 
 impl Permission {
-    pub fn role(role: Role, channelid: ChannelId, value: u64) -> Self {
+    pub fn role(role: RoleId, channelid: ChannelId, value: u64) -> Self {
         Self {
             permission_type: PermissionType::Role(role),
             channelid,
@@ -94,7 +121,9 @@ impl Default for Permission {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 #[serde(crate = "fydia_utils::serde")]
 pub enum PermissionType {
-    Role(Role),
+    #[serde(rename = "role")]
+    Role(RoleId),
+    #[serde(rename = "user")]
     User(UserId),
 }
 

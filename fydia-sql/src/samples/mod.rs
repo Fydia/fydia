@@ -2,12 +2,14 @@ use fydia_struct::{
     channel::{Channel, ChannelId},
     instance::Instance,
     messages::{Date, Message},
+    roles::Role,
     server::{Server, ServerId},
     user::{Token, User},
+    utils::Id,
 };
 
 use crate::{
-    impls::{message::SqlMessage, server::SqlServer, user::SqlUser},
+    impls::{message::SqlMessage, role::SqlRoles, server::SqlServer, user::SqlUser},
     sqlpool::DbConnection,
 };
 
@@ -93,6 +95,18 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
             }
         }
     }
+
+    let mut role = Role {
+        id: Id::Unset,
+        server_id: server.id,
+        name: String::from("default_role"),
+        color: String::from("ffffff"),
+        server_permission: 4,
+    };
+
+    role.insert(db).await?;
+
+    role.add_user(&user.id, db).await?;
 
     info!("Sample are insert in database");
 

@@ -9,7 +9,7 @@ pub mod role {
         #[sea_orm(primary_key, auto_increment = false)]
         pub channel: String,
         #[sea_orm(primary_key, auto_increment = false)]
-        pub role: i32,
+        pub role: u32,
         #[sea_orm(primary_key, auto_increment = false)]
         pub value: u64,
     }
@@ -59,9 +59,16 @@ pub mod role {
 
             Ok(Self {
                 channel: Set(perm.channelid.id),
-                role: Set(role.id),
+                role: Set(role.get_id()?),
                 value: Set(perm.value),
             })
+        }
+    }
+
+    impl TryFrom<&Permission> for ActiveModel {
+        type Error = String;
+        fn try_from(perm: &Permission) -> Result<Self, Self::Error> {
+            Self::try_from(perm.clone())
         }
     }
 }
@@ -129,6 +136,13 @@ pub mod user {
                 user: Set(user.0.get_id()?),
                 value: Set(perm.value),
             })
+        }
+    }
+
+    impl TryFrom<&Permission> for ActiveModel {
+        type Error = String;
+        fn try_from(perm: &Permission) -> Result<Self, Self::Error> {
+            Self::try_from(perm.clone())
         }
     }
 }

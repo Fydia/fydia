@@ -11,9 +11,7 @@ use fydia_utils::async_trait;
 use migration::{IntoCondition, SimpleExpr};
 use sea_orm::{ColumnTrait, DatabaseConnection as DbConnection, EntityTrait, QueryFilter};
 
-use super::{
-    channel::SqlChannel, members::SqlMembers, role::SqlRoles, server::SqlServerId, user::SqlUser,
-};
+use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlUser};
 
 #[async_trait::async_trait]
 pub trait BasicModel {
@@ -181,7 +179,6 @@ impl BasicModel for entity::permission::role::Model {
     type Entity = entity::permission::role::Entity;
 
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
-        let role = Role::by_id(self.role, executor).await?;
         let channel = Channel::by_id(
             &ChannelId {
                 id: self.channel.clone(),
@@ -190,7 +187,9 @@ impl BasicModel for entity::permission::role::Model {
         )
         .await?;
 
-        Ok(Permission::role(role, channel.id, self.value))
+        let role = Role::by_id(self.role, &channel.parent_id, executor).await?;
+
+        Ok(Permission::role(role.id, channel.id, self.value))
     }
 
     async fn get_model_by_id(
