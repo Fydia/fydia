@@ -189,7 +189,7 @@ impl BasicModel for entity::permission::role::Model {
 
         let role = Role::by_id(self.role, &channel.parent_id, executor).await?;
 
-        Ok(Permission::role(role.id, channel.id, self.value))
+        Ok(Permission::role(role.id, Some(channel.id), self.value))
     }
 
     async fn get_model_by_id(
@@ -218,7 +218,7 @@ impl BasicModel for entity::permission::user::Model {
         )
         .await?;
 
-        Ok(Permission::user(user.id, channel.id, self.value))
+        Ok(Permission::user(user.id, Some(channel.id), self.value))
     }
 
     async fn get_model_by_id(

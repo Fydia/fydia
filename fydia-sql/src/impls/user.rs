@@ -201,7 +201,7 @@ impl SqlUser for User {
         channelid: &ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Permissions, String> {
-        Permission::by_user(channelid, &self.id, executor).await
+        Permission::of_user_with_role_in_channel(channelid, &self.id, executor).await
     }
 
     async fn roles(
@@ -227,12 +227,14 @@ impl SqlUser for User {
 }
 #[async_trait]
 pub trait UserFrom {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User>;
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String>;
 }
 
 #[async_trait]
 impl UserFrom for UserId {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::by_id(self.0.get_id_cloned().ok()?, executor).await
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String> {
+        User::by_id(self.0.get_id_cloned()?, executor)
+            .await
+            .ok_or(String::from("No user with this id"))
     }
 }

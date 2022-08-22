@@ -33,18 +33,17 @@ mod tests {
             let permissions = Permissions::new(vec![
                 Permission::user(
                     UserId::new(0),
-                    crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
+                    None,
                     PermissionValue::Read as u64 | PermissionValue::Write as u64,
                 ),
                 Permission::user(
                     UserId::new(0),
-                    crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"),
+                    None,
                     PermissionValue::Admin as u64 | PermissionValue::Write as u64,
                 ),
             ]);
 
-            let value =
-                permissions.calculate(crate::channel::ChannelId::new("eejahjdfghakjsdhjaksjhdkj"));
+            let value = permissions.calculate(None);
 
             assert!(value.can_vec(&[
                 PermissionValue::Read,

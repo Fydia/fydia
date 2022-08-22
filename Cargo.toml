@@ -15,7 +15,3 @@ panic = 'abort'
 lto = "thin"
 opt-level = 3
 incremental = false
-
-[profile.dev]
-incremental = true
-lto = false

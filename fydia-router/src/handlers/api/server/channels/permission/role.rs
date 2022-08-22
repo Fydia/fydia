@@ -22,6 +22,7 @@ pub async fn get_permission_of_role<'a>(
         &headers, &serverid, &channelid, &database,
     )
     .await?;
+
     let roleid = roleid
         .as_str()
         .parse()
@@ -29,7 +30,7 @@ pub async fn get_permission_of_role<'a>(
 
     let role = Role::by_id(roleid, &server.id, &database).await.unwrap();
 
-    let perm = Permission::by_role(&channel.id, &role, &database)
+    let perm = Permission::of_role_in_channel(&channel.id, &role.id, &database)
         .await
         .map_err(|err| FydiaResponse::StringError(err))?;
 

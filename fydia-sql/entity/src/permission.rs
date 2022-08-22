@@ -6,11 +6,10 @@ pub mod role {
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "permission_roles")]
     pub struct Model {
-        #[sea_orm(primary_key, auto_increment = false)]
         pub channel: String,
         #[sea_orm(primary_key, auto_increment = false)]
         pub role: u32,
-        #[sea_orm(primary_key, auto_increment = false)]
+        #[sea_orm(auto_increment = false)]
         pub value: u64,
     }
 
@@ -58,7 +57,7 @@ pub mod role {
             };
 
             Ok(Self {
-                channel: Set(perm.channelid.id),
+                channel: Set(perm.channelid.ok_or(String::from("No channelid"))?.id),
                 role: Set(role.get_id()?),
                 value: Set(perm.value),
             })
@@ -132,7 +131,7 @@ pub mod user {
             };
 
             Ok(Self {
-                channel: Set(perm.channelid.id),
+                channel: Set(perm.channelid.ok_or(String::from("No channelid"))?.id),
                 user: Set(user.0.get_id()?),
                 value: Set(perm.value),
             })

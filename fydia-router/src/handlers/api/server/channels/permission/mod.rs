@@ -21,7 +21,7 @@ pub async fn get_permission<'a>(
     )
     .await?;
 
-    let perm = Permission::by_channel(&channel.id, &database)
+    let perm = Permission::of_channel(&channel.id, &database)
         .await
         .map_err(|err| FydiaResponse::StringError(err))?;
 
@@ -44,7 +44,7 @@ pub async fn post_permission<'a>(
         .permission(&channel.id, &database)
         .await
         .unwrap()
-        .calculate(channel.id);
+        .calculate(Some(channel.id));
 
     if !perms.can(&fydia_struct::permission::PermissionValue::Admin) {
         return FydiaResult::Err(FydiaResponse::TextError("Not enought permission"));

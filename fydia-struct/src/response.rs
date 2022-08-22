@@ -101,7 +101,7 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
             FydiaResponse::TextErrorWithStatusCode(statuscode, text) => {
                 let value = json!(text);
                 let builder = response.status(statuscode);
-                build_response(FydiaStatus::Ok, value, builder)
+                build_response(FydiaStatus::Error, value, builder)
             }
             FydiaResponse::String(text) => {
                 let value = json!(text);

@@ -12,7 +12,9 @@ use crate::handlers::{
                 post::post_messages,
             },
             permission::{
-                get_permission, role::get_permission_of_role, user::get_permission_of_user,
+                get_permission,
+                role::get_permission_of_role,
+                user::{get_permission_of_user, post_permission_of_user},
             },
             typing::{start_typing, stop_typing},
             update::{update_description, update_name},
@@ -74,7 +76,11 @@ pub fn channelid() -> Router {
                     "/permission",
                     Router::new()
                         .route("/role/:roleid", axum::routing::get(get_permission_of_role))
-                        .route("/user/:userid", axum::routing::get(get_permission_of_user)),
+                        .route(
+                            "/user/:userid",
+                            axum::routing::get(get_permission_of_user)
+                                .post(post_permission_of_user),
+                        ),
                 )
                 .nest(
                     "/typing",

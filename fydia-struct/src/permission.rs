@@ -2,11 +2,7 @@
 
 use fydia_utils::serde::{Deserialize, Serialize};
 
-use crate::{
-    channel::ChannelId,
-    roles::{Role, RoleId},
-    user::UserId,
-};
+use crate::{channel::ChannelId, roles::RoleId, user::UserId};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "fydia_utils::serde")]
@@ -15,6 +11,10 @@ pub struct Permissions(Vec<Permission>);
 impl Permissions {
     pub fn new(perms: Vec<Permission>) -> Self {
         Self(perms)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     pub fn get(self) -> Vec<Permission> {
@@ -41,21 +41,28 @@ impl Permissions {
         true
     }
 
-    pub fn calculate(&self, channelid: ChannelId) -> Permission {
+    pub fn calculate(&self, channelid: Option<ChannelId>) -> Permission {
         let mut value = 0;
         let mut permission_type = None;
 
         for i in self.0.iter() {
-            if permission_type.is_none() {
-                permission_type = Some(i.permission_type.clone())
-            }
+            match i.permission_type {
+                PermissionType::Role(_) => {
+                    value |= i.value;
+                }
+                PermissionType::User(_) => {
+                    if permission_type.is_none() {
+                        permission_type = Some(i.permission_type.clone())
+                    }
 
-            value |= i.value;
+                    value &= i.value;
+                }
+            }
         }
 
         Permission {
             permission_type: permission_type.unwrap(),
-            channelid: channelid,
+            channelid,
             value,
         }
     }
@@ -67,12 +74,12 @@ impl Permissions {
 pub struct Permission {
     #[serde(flatten)]
     pub permission_type: PermissionType,
-    pub channelid: ChannelId,
+    pub channelid: Option<ChannelId>,
     pub value: u64,
 }
 
 impl Permission {
-    pub fn role(role: RoleId, channelid: ChannelId, value: u64) -> Self {
+    pub fn role(role: RoleId, channelid: Option<ChannelId>, value: u64) -> Self {
         Self {
             permission_type: PermissionType::Role(role),
             channelid,
@@ -80,7 +87,7 @@ impl Permission {
         }
     }
 
-    pub fn user(userid: UserId, channelid: ChannelId, value: u64) -> Self {
+    pub fn user(userid: UserId, channelid: Option<ChannelId>, value: u64) -> Self {
         Self {
             permission_type: PermissionType::User(userid),
             channelid,

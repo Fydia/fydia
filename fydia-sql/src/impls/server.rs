@@ -57,11 +57,7 @@ impl SqlServer for Server {
     }
 
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let mut user = self
-            .owner
-            .to_user(executor)
-            .await
-            .ok_or_else(|| "Owner not found ?".to_string())?;
+        let mut user = self.owner.to_user(executor).await?;
 
         let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
 
@@ -149,10 +145,7 @@ impl SqlMember for Members {
         let mut result = Vec::new();
 
         for id in &self.members {
-            let user = id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))?;
+            let user = id.to_user(executor).await?;
 
             result.push(user);
         }
@@ -162,12 +155,7 @@ impl SqlMember for Members {
 
     async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in &self.members {
-            if id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))
-                .is_err()
-            {
+            if id.to_user(executor).await.is_err() {
                 return false;
             }
         }
@@ -185,12 +173,7 @@ impl SqlMember for Vec<UserId> {
 
     async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in self {
-            if id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))
-                .is_err()
-            {
+            if id.to_user(executor).await.is_err() {
                 return false;
             };
         }

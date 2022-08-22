@@ -3,7 +3,8 @@ use std::convert::TryFrom;
 use fydia_struct::{
     channel::ChannelId,
     permission::{Permission, Permissions},
-    roles::Role,
+    roles::{Role, RoleId},
+    server::ServerId,
     user::UserId,
 };
 use fydia_utils::async_trait::async_trait;
@@ -13,90 +14,115 @@ use super::{
     basic_model::BasicModel,
     channel::SqlChannelId,
     delete, insert,
+    role::SqlRoles,
+    update,
     user::{SqlUser, UserFrom},
 };
 
 #[async_trait]
 pub trait PermissionSql {
-    async fn by_role(
+    async fn of_role_in_channel(
         channelid: &ChannelId,
-        role: &Role,
+        role: &RoleId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, String>;
+    ) -> Result<Permission, String>;
 
-    async fn by_user(
+    async fn of_user_in_channel(
+        channelid: &ChannelId,
+        user: &UserId,
+        db: &DatabaseConnection,
+    ) -> Result<Permission, String>;
+    async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, String>;
-
-    async fn by_channel(
+    async fn of_user(
+        user: &UserId,
+        serverid: &ServerId,
+        db: &DatabaseConnection,
+    ) -> Result<Permissions, String>;
+    async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, String>;
-
     async fn insert(&self, db: &DatabaseConnection) -> Result<(), String>;
-
+    async fn update(self, db: &DatabaseConnection) -> Result<Permission, String>;
     async fn delete(mut self, db: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait]
 impl PermissionSql for Permission {
-    async fn by_role(
-        channelid: &ChannelId,
-        role: &Role,
+    async fn of_user(
+        user: &UserId,
+        serverid: &ServerId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, String> {
-        let result = entity::permission::role::Entity::find()
-            .filter(entity::permission::role::Column::Role.eq(role.id.get_id_cloned()?))
-            .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
-            .all(db)
-            .await
-            .map_err(|error| error.to_string())?;
-
+        let user = user.to_user(db).await?;
+        let roles = user.roles(serverid, db).await?;
         let mut vec = Vec::new();
-        for i in result {
-            vec.push(i.to_struct(db).await?);
-        }
 
+        for role in roles {
+            vec.push(Permission::role(role.id, None, role.server_permission))
+        }
+        info!("{:#?}", vec);
         Ok(Permissions::new(vec))
     }
 
-    async fn by_user(
+    async fn of_role_in_channel(
+        channelid: &ChannelId,
+        roleid: &RoleId,
+        db: &DatabaseConnection,
+    ) -> Result<Permission, String> {
+        entity::permission::role::Entity::find()
+            .filter(entity::permission::role::Column::Role.eq(roleid.get_id_cloned()?))
+            .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
+            .one(db)
+            .await
+            .map_err(|error| error.to_string())?
+            .ok_or("No role permission".to_string())?
+            .to_struct(db)
+            .await
+    }
+
+    async fn of_user_in_channel(
+        channelid: &ChannelId,
+        user: &UserId,
+        db: &DatabaseConnection,
+    ) -> Result<Permission, String> {
+        entity::permission::user::Entity::find()
+            .filter(entity::permission::user::Column::User.eq(user.0.clone().get_id()?))
+            .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
+            .one(db)
+            .await
+            .map_err(|error| error.to_string())?
+            .ok_or("No user permission".to_string())?
+            .to_struct(db)
+            .await
+    }
+
+    async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, String> {
-        let result = entity::permission::user::Entity::find()
-            .filter(entity::permission::user::Column::User.eq(user.0.clone().get_id()?))
-            .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
-            .all(db)
-            .await
-            .map_err(|error| error.to_string())?;
+        let channel = channelid.channel(db).await?;
+        let user = user.to_user(db).await?;
+        let roles = user.roles(&channel.parent_id, db).await?;
 
         let mut vec = Vec::new();
 
-        for i in result {
-            vec.push(i.to_struct(db).await?);
-        }
-
-        let channel = channelid.channel(db).await?;
-
-        let roles = user
-            .to_user(db)
-            .await
-            .ok_or(String::from("No user"))?
-            .roles(&channel.parent_id, db)
-            .await?;
-
         for i in roles.iter() {
-            vec.append(&mut Self::by_role(channelid, i, db).await?.get());
+            if let Ok(perm) = Self::of_role_in_channel(channelid, &i.id, db).await {
+                vec.push(perm);
+            }
         }
 
-        Ok(Permissions::new(vec))
-    }
+        vec.push(Self::of_user_in_channel(channelid, &user.id, db).await?);
 
-    async fn by_channel(
+        return Ok(Permissions::new(vec));
+    }
+    async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, String> {
@@ -139,6 +165,23 @@ impl PermissionSql for Permission {
         }
 
         Ok(())
+    }
+
+    async fn update(self, db: &DatabaseConnection) -> Result<Permission, String> {
+        match self.permission_type {
+            fydia_struct::permission::PermissionType::Role(_) => {
+                let am = entity::permission::role::ActiveModel::try_from(self.clone())?;
+
+                update(am, db).await?;
+            }
+            fydia_struct::permission::PermissionType::User(_) => {
+                let am = entity::permission::user::ActiveModel::try_from(self.clone())?;
+
+                update(am, db).await?;
+            }
+        }
+
+        Ok(self)
     }
 
     async fn delete(mut self, db: &DatabaseConnection) -> Result<(), String> {
