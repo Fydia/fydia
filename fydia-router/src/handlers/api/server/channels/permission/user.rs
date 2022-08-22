@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use axum::Extension;
 use axum::{extract::Path, http::HeaderMap};
 use fydia_sql::impls::permission::PermissionSql;
+use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::permission::Permission;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
@@ -43,7 +44,8 @@ pub async fn post_permission_of_user<'a>(
     )
     .await?;
 
-    let perm = Permission::of_user(&user.id, &server.id, &database)
+    let perm = user
+        .permission_of_server(&server.id, &database)
         .await
         .map_err(|err| FydiaResponse::StringError(err))?;
 
@@ -56,50 +58,35 @@ pub async fn post_permission_of_user<'a>(
 
     let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 
-    let value = get_json("value", &json)?.parse().unwrap();
+    let value = get_json("value", &json)?.parse().map_err(|_| {
+        FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Bad value")
+    })?;
+
     let userid = UserId::new(userid.parse().unwrap());
 
     if let Ok(mut permission) =
         Permission::of_user_in_channel(&channel.id, &userid, &database).await
     {
         permission.value = value;
-        if permission
-            .update(&database)
-            .await
-            .map_err(|err| {
-                info!("{}", err);
-                err
-            })
-            .is_err()
-        {
-            info!("Errororroro");
+        if permission.update_value(&database).await.is_err() {
             return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Cannot update value",
             ));
         };
-    }
+    } else {
+        let perm = Permission {
+            permission_type: fydia_struct::permission::PermissionType::User(userid),
+            channelid: Some(channel.id),
+            value,
+        };
 
-    let perm = Permission {
-        permission_type: fydia_struct::permission::PermissionType::User(userid),
-        channelid: Some(channel.id),
-        value,
-    };
-
-    if perm
-        .insert(&database)
-        .await
-        .map_err(|err| {
-            info!("{}", err);
-            err
-        })
-        .is_err()
-    {
-        info!("qweqwe");
-        return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Cannot insert value",
-        ));
+        if perm.insert(&database).await.is_err() {
+            return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Cannot insert value",
+            ));
+        }
     }
 
     FydiaResult::Ok(FydiaResponse::Text(""))

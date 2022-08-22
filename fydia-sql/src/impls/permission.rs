@@ -8,7 +8,7 @@ use fydia_struct::{
     user::UserId,
 };
 use fydia_utils::async_trait::async_trait;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ActiveValue::NotSet, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 use super::{
     basic_model::BasicModel,
@@ -47,7 +47,7 @@ pub trait PermissionSql {
         db: &DatabaseConnection,
     ) -> Result<Permissions, String>;
     async fn insert(&self, db: &DatabaseConnection) -> Result<(), String>;
-    async fn update(self, db: &DatabaseConnection) -> Result<Permission, String>;
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, String>;
     async fn delete(mut self, db: &DatabaseConnection) -> Result<(), String>;
 }
 
@@ -65,7 +65,7 @@ impl PermissionSql for Permission {
         for role in roles {
             vec.push(Permission::role(role.id, None, role.server_permission))
         }
-        info!("{:#?}", vec);
+
         Ok(Permissions::new(vec))
     }
 
@@ -167,17 +167,35 @@ impl PermissionSql for Permission {
         Ok(())
     }
 
-    async fn update(self, db: &DatabaseConnection) -> Result<Permission, String> {
-        match self.permission_type {
-            fydia_struct::permission::PermissionType::Role(_) => {
-                let am = entity::permission::role::ActiveModel::try_from(self.clone())?;
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, String> {
+        let channelid = self
+            .channelid
+            .clone()
+            .ok_or(String::from("No channelid"))?
+            .id;
 
-                update(am, db).await?;
+        match &self.permission_type {
+            fydia_struct::permission::PermissionType::Role(role) => {
+                let am = entity::permission::role::ActiveModel::try_from(&self)?;
+
+                entity::permission::role::Entity::update(am)
+                    .filter(entity::permission::role::Column::Channel.eq(channelid.as_str()))
+                    .filter(entity::permission::role::Column::Role.eq(role.get_id_cloned()?))
+                    .exec(db)
+                    .await
+                    .map(|_| ())
+                    .map_err(|error| error.to_string())?;
             }
-            fydia_struct::permission::PermissionType::User(_) => {
-                let am = entity::permission::user::ActiveModel::try_from(self.clone())?;
+            fydia_struct::permission::PermissionType::User(user) => {
+                let am = entity::permission::user::ActiveModel::try_from(&self)?;
 
-                update(am, db).await?;
+                entity::permission::user::Entity::update(am)
+                    .filter(entity::permission::user::Column::Channel.eq(channelid.as_str()))
+                    .filter(entity::permission::user::Column::User.eq(user.0.get_id_cloned()?))
+                    .exec(db)
+                    .await
+                    .map(|_| ())
+                    .map_err(|error| error.to_string())?;
             }
         }
 

@@ -59,9 +59,14 @@ pub trait SqlUser {
     ) -> Result<(), String>;
     async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, String>;
     async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn permission(
+    async fn permission_of_channel(
         &self,
         channelid: &ChannelId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String>;
+    async fn permission_of_server(
+        &self,
+        serverid: &ServerId,
         executor: &DatabaseConnection,
     ) -> Result<Permissions, String>;
 
@@ -196,14 +201,20 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn permission(
+    async fn permission_of_channel(
         &self,
         channelid: &ChannelId,
         executor: &DatabaseConnection,
     ) -> Result<Permissions, String> {
         Permission::of_user_with_role_in_channel(channelid, &self.id, executor).await
     }
-
+    async fn permission_of_server(
+        &self,
+        serverid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String> {
+        Permission::of_user(&self.id, serverid, executor).await
+    }
     async fn roles(
         &self,
         serverid: &ServerId,

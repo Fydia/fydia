@@ -13,14 +13,22 @@ const RAW_SQL: &[&str] = &["ALTER TABLE Fydia.permission_roles ADD CONSTRAINT pe
 /// * Database is unreachable
 pub async fn create_tables(db: &Arc<DbConn>) -> Result<(), DbErr> {
     migration::run_migrations(db).await?;
-
-    for i in RAW_SQL {
-        db.execute(Statement::from_string(
+    if db
+        .execute(Statement::from_string(
             db.get_database_backend(),
-            i.to_string(),
+            "SELECT * FROM seaql_migrations".to_string(),
         ))
         .await
-        .map(|_| ())?;
+        .is_err()
+    {
+        for i in RAW_SQL {
+            db.execute(Statement::from_string(
+                db.get_database_backend(),
+                i.to_string(),
+            ))
+            .await
+            .map(|_| ())?;
+        }
     }
 
     Ok(())

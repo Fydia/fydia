@@ -41,7 +41,7 @@ pub async fn post_permission<'a>(
     .await?;
 
     let perms = user
-        .permission(&channel.id, &database)
+        .permission_of_channel(&channel.id, &database)
         .await
         .unwrap()
         .calculate(Some(channel.id));

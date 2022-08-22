@@ -6,6 +6,7 @@ pub mod role {
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "permission_roles")]
     pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
         pub channel: String,
         #[sea_orm(primary_key, auto_increment = false)]
         pub role: u32,
@@ -83,7 +84,7 @@ pub mod user {
         pub user: u32,
         #[sea_orm(primary_key, auto_increment = false)]
         pub channel: String,
-        #[sea_orm(primary_key, auto_increment = false)]
+        #[sea_orm(auto_increment = false)]
         pub value: u64,
     }
 
