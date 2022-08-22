@@ -1,11 +1,9 @@
 //! This module is related to roles
 
 use crate::{server::ServerId, utils::Id};
-use fydia_utils::{
-    serde::{Deserialize, Serialize},
-    serde_json,
-};
+use fydia_utils::serde::{Deserialize, Serialize};
 
+/// Id of Role
 pub type RoleId = Id<u32>;
 /// `Role` contains all value of roles
 #[allow(missing_docs)]

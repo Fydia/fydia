@@ -43,7 +43,7 @@ mod tests {
                 ),
             ]);
 
-            let value = permissions.calculate(None);
+            let value = permissions.calculate(None).unwrap();
 
             assert!(value.can_vec(&[
                 PermissionValue::Read,

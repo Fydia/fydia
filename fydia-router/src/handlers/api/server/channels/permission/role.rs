@@ -13,12 +13,11 @@ use fydia_struct::roles::Role;
 use crate::handlers::basic::BasicValues;
 
 pub async fn get_permission_of_role<'a>(
-    body: Bytes,
     Path((serverid, channelid, roleid)): Path<(String, String, String)>,
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
 ) -> FydiaResult<'a> {
-    let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+    let (_, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
     .await?;
@@ -32,7 +31,7 @@ pub async fn get_permission_of_role<'a>(
 
     let perm = Permission::of_role_in_channel(&channel.id, &role.id, &database)
         .await
-        .map_err(|err| FydiaResponse::StringError(err))?;
+        .map_err(FydiaResponse::StringError)?;
 
     FydiaResult::Ok(FydiaResponse::Json(
         fydia_utils::serde_json::to_value(perm).unwrap(),

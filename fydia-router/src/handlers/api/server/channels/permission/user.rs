@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use axum::Extension;
@@ -26,7 +24,7 @@ pub async fn get_permission_of_user<'a>(
 
     let perm = Permission::of_user_in_channel(&channel.id, &user.id, &database)
         .await
-        .map_err(|err| FydiaResponse::StringError(err))?;
+        .map_err(FydiaResponse::StringError)?;
 
     FydiaResult::Ok(FydiaResponse::Json(
         fydia_utils::serde_json::to_value(perm).unwrap(),
@@ -47,7 +45,7 @@ pub async fn post_permission_of_user<'a>(
     let perm = user
         .permission_of_server(&server.id, &database)
         .await
-        .map_err(|err| FydiaResponse::StringError(err))?;
+        .map_err(FydiaResponse::StringError)?;
 
     if !perm.can(&fydia_struct::permission::PermissionValue::Admin) {
         return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
@@ -58,7 +56,8 @@ pub async fn post_permission_of_user<'a>(
 
     let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 
-    let value = get_json("value", &json)?.parse().map_err(|_| {
+    let value = get_json("value", &json)?.parse().map_err(|err| {
+        info!("{}", err);
         FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Bad value")
     })?;
 

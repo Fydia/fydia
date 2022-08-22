@@ -58,7 +58,10 @@ pub mod role {
             };
 
             Ok(Self {
-                channel: Set(perm.channelid.ok_or(String::from("No channelid"))?.id),
+                channel: Set(perm
+                    .channelid
+                    .ok_or_else(|| String::from("No channelid"))?
+                    .id),
                 role: Set(role.get_id()?),
                 value: Set(perm.value),
             })
@@ -132,7 +135,10 @@ pub mod user {
             };
 
             Ok(Self {
-                channel: Set(perm.channelid.ok_or(String::from("No channelid"))?.id),
+                channel: Set(perm
+                    .channelid
+                    .ok_or_else(|| String::from("No channelid"))?
+                    .id),
                 user: Set(user.0.get_id()?),
                 value: Set(perm.value),
             })

@@ -16,14 +16,14 @@ pub async fn get_permission<'a>(
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
 ) -> FydiaResult<'a> {
-    let (user, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+    let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
     .await?;
 
     let perm = Permission::of_channel(&channel.id, &database)
         .await
-        .map_err(|err| FydiaResponse::StringError(err))?;
+        .map_err(FydiaResponse::StringError)?;
 
     FydiaResult::Ok(FydiaResponse::Json(
         fydia_utils::serde_json::to_value(perm).unwrap(),
@@ -43,8 +43,9 @@ pub async fn post_permission<'a>(
     let perms = user
         .permission_of_channel(&channel.id, &database)
         .await
-        .unwrap()
-        .calculate(Some(channel.id));
+        .map_err(FydiaResponse::StringError)?
+        .calculate(Some(channel.id))
+        .map_err(FydiaResponse::StringError)?;
 
     if !perms.can(&fydia_struct::permission::PermissionValue::Admin) {
         return FydiaResult::Err(FydiaResponse::TextError("Not enought permission"));

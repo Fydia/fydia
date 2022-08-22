@@ -208,7 +208,7 @@ impl BasicModel for entity::permission::user::Model {
     async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
         let user = User::by_id(self.user, executor)
             .await
-            .ok_or(String::from("User doesn't exists"))?;
+            .ok_or_else(|| String::from("User doesn't exists"))?;
 
         let channel = Channel::by_id(
             &ChannelId {

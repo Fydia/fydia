@@ -36,7 +36,7 @@ pub async fn delete_message<'a>(
     )
     .await?;
 
-    let mut message = Message::by_id(&messageid, &executor)
+    let message = Message::by_id(&messageid, &executor)
         .await
         .map_err(FydiaResponse::StringError)?;
 

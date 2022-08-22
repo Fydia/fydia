@@ -4,26 +4,31 @@ use fydia_utils::serde::{Deserialize, Serialize};
 
 use crate::{channel::ChannelId, roles::RoleId, user::UserId};
 
+/// Wrapper of `Vec<Permission>`
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "fydia_utils::serde")]
 pub struct Permissions(Vec<Permission>);
 
 impl Permissions {
+    /// Create a new `Permissions`
     pub fn new(perms: Vec<Permission>) -> Self {
         Self(perms)
     }
 
+    /// Return true if there is no permission
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Return permissions
     pub fn get(self) -> Vec<Permission> {
         self.0
     }
 
+    /// Return true if user can do this
     pub fn can(&self, pvalue: &PermissionValue) -> bool {
         for i in &self.0 {
-            if !i.can(&pvalue) {
+            if !i.can(pvalue) {
                 return false;
             }
         }
@@ -31,6 +36,7 @@ impl Permissions {
         true
     }
 
+    /// Return true if user can do this
     pub fn can_vec(&self, pvalues: &[PermissionValue]) -> bool {
         for i in &self.0 {
             if !i.can_vec(pvalues) {
@@ -41,7 +47,12 @@ impl Permissions {
         true
     }
 
-    pub fn calculate(&self, channelid: Option<ChannelId>) -> Permission {
+    /// Take multiple permissions and return one
+    ///
+    /// # Errors
+    /// Return an error if :
+    /// * there is no `Permission` have `PermissionType::User` as type
+    pub fn calculate(&self, channelid: Option<ChannelId>) -> Result<Permission, String> {
         let mut value = 0;
         let mut permission_type = None;
 
@@ -52,7 +63,7 @@ impl Permissions {
                 }
                 PermissionType::User(_) => {
                     if permission_type.is_none() {
-                        permission_type = Some(i.permission_type.clone())
+                        permission_type = Some(i.permission_type.clone());
                     }
 
                     value &= i.value;
@@ -60,11 +71,14 @@ impl Permissions {
             }
         }
 
-        Permission {
-            permission_type: permission_type.unwrap(),
-            channelid,
-            value,
+        if let Some(permission_type) = permission_type {
+            return Ok(Permission {
+                permission_type,
+                channelid,
+                value,
+            });
         }
+        Err("No type for permission".to_string())
     }
 }
 
@@ -79,6 +93,7 @@ pub struct Permission {
 }
 
 impl Permission {
+    /// Create a new Role permission
     pub fn role(role: RoleId, channelid: Option<ChannelId>, value: u64) -> Self {
         Self {
             permission_type: PermissionType::Role(role),
@@ -86,7 +101,7 @@ impl Permission {
             value,
         }
     }
-
+    /// Create a new User permission
     pub fn user(userid: UserId, channelid: Option<ChannelId>, value: u64) -> Self {
         Self {
             permission_type: PermissionType::User(userid),
@@ -95,17 +110,18 @@ impl Permission {
         }
     }
 
+    /// Return true if user can do the `PermissionValue`
     pub fn can(&self, pvalue: &PermissionValue) -> bool {
         let perm = pvalue.to_u64();
         self.value & perm == perm
     }
 
+    /// Return true if user can do all of the `PermissionValue`
     pub fn can_vec(&self, pvalues: &[PermissionValue]) -> bool {
         let can = true;
         for pvalue in pvalues {
-            println!("{:?}", pvalue);
             let perm = pvalue.to_u64();
-            if can && !(self.value & perm == perm) {
+            if can && self.value & perm != perm {
                 return false;
             }
         }
@@ -146,23 +162,7 @@ pub enum PermissionValue {
 }
 
 impl PermissionValue {
-    /// Take a u64 represent Permission and a `Permission` to test*
-    ///
-    /// # Examples
-    /// ```
-    /// use fydia_struct::permission::Permission;
-    ///
-    /// let perms: u32 = Permission::Read as u32 | Permission::Write as u32;
-    ///
-    /// // Permission::can will return true
-    /// assert!(Permission::can(perms, Permission::Read));
-    /// ```
-    fn can(perms: u64, perm: PermissionValue) -> bool {
-        let perm = perm as u64;
-        perms & perm == perm
-    }
-
     fn to_u64(&self) -> u64 {
-        return self.clone() as u64;
+        self.clone() as u64
     }
 }

@@ -8,7 +8,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 #[async_trait::async_trait]
 pub trait SqlRoles {
     async fn by_server_id(
-        shortid: &String,
+        shortid: &str,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Role>, String>;
     async fn by_id(
@@ -34,12 +34,12 @@ pub trait SqlRoles {
 #[async_trait::async_trait]
 impl SqlRoles for Role {
     async fn by_server_id(
-        shortid: &String,
+        shortid: &str,
         executor: &DatabaseConnection,
     ) -> Result<Vec<Self>, String> {
         let mut result = Vec::new();
         let query = entity::roles::Entity::find()
-            .filter(entity::roles::Column::Serverid.eq(shortid.as_str()))
+            .filter(entity::roles::Column::Serverid.eq(shortid))
             .all(executor)
             .await;
         if let Ok(query) = query {

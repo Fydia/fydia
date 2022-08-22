@@ -3,19 +3,17 @@ use std::convert::TryFrom;
 use fydia_struct::{
     channel::ChannelId,
     permission::{Permission, Permissions},
-    roles::{Role, RoleId},
+    roles::RoleId,
     server::ServerId,
     user::UserId,
 };
 use fydia_utils::async_trait::async_trait;
-use sea_orm::{ActiveValue::NotSet, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 use super::{
     basic_model::BasicModel,
     channel::SqlChannelId,
     delete, insert,
-    role::SqlRoles,
-    update,
     user::{SqlUser, UserFrom},
 };
 
@@ -63,7 +61,7 @@ impl PermissionSql for Permission {
         let mut vec = Vec::new();
 
         for role in roles {
-            vec.push(Permission::role(role.id, None, role.server_permission))
+            vec.push(Permission::role(role.id, None, role.server_permission));
         }
 
         Ok(Permissions::new(vec))
@@ -80,7 +78,7 @@ impl PermissionSql for Permission {
             .one(db)
             .await
             .map_err(|error| error.to_string())?
-            .ok_or("No role permission".to_string())?
+            .ok_or_else(|| "No role permission".to_string())?
             .to_struct(db)
             .await
     }
@@ -96,7 +94,7 @@ impl PermissionSql for Permission {
             .one(db)
             .await
             .map_err(|error| error.to_string())?
-            .ok_or("No user permission".to_string())?
+            .ok_or_else(|| "No user permission".to_string())?
             .to_struct(db)
             .await
     }
@@ -171,7 +169,7 @@ impl PermissionSql for Permission {
         let channelid = self
             .channelid
             .clone()
-            .ok_or(String::from("No channelid"))?
+            .ok_or_else(|| String::from("No channelid"))?
             .id;
 
         match &self.permission_type {

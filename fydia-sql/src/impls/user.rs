@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use entity::roles::assignation;
 use entity::user::ActiveModel as UserActiveModel;
 use entity::user::Column;
-use entity::user::Entity as UserEntity;
 use entity::user::Model;
 use fydia_crypto::password::hash;
 use fydia_crypto::password::verify_password;
@@ -246,6 +245,6 @@ impl UserFrom for UserId {
     async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String> {
         User::by_id(self.0.get_id_cloned()?, executor)
             .await
-            .ok_or(String::from("No user with this id"))
+            .ok_or_else(|| String::from("No user with this id"))
     }
 }

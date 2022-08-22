@@ -21,7 +21,7 @@ pub trait SqlMessage {
     async fn by_id(message_id: &str, executor: &DatabaseConnection) -> Result<Message, String>;
     async fn insert(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update(&mut self, content: &str, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn delete(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
@@ -91,7 +91,7 @@ impl SqlMessage for Message {
         Ok(())
     }
 
-    async fn delete(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String> {
         let model = Model::get_model_by_id(&self.id, executor).await?;
         let active_model: entity::messages::ActiveModel = model.clone().into();
         delete(active_model, executor).await?;
