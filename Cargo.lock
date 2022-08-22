@@ -1898,7 +1898,7 @@ dependencies = [
 [[package]]
 name = "sea-orm"
 version = "0.9.1"
-source = "git+https://github.com/rheydskey/sea-orm#94f91784a004c02c4f6cf44f04d5cae6939682de"
+source = "git+https://github.com/rheydskey/sea-orm#805f67783e45fbe9d0cb5c1d7fa25b926d11f495"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1920,7 +1920,7 @@ dependencies = [
 [[package]]
 name = "sea-orm-macros"
 version = "0.9.1"
-source = "git+https://github.com/rheydskey/sea-orm#94f91784a004c02c4f6cf44f04d5cae6939682de"
+source = "git+https://github.com/rheydskey/sea-orm#805f67783e45fbe9d0cb5c1d7fa25b926d11f495"
 dependencies = [
  "bae",
  "heck 0.3.3",
@@ -1932,7 +1932,7 @@ dependencies = [
 [[package]]
 name = "sea-orm-migration"
 version = "0.9.1"
-source = "git+https://github.com/rheydskey/sea-orm#94f91784a004c02c4f6cf44f04d5cae6939682de"
+source = "git+https://github.com/rheydskey/sea-orm#805f67783e45fbe9d0cb5c1d7fa25b926d11f495"
 dependencies = [
  "async-trait",
  "sea-orm",
