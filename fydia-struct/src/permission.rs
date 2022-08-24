@@ -49,36 +49,43 @@ impl Permissions {
 
     /// Take multiple permissions and return one
     ///
+    /// User permisison is privileged to a role permission.
+    ///
     /// # Errors
     /// Return an error if :
     /// * there is no `Permission` have `PermissionType::User` as type
     pub fn calculate(&self, channelid: Option<ChannelId>) -> Result<Permission, String> {
-        let mut value = 0;
-        let mut permission_type = None;
+        if let Some(user_perm) = self
+            .0
+            .iter()
+            .filter(|i| {
+                if let PermissionType::User(_) = i.permission_type {
+                    true
+                } else {
+                    false
+                }
+            })
+            .nth(0)
+        {
+            return Ok(user_perm.clone());
+        }
 
+        let mut value = 0;
         for i in self.0.iter() {
             match i.permission_type {
                 PermissionType::Role(_) => {
                     value |= i.value;
                 }
-                PermissionType::User(_) => {
-                    if permission_type.is_none() {
-                        permission_type = Some(i.permission_type.clone());
-                    }
-
-                    value &= i.value;
-                }
+                _ => {}
             }
         }
+        let channelid = channelid.ok_or_else(|| "No channelid".to_string())?;
 
-        if let Some(permission_type) = permission_type {
-            return Ok(Permission {
-                permission_type,
-                channelid,
-                value,
-            });
-        }
-        Err("No type for permission".to_string())
+        Ok(Permission {
+            permission_type: PermissionType::Channel(channelid.clone()),
+            channelid: Some(channelid),
+            value,
+        })
     }
 }
 
@@ -148,6 +155,8 @@ pub enum PermissionType {
     Role(RoleId),
     #[serde(rename = "user")]
     User(UserId),
+    #[serde(skip)]
+    Channel(ChannelId),
 }
 
 /// `Permission` contains all permission as enum

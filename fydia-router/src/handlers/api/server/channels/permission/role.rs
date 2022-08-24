@@ -1,6 +1,5 @@
 use std::num::ParseIntError;
 
-use axum::body::Bytes;
 use axum::Extension;
 use axum::{extract::Path, http::HeaderMap};
 use fydia_sql::impls::permission::PermissionSql;

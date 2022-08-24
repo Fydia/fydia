@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Extension, Path};
 use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage},
+    impls::{channel::SqlChannel, message::SqlMessage, user::SqlUser},
     sqlpool::DbConnection,
 };
 use fydia_struct::{
@@ -35,6 +35,17 @@ pub async fn delete_message<'a>(
         &headers, &serverid, &channelid, &executor,
     )
     .await?;
+
+    if !user
+        .permission_of_channel(&channel.id, &executor)
+        .await
+        .map_err(|_| FydiaResponse::TextError("Cannot get permission"))?
+        .calculate(Some(channel.id.clone()))
+        .map_err(FydiaResponse::StringError)?
+        .can(&fydia_struct::permission::PermissionValue::Read)
+    {
+        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+    }
 
     let message = Message::by_id(&messageid, &executor)
         .await

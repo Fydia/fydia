@@ -115,8 +115,9 @@ impl PermissionSql for Permission {
                 vec.push(perm);
             }
         }
-
-        vec.push(Self::of_user_in_channel(channelid, &user.id, db).await?);
+        if let Ok(perm) = Self::of_user_in_channel(channelid, &user.id, db).await {
+            vec.push(perm);
+        }
 
         return Ok(Permissions::new(vec));
     }
@@ -160,6 +161,8 @@ impl PermissionSql for Permission {
 
                 insert(am, db).await?;
             }
+
+            _ => return Err("Bad Type".to_string()),
         }
 
         Ok(())
@@ -195,6 +198,7 @@ impl PermissionSql for Permission {
                     .map(|_| ())
                     .map_err(|error| error.to_string())?;
             }
+            _ => return Err("Bad Type".to_string()),
         }
 
         Ok(self)
@@ -212,6 +216,7 @@ impl PermissionSql for Permission {
 
                 delete(am, db).await?;
             }
+            _ => return Err("Bad Type".to_string()),
         }
 
         drop(self);

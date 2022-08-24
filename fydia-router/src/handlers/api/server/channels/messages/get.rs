@@ -1,6 +1,6 @@
 use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
-use fydia_sql::impls::channel::SqlChannel;
+use fydia_sql::impls::{channel::SqlChannel, user::SqlUser};
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
 use fydia_utils::http::HeaderMap;
@@ -16,10 +16,21 @@ pub async fn get_messages<'a>(
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
-    let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
+    let (user, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
     .await?;
+
+    if !user
+        .permission_of_channel(&channel.id, &database)
+        .await
+        .map_err(|_| FydiaResponse::TextError("Cannot get permission"))?
+        .calculate(Some(channel.id.clone()))
+        .map_err(FydiaResponse::StringError)?
+        .can(&fydia_struct::permission::PermissionValue::Read)
+    {
+        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+    }
 
     channel
         .messages(&database)
