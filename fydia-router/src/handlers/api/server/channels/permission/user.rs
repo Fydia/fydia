@@ -12,6 +12,11 @@ use fydia_struct::user::UserId;
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};
 
+/// Get permission of user
+///
+/// # Errors
+/// Return an error if :
+/// * channelid, serverid, roleid isn't valid
 pub async fn get_permission_of_user<'a>(
     Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
@@ -26,11 +31,14 @@ pub async fn get_permission_of_user<'a>(
         .await
         .map_err(FydiaResponse::StringError)?;
 
-    FydiaResult::Ok(FydiaResponse::Json(
-        fydia_utils::serde_json::to_value(perm).unwrap(),
-    ))
+    FydiaResult::Ok(FydiaResponse::from_serialize(perm))
 }
 
+/// Post permission of user
+///
+/// # Errors
+/// Return an error if :
+/// * channelid, serverid, roleid isn't valid
 pub async fn post_permission_of_user<'a>(
     body: Bytes,
     Path((serverid, channelid, userid)): Path<(String, String, String)>,
@@ -61,7 +69,11 @@ pub async fn post_permission_of_user<'a>(
         FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Bad value")
     })?;
 
-    let userid = UserId::new(userid.parse().unwrap());
+    let userid = UserId::new(
+        userid
+            .parse()
+            .map_err(|_err| FydiaResponse::TextError("Bad Value"))?,
+    );
 
     if let Ok(mut permission) =
         Permission::of_user_in_channel(&channel.id, &userid, &database).await

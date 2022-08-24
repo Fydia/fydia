@@ -39,7 +39,7 @@ pub async fn delete_message<'a>(
     if !user
         .permission_of_channel(&channel.id, &executor)
         .await
-        .map_err(|_| FydiaResponse::TextError("Cannot get permission"))?
+        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
         .calculate(Some(channel.id.clone()))
         .map_err(FydiaResponse::StringError)?
         .can_read()

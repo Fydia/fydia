@@ -162,7 +162,9 @@ impl PermissionSql for Permission {
                 insert(am, db).await?;
             }
 
-            _ => return Err("Bad Type".to_string()),
+            fydia_struct::permission::PermissionType::Channel(_) => {
+                return Err("Bad Type".to_string())
+            }
         }
 
         Ok(())
@@ -198,7 +200,9 @@ impl PermissionSql for Permission {
                     .map(|_| ())
                     .map_err(|error| error.to_string())?;
             }
-            _ => return Err("Bad Type".to_string()),
+            fydia_struct::permission::PermissionType::Channel(_) => {
+                return Err("Bad Type".to_string())
+            }
         }
 
         Ok(self)
@@ -216,7 +220,9 @@ impl PermissionSql for Permission {
 
                 delete(am, db).await?;
             }
-            _ => return Err("Bad Type".to_string()),
+            fydia_struct::permission::PermissionType::Channel(_) => {
+                return Err("Bad Type".to_string())
+            }
         }
 
         drop(self);
