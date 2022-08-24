@@ -64,8 +64,7 @@ pub async fn post_permission_of_user<'a>(
 
     let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 
-    let value = get_json("value", &json)?.parse().map_err(|err| {
-        info!("{}", err);
+    let value = get_json("value", &json)?.parse().map_err(|_err| {
         FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Bad value")
     })?;
 
