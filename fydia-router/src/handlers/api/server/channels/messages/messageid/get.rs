@@ -23,7 +23,7 @@ pub async fn get_message<'a>(
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
 ) -> FydiaResult<'a> {
     let (_, _, _) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &executor,
+        &headers, &serverid, &channelid, &executor,
     )
     .await?;
 

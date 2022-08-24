@@ -36,9 +36,9 @@ impl BasicValues {
     /// # Errors
     /// This function will return an errors if serverid or user token isn't correct
     /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined<'a, T: Into<String>>(
+    pub async fn get_user_and_server_and_check_if_joined<'a>(
         headers: &HeaderMap,
-        serverid: T,
+        serverid: &String,
         executor: &DbConnection,
     ) -> Result<(User, Server), FydiaResponse<'a>> {
         let user = Self::get_user(headers, executor).await?;
@@ -85,10 +85,10 @@ impl BasicValues {
     /// # Errors
     /// This function will return an errors if serverid, channelid isn't correct
     /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined_and_channel<'a, T: Into<String>>(
+    pub async fn get_user_and_server_and_check_if_joined_and_channel<'a>(
         headers: &HeaderMap,
-        serverid: T,
-        channelid: T,
+        serverid: &String,
+        channelid: &String,
         executor: &DbConnection,
     ) -> Result<(User, Server, Channel), FydiaResponse<'a>> {
         let (user, server) =

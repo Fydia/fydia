@@ -17,7 +17,7 @@ pub async fn delete_channel<'a>(
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
     let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &database,
+        &headers, &serverid, &channelid, &database,
     )
     .await?;
 

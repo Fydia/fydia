@@ -9,6 +9,7 @@ use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::SqlServer;
+use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
@@ -51,9 +52,20 @@ pub async fn post_messages<'a>(
     Path((serverid, channelid)): Path<(String, String)>,
 ) -> FydiaResult<'a> {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, serverid, channelid, &database,
+        &headers, &serverid, &channelid, &database,
     )
     .await?;
+
+    if !user
+        .permission_of_channel(&channel.id, &database)
+        .await
+        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .calculate(Some(channel.id.clone()))
+        .map_err(FydiaResponse::StringError)?
+        .can_read()
+    {
+        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+    }
 
     let content_type = headers
         .get(CONTENT_TYPE)

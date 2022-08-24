@@ -1,6 +1,6 @@
 use fydia_struct::{
     channel::Channel,
-    server::{Members, Server, ServerId},
+    server::{Channels, Members, Server, ServerId},
     user::{User, UserId},
 };
 use fydia_utils::async_trait;
@@ -9,12 +9,16 @@ use std::convert::TryFrom;
 
 use entity::server::Model;
 
-use super::{basic_model::BasicModel, delete, insert, members::SqlMembers, update, user::UserFrom};
+use super::{
+    basic_model::BasicModel, channel::SqlChannel, delete, insert, members::SqlMembers, update,
+    user::UserFrom,
+};
 
 #[async_trait::async_trait]
 pub trait SqlServer {
     async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String>;
     async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String>;
+    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String>;
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String>;
     async fn update_name<T: Into<String> + Send>(
@@ -48,12 +52,12 @@ impl SqlServer for Server {
             .await
     }
 
+    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String> {
+        Channel::by_serverid(&self.id, executor).await
+    }
+
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
-        let mut user = self
-            .owner
-            .to_user(executor)
-            .await
-            .ok_or_else(|| "Owner not found ?".to_string())?;
+        let mut user = self.owner.to_user(executor).await?;
 
         let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
 
@@ -125,7 +129,7 @@ pub trait SqlServerId {
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
     async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String> {
-        Server::by_id(&ServerId::new(self.id.clone()), executor).await
+        Server::by_id(self, executor).await
     }
 }
 
@@ -141,10 +145,7 @@ impl SqlMember for Members {
         let mut result = Vec::new();
 
         for id in &self.members {
-            let user = id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))?;
+            let user = id.to_user(executor).await?;
 
             result.push(user);
         }
@@ -154,12 +155,7 @@ impl SqlMember for Members {
 
     async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in &self.members {
-            if id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))
-                .is_err()
-            {
+            if id.to_user(executor).await.is_err() {
                 return false;
             }
         }
@@ -177,12 +173,7 @@ impl SqlMember for Vec<UserId> {
 
     async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
         for id in self {
-            if id
-                .to_user(executor)
-                .await
-                .ok_or_else(|| String::from("User not exists"))
-                .is_err()
-            {
+            if id.to_user(executor).await.is_err() {
                 return false;
             };
         }

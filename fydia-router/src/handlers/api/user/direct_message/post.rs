@@ -35,7 +35,7 @@ pub async fn create_direct_message<'a>(
     let target = UserId::new(id)
         .to_user(&database)
         .await
-        .ok_or(FydiaResponse::TextError("Bad user id"))?;
+        .map_err(FydiaResponse::StringError)?;
 
     let mut dm = DirectMessage::new(Id::Unset, "New DM channel".to_string(), "".to_string());
     dm.insert(&database).await.map_err(|error| {

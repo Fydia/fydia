@@ -5,22 +5,6 @@ mod tests {
         pub fn test() {}
     }
 
-    mod permission {
-        use crate::permission::Permission;
-        #[cfg(test)]
-        const PERMISSION_TO_TEST: u32 = Permission::Read as u32 | Permission::Write as u32;
-        #[test]
-        pub fn can() {
-            assert_eq!(Permission::can(PERMISSION_TO_TEST, Permission::Read), true);
-        }
-        #[test]
-        pub fn cant() {
-            assert_eq!(
-                Permission::can(PERMISSION_TO_TEST, Permission::Admin),
-                false
-            );
-        }
-    }
     mod formated {
         mod user {
             use crate::format::UserFormat;

@@ -20,7 +20,7 @@ pub async fn get_server<'a>(
     Path(serverid): Path<String>,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    BasicValues::get_user_and_server_and_check_if_joined(&headers, serverid, &database)
+    BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
         .await
         .map(|(_, server)| FydiaResponse::from_serialize(&server))
 }

@@ -10,7 +10,7 @@ use sea_orm::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "DirectMessage")]
+#[sea_orm(table_name = "direct_message")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: u32,

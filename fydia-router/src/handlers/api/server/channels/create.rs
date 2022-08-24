@@ -23,7 +23,8 @@ pub async fn create_channel<'a>(
     headers: HeaderMap,
 ) -> FydiaResult<'a> {
     let (_, mut server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, serverid, &database).await?;
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
+            .await?;
 
     let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
 

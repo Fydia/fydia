@@ -48,11 +48,11 @@ impl DirectMessageMembers for DirectMessage {
         Ok(result)
     }
     async fn add(&self, userid: &UserId, executor: &DatabaseConnection) -> Result<(), String> {
-        if userid.to_user(executor).await.is_none() {
-            return Err("User not exists".to_string());
-        };
+        userid.to_user(executor).await?;
 
-        insert(dm_members::Model::new_activemodel(userid, self)?, executor).await
+        insert(dm_members::Model::new_activemodel(userid, self)?, executor)
+            .await
+            .map(|_| ())
     }
 
     async fn remove(&self, user: &UserId, executor: &DatabaseConnection) -> Result<(), String> {

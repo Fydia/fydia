@@ -1,10 +1,15 @@
 use async_trait::async_trait;
+use entity::roles::assignation;
 use entity::user::ActiveModel as UserActiveModel;
 use entity::user::Column;
-use entity::user::Entity as UserEntity;
 use entity::user::Model;
 use fydia_crypto::password::hash;
 use fydia_crypto::password::verify_password;
+use fydia_struct::channel::ChannelId;
+use fydia_struct::permission::Permission;
+use fydia_struct::permission::Permissions;
+use fydia_struct::roles::Role;
+use fydia_struct::server::ServerId;
 use fydia_struct::user::Token;
 use fydia_struct::user::User;
 use fydia_struct::user::UserId;
@@ -13,11 +18,15 @@ use fydia_utils::generate_string;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
 use sea_orm::EntityTrait;
+use sea_orm::QueryFilter;
 use sea_orm::Set;
 use std::convert::TryFrom;
 
 use super::basic_model::BasicModel;
 use super::delete;
+use super::insert;
+use super::permission::PermissionSql;
+use super::role::SqlRoles;
 use super::update;
 
 #[async_trait]
@@ -49,6 +58,22 @@ pub trait SqlUser {
     ) -> Result<(), String>;
     async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, String>;
     async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), String>;
+    async fn permission_of_channel(
+        &self,
+        channelid: &ChannelId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String>;
+    async fn permission_of_server(
+        &self,
+        serverid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String>;
+
+    async fn roles(
+        &self,
+        serverid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<Role>, String>;
 }
 
 #[async_trait]
@@ -156,10 +181,7 @@ impl SqlUser for User {
         }
 
         let active_model: UserActiveModel = UserActiveModel::try_from(self.clone())?;
-        let db = UserEntity::insert(active_model)
-            .exec(executor)
-            .await
-            .map_err(|f| f.to_string())?;
+        let db = insert(active_model, executor).await?;
 
         self.id = UserId::new(db.last_insert_id);
 
@@ -173,19 +195,56 @@ impl SqlUser for User {
 
         delete(active_model, executor).await?;
 
-        self = Self::default();
+        drop(self);
 
         Ok(())
+    }
+
+    async fn permission_of_channel(
+        &self,
+        channelid: &ChannelId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String> {
+        Permission::of_user_with_role_in_channel(channelid, &self.id, executor).await
+    }
+    async fn permission_of_server(
+        &self,
+        serverid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Permissions, String> {
+        Permission::of_user(&self.id, serverid, executor).await
+    }
+    async fn roles(
+        &self,
+        serverid: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<Role>, String> {
+        let roles = assignation::Entity::find()
+            .filter(assignation::Column::ServerId.eq(serverid.id.as_str()))
+            .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned()?))
+            .all(executor)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        let mut buf = Vec::new();
+
+        for roleid in roles {
+            buf.push(Role::by_id(roleid.role_id, serverid, executor).await?);
+        }
+
+        Ok(buf)
     }
 }
 #[async_trait]
 pub trait UserFrom {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User>;
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String>;
 }
 
 #[async_trait]
 impl UserFrom for UserId {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Option<User> {
-        User::by_id(self.0.get_id_cloned().ok()?, executor).await
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, String> {
+        User::by_id(self.0.get_id_cloned()?, executor)
+            .await
+            .ok_or_else(|| String::from("No user with this id"))
     }
 }
