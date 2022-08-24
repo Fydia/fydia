@@ -25,21 +25,37 @@ impl Permissions {
         self.0
     }
 
+    /// Return true if user can read
+    pub fn can_read(&self) -> bool {
+        if let Ok(value) = self.calculate(None) {
+            return value.can_read();
+        }
+
+        false
+    }
+
+    /// Return true if user can write
+    pub fn can_write(&self) -> bool {
+        if let Ok(value) = self.calculate(None) {
+            return value.can_write();
+        }
+
+        false
+    }
+
+    /// Return true if user is admin
+    pub fn is_admin(&self) -> bool {
+        if let Ok(value) = self.calculate(None) {
+            return value.can_write();
+        }
+
+        false
+    }
+
     /// Return true if user can do this
     pub fn can(&self, pvalue: &PermissionValue) -> bool {
         for i in &self.0 {
             if !i.can(pvalue) {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// Return true if user can do this
-    pub fn can_vec(&self, pvalues: &[PermissionValue]) -> bool {
-        for i in &self.0 {
-            if !i.can_vec(pvalues) {
                 return false;
             }
         }
@@ -58,25 +74,15 @@ impl Permissions {
         if let Some(user_perm) = self
             .0
             .iter()
-            .filter(|i| {
-                if let PermissionType::User(_) = i.permission_type {
-                    true
-                } else {
-                    false
-                }
-            })
-            .nth(0)
+            .find(|i| matches!(i.permission_type, PermissionType::User(_)))
         {
             return Ok(user_perm.clone());
         }
 
         let mut value = 0;
         for i in self.0.iter() {
-            match i.permission_type {
-                PermissionType::Role(_) => {
-                    value |= i.value;
-                }
-                _ => {}
+            if let PermissionType::Role(_) = i.permission_type {
+                value |= i.value;
             }
         }
         let channelid = channelid.ok_or_else(|| "No channelid".to_string())?;
@@ -117,23 +123,25 @@ impl Permission {
         }
     }
 
-    /// Return true if user can do the `PermissionValue`
-    pub fn can(&self, pvalue: &PermissionValue) -> bool {
-        let perm = pvalue.to_u64();
-        self.value & perm == perm
+    /// Return true if user can read
+    pub fn can_read(&self) -> bool {
+        self.can(&PermissionValue::Read)
     }
 
-    /// Return true if user can do all of the `PermissionValue`
-    pub fn can_vec(&self, pvalues: &[PermissionValue]) -> bool {
-        let can = true;
-        for pvalue in pvalues {
-            let perm = pvalue.to_u64();
-            if can && self.value & perm != perm {
-                return false;
-            }
-        }
+    /// Return true if user can write
+    pub fn can_write(&self) -> bool {
+        self.can(&PermissionValue::Write)
+    }
 
-        can
+    /// Return true if user is admin
+    pub fn is_admin(&self) -> bool {
+        self.can(&PermissionValue::Admin)
+    }
+
+    /// Return true if user can do the `PermissionValue`
+    fn can(&self, pvalue: &PermissionValue) -> bool {
+        let perm = pvalue.to_u64();
+        self.value & perm == perm
     }
 }
 

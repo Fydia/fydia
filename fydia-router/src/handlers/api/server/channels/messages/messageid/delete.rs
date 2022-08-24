@@ -42,7 +42,7 @@ pub async fn delete_message<'a>(
         .map_err(|_| FydiaResponse::TextError("Cannot get permission"))?
         .calculate(Some(channel.id.clone()))
         .map_err(FydiaResponse::StringError)?
-        .can(&fydia_struct::permission::PermissionValue::Read)
+        .can_read()
     {
         return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
     }

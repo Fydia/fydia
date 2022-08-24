@@ -47,7 +47,7 @@ pub async fn post_permission<'a>(
         .calculate(Some(channel.id))
         .map_err(FydiaResponse::StringError)?;
 
-    if !perms.can(&fydia_struct::permission::PermissionValue::Admin) {
+    if !perms.is_admin() {
         return FydiaResult::Err(FydiaResponse::TextError("Not enought permission"));
     }
 
