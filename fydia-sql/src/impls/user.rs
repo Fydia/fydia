@@ -275,6 +275,6 @@ impl UserFrom for UserId {
     async fn to_user<'a>(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse<'a>> {
         User::by_id(self.0.get_id_cloned_fydiaresponse()?, executor)
             .await
-            .ok_or_else(|| FydiaResponse::TextError("No user with this id"))
+            .ok_or(FydiaResponse::TextError("No user with this id"))
     }
 }

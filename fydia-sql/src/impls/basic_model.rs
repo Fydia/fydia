@@ -36,7 +36,7 @@ pub trait BasicModel {
             .one(executor)
             .await
             .map_err(|err| FydiaResponse::StringError(err.to_string()))?
-            .ok_or_else(|| FydiaResponse::TextError("Model doesn't exists"))?)
+            .ok_or(FydiaResponse::TextError("Model doesn't exists"))?)
     }
 
     async fn get_models_by<'a>(
@@ -162,10 +162,10 @@ impl BasicModel for entity::messages::Model {
     ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let author_id = User::by_id(self.author_id, executor)
             .await
-            .ok_or_else(|| FydiaResponse::TextError("Error Author_Id"))?;
+            .ok_or(FydiaResponse::TextError("Error Author_Id"))?;
 
         let message_type = MessageType::from_string(&self.message_type)
-            .ok_or_else(|| FydiaResponse::TextError("Error Message_type"))?;
+            .ok_or(FydiaResponse::TextError("Error Message_type"))?;
 
         Ok(Message {
             id: self.id.clone(),
@@ -227,7 +227,7 @@ impl BasicModel for entity::permission::user::Model {
     ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let user = User::by_id(self.user, executor)
             .await
-            .ok_or_else(|| FydiaResponse::TextError("User doesn't exists"))?;
+            .ok_or(FydiaResponse::TextError("User doesn't exists"))?;
 
         let channel = Channel::by_id(
             &ChannelId {

@@ -85,7 +85,7 @@ impl PermissionSql for Permission {
             .one(db)
             .await
             .map_err(|error| FydiaResponse::StringError(error.to_string()))?
-            .ok_or_else(|| FydiaResponse::TextError("No role permission"))?
+            .ok_or(FydiaResponse::TextError("No role permission"))?
             .to_struct(db)
             .await
     }
@@ -107,7 +107,7 @@ impl PermissionSql for Permission {
             .one(db)
             .await
             .map_err(|error| FydiaResponse::StringError(error.to_string()))?
-            .ok_or_else(|| FydiaResponse::TextError("No role permission"))?
+            .ok_or(FydiaResponse::TextError("No role permission"))?
             .to_struct(db)
             .await
     }
@@ -192,7 +192,7 @@ impl PermissionSql for Permission {
         let channelid = self
             .channelid
             .clone()
-            .ok_or_else(|| FydiaResponse::TextError("No channelid"))?
+            .ok_or(FydiaResponse::TextError("No channelid"))?
             .id;
 
         match &self.permission_type {
