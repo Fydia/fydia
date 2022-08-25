@@ -47,10 +47,6 @@ pub async fn update_name<'a>(
         .update_name(name, &database)
         .await
         .map(|_| FydiaResponse::Text("Channel name updated"))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot update name")
-        })
 }
 
 /// Change description of a channel
@@ -79,8 +75,4 @@ pub async fn update_description<'a>(
         .update_description(description, &database)
         .await
         .map(|_| FydiaResponse::Text("Channel description updated"))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot update description")
-        })
 }

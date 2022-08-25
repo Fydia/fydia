@@ -35,13 +35,9 @@ pub async fn get_permission_of_role<'a>(
         .parse()
         .map_err(|err: ParseIntError| FydiaResponse::StringError(err.to_string()))?;
 
-    let role = Role::by_id(roleid, &server.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let role = Role::by_id(roleid, &server.id, &database).await?;
 
-    let perm = Permission::of_role_in_channel(&channel.id, &role.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let perm = Permission::of_role_in_channel(&channel.id, &role.id, &database).await?;
 
     FydiaResult::Ok(FydiaResponse::from_serialize(perm))
 }
@@ -62,10 +58,7 @@ pub async fn post_permission_of_user<'a>(
     )
     .await?;
 
-    let perm = user
-        .permission_of_server(&server.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let perm = user.permission_of_server(&server.id, &database).await?;
 
     if !perm.can(&fydia_struct::permission::PermissionValue::Admin) {
         return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(

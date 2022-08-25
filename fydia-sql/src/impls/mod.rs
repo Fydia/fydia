@@ -1,3 +1,4 @@
+use fydia_struct::response::FydiaResponse;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel};
 
 pub mod basic_model;
@@ -19,14 +20,14 @@ pub mod user;
 /// * Database is unreachable
 /// * Table doesn't exist
 /// * Model doesn't exist
-pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
+pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<InsertResult<A>, String> {
+) -> Result<InsertResult<A>, FydiaResponse<'a>> {
     T::insert(am)
         .exec(executor)
         .await
-        .map_err(|error| error.to_string())
+        .map_err(|error| FydiaResponse::StringError(error.to_string()))
 }
 
 /// Update any model
@@ -35,10 +36,10 @@ pub async fn insert<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
 /// Return an error if:
 /// * Database is unreachable
 /// * Model doesn't exist
-pub async fn update<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
+pub async fn update<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), String>
+) -> Result<(), FydiaResponse<'a>>
 where
     <A::Entity as EntityTrait>::Model: IntoActiveModel<A>,
 {
@@ -46,7 +47,7 @@ where
         .exec(executor)
         .await
         .map(|_| ())
-        .map_err(|error| error.to_string())
+        .map_err(|error| FydiaResponse::StringError(error.to_string()))
 }
 
 /// Delete any model
@@ -55,13 +56,13 @@ where
 /// Return an error if:
 /// * Database is unreachable
 /// * Model doesn't exist
-pub async fn delete<T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
+pub async fn delete<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), String> {
+) -> Result<(), FydiaResponse<'a>> {
     T::delete(am)
         .exec(executor)
         .await
         .map(|_| ())
-        .map_err(|error| error.to_string())
+        .map_err(|error| FydiaResponse::StringError(error.to_string()))
 }

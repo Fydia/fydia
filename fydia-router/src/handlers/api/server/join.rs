@@ -26,8 +26,4 @@ pub async fn join<'a>(
         .join(&mut user, &database)
         .await
         .map(|_| FydiaResponse::Text("Server joined"))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot join")
-        })
 }

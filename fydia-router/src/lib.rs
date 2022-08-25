@@ -102,7 +102,7 @@ pub async fn get_axum_router(
     #[cfg(not(test))]
     #[cfg(debug_assertions)]
     if let Err(error) = fydia_sql::samples::insert_samples(&database).await {
-        error!("{}", error);
+        error!("{}", error.get_string());
     }
 
     info!("Ip is : {}", instance.domain);

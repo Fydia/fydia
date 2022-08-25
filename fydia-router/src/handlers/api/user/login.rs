@@ -7,7 +7,6 @@ use fydia_struct::{
     response::{FydiaResponse, FydiaResult},
     user::User,
 };
-use fydia_utils::http::StatusCode;
 
 /// Return a token
 ///
@@ -26,10 +25,7 @@ pub async fn user_login<'a>(
         .await
         .ok_or(FydiaResponse::TextError("User not exists"))?;
 
-    user.update_token(&database).await.map_err(|error| {
-        error!("{error}");
-        FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Database Error")
-    })?;
+    user.update_token(&database).await?;
 
     let token = user.token.ok_or(FydiaResponse::Text("Token error"))?;
 

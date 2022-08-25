@@ -17,11 +17,6 @@ pub async fn get_direct_messages<'a>(
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
     let user = BasicValues::get_user(&headers, &database).await?;
-    let channels = DirectMessage::of_user(&user.id, &database)
-        .await
-        .map_err(|e| {
-            error!("{e}");
-            FydiaResponse::TextError("Error")
-        })?;
+    let channels = DirectMessage::of_user(&user.id, &database).await?;
     Ok(FydiaResponse::from_serialize(channels))
 }

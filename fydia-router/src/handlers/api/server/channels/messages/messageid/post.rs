@@ -53,9 +53,7 @@ pub async fn update_message<'a>(
         return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
     }
 
-    let mut message = Message::by_id(&messageid, &executor)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let mut message = Message::by_id(&messageid, &executor).await?;
 
     if message.message_type != MessageType::TEXT && message.message_type != MessageType::URL {
         return Err(FydiaResponse::TextError("Cannot edit this type of message"));
@@ -69,15 +67,9 @@ pub async fn update_message<'a>(
 
     let content = get_json("content", &value)?.to_string();
 
-    message
-        .update(&content, &executor)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    message.update(&content, &executor).await?;
 
-    let users = &channel.users(&executor).await.map_err(|error| {
-        error!("{error}");
-        FydiaResponse::TextError("Cannot get user")
-    })?;
+    let users = &channel.users(&executor).await?;
 
     wbsocket
         .send(

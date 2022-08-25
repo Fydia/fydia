@@ -243,7 +243,13 @@ fn send_websocket_message(
     let database = database.clone();
     let websocket = websocket.clone();
     tokio::task::spawn(async move {
-        let users = channelid.channel(&database).await?.users(&database).await?;
+        let users = channelid
+            .channel(&database)
+            .await
+            .map_err(|e| e.get_string())?
+            .users(&database)
+            .await
+            .map_err(|e| e.get_string())?;
 
         websocket
             .send(&Event::new(serverid.clone(), event), &users)

@@ -93,8 +93,4 @@ pub async fn post_picture_of_server<'a>(
         .update(&database)
         .await
         .map(|_| FydiaResponse::Text("Icon have been update"))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "")
-        })
 }
