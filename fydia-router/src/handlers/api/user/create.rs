@@ -16,7 +16,7 @@ pub async fn create_user<'a>(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
+    let json = get_json_value_from_body(&body)?;
 
     let name = get_json("name".to_string(), &json)?;
     let email = get_json("email".to_string(), &json)?;

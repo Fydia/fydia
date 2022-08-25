@@ -23,19 +23,19 @@ pub async fn default<'a>() -> FydiaResult<'a> {
 ///
 /// # Errors
 /// This function will return an error if body cannot be convert to a json value
-pub fn get_json_value_from_body(body: &Bytes) -> Result<Value, String> {
+pub fn get_json_value_from_body<'a>(body: &Bytes) -> Result<Value, FydiaResponse<'a>> {
     if body.is_empty() {
-        return Err("Body is empty".to_string());
+        return Err(FydiaResponse::TextError("Body is empty"));
     }
 
     let body = String::from_utf8(body.to_vec()).map_err(|error| {
         error!("{error}");
-        "Bad Body".to_string()
+        FydiaResponse::TextError("Bad Body")
     })?;
 
     serde_json::from_str::<Value>(body.as_str()).map_err(|error| {
         error!("{error}");
-        "Bad Body".to_string()
+        FydiaResponse::TextError("Bad Body")
     })
 }
 

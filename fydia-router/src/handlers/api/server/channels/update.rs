@@ -36,10 +36,7 @@ pub async fn update_name<'a>(
         return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
     }
 
-    let json = get_json_value_from_body(&body).map_err(|error| {
-        error!("{error}");
-        FydiaResponse::StringError(error)
-    })?;
+    let json = get_json_value_from_body(&body)?;
 
     let name = get_json("name", &json)?;
 
@@ -64,10 +61,7 @@ pub async fn update_description<'a>(
     )
     .await?;
 
-    let json = get_json_value_from_body(&body).map_err(|error| {
-        error!("{error}");
-        FydiaResponse::StringError(error)
-    })?;
+    let json = get_json_value_from_body(&body)?;
 
     let description = get_json("description", &json)?;
 

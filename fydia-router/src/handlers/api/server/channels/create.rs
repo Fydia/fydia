@@ -26,7 +26,7 @@ pub async fn create_channel<'a>(
         BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
             .await?;
 
-    let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
+    let json = get_json_value_from_body(&body)?;
 
     let name = get_json("name", &json)?.to_string();
     let channeltype = ChannelType::from_string(get_json("type", &json)?.to_string());

@@ -82,10 +82,7 @@ pub async fn post_messages<'a>(
     })?;
 
     if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
-        let json = get_json_value_from_body(&body).map_err(|error| {
-            error!("{error}");
-            FydiaResponse::StringError(error)
-        })?;
+        let json = get_json_value_from_body(&body)?;
         let event = json_message(json, user, &channel.id, &server.id).await?;
         return send_event(event, server, &rsa, wbsocket, database).await;
     }

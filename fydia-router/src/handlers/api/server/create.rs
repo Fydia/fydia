@@ -20,7 +20,7 @@ pub async fn create_server<'a>(
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
     let user = BasicValues::get_user(&headers, &database).await?;
-    let value = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
+    let value = get_json_value_from_body(&body)?;
     let name = get_json("name", &value)?;
 
     let mut server = Server::new(name, user.id.clone()).map_err(FydiaResponse::StringError)?;

@@ -151,32 +151,3 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
         }
     }
 }
-
-/// This trait can be use to compact `map` and `map_err`
-pub trait FydiaMap<T, E> {
-    /// The fydia map of the trait
-    ///
-    /// # Errors
-    /// Return an error if the `Result` is an error
-    fn fydia_map<'a, OF: FnOnce(T) -> FydiaResponse<'a>, EF: FnOnce(E) -> FydiaResponse<'a>>(
-        self,
-        ok_res: OF,
-        err_res: EF,
-    ) -> FydiaResult<'a>;
-}
-
-impl<T, E: std::fmt::Display> FydiaMap<T, E> for Result<T, E> {
-    fn fydia_map<'a, 's, OF: FnOnce(T) -> FydiaResponse<'a>, EF: FnOnce(E) -> FydiaResponse<'a>>(
-        self,
-        ok_res: OF,
-        err_res: EF,
-    ) -> FydiaResult<'a> {
-        match self {
-            Ok(ok_value) => Ok(ok_res(ok_value)),
-            Err(err_value) => {
-                error!("{err_value}");
-                Err(err_res(err_value))
-            }
-        }
-    }
-}

@@ -16,7 +16,7 @@ pub async fn user_login<'a>(
     body: Bytes,
     Extension(database): Extension<DbConnection>,
 ) -> FydiaResult<'a> {
-    let json = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
+    let json = get_json_value_from_body(&body)?;
 
     let email = get_json("email", &json)?;
     let password = get_json("password", &json)?;

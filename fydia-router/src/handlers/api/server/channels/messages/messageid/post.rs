@@ -63,7 +63,7 @@ pub async fn update_message<'a>(
         return Err(FydiaResponse::TextError("You can't edit this message"));
     }
 
-    let value = get_json_value_from_body(&body).map_err(FydiaResponse::StringError)?;
+    let value = get_json_value_from_body(&body)?;
 
     let content = get_json("content", &value)?.to_string();
 
