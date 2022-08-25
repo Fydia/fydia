@@ -53,6 +53,23 @@ impl<'a> FydiaResponse<'a> {
             Err(_) => FydiaResponse::TextError("Cannot serialize"),
         }
     }
+
+    /// Return a `String` from `FydiaResponse`
+    pub fn get_string(self) -> String {
+        match self {
+            FydiaResponse::Text(txt)
+            | FydiaResponse::TextError(txt)
+            | FydiaResponse::TextErrorWithStatusCode(_, txt) => txt.to_string(),
+            FydiaResponse::String(str)
+            | FydiaResponse::StringError(str)
+            | FydiaResponse::StringWithStatusCode(_, str) => str,
+            FydiaResponse::Json(_) => String::from("Json type cannot return a string"),
+            FydiaResponse::Bytes(_) => String::from("Bytes type cannot return a string"),
+            FydiaResponse::BytesWithContentType(_, _) => {
+                String::from("BytesWithContentType type cannot return a string")
+            }
+        }
+    }
 }
 
 impl<'a> IntoResponse for FydiaResponse<'a> {

@@ -29,8 +29,4 @@ pub async fn create_server<'a>(
         .insert(&database)
         .await
         .map(|_| FydiaResponse::String(server.id.id))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot create the server")
-        })
 }

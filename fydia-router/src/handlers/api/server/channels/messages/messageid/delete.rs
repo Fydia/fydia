@@ -47,9 +47,7 @@ pub async fn delete_message<'a>(
         return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
     }
 
-    let message = Message::by_id(&messageid, &executor)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let message = Message::by_id(&messageid, &executor).await?;
 
     if message.author_id.id != user.id {
         return Err(FydiaResponse::TextError("You can't delete this message"));
@@ -63,10 +61,7 @@ pub async fn delete_message<'a>(
                     message_id: messageid,
                 },
             },
-            &channel
-                .users(&executor)
-                .await
-                .map_err(FydiaResponse::StringError)?,
+            &channel.users(&executor).await?,
         )
         .await
         .map_err(|error| {
@@ -77,10 +72,7 @@ pub async fn delete_message<'a>(
             )
         })?;
 
-    message
-        .delete(&executor)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    message.delete(&executor).await?;
 
     Ok(FydiaResponse::Text("Message delete"))
 }

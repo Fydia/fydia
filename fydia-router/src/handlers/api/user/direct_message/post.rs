@@ -32,27 +32,14 @@ pub async fn create_direct_message<'a>(
         FydiaResponse::TextError("Bad user id")
     })?;
 
-    let target = UserId::new(id)
-        .to_user(&database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let target = UserId::new(id).to_user(&database).await?;
 
     let mut dm = DirectMessage::new(Id::Unset, "New DM channel".to_string(), "".to_string());
-    dm.insert(&database).await.map_err(|error| {
-        error!("{error}");
-        FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Cannot insert in database",
-        )
-    })?;
+    dm.insert(&database).await?;
 
-    dm.add(&user.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    dm.add(&user.id, &database).await?;
 
-    dm.add(&target.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    dm.add(&target.id, &database).await?;
 
     Ok(FydiaResponse::Text(""))
 }

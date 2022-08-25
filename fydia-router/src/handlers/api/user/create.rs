@@ -6,7 +6,6 @@ use fydia_struct::{
     response::{FydiaResponse, FydiaResult},
     user::User,
 };
-use fydia_utils::http::StatusCode;
 
 /// Create a new user
 ///
@@ -28,11 +27,4 @@ pub async fn create_user<'a>(
         .insert(&database)
         .await
         .map(|_| FydiaResponse::Text("Register successfully"))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error",
-            )
-        })
 }

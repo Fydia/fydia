@@ -3,6 +3,7 @@ use fydia_struct::{
     instance::Instance,
     messages::{Message, MessageType},
     permission::Permission,
+    response::FydiaResponse,
     roles::Role,
     server::{Members, Server, ServerId, Servers},
     user::{User, UserId},
@@ -18,12 +19,13 @@ pub trait BasicModel {
     type Entity: EntityTrait;
     type StructSelf;
 
-    async fn to_struct(&self, db: &DbConnection) -> Result<Self::StructSelf, String>;
+    async fn to_struct<'a>(&self, db: &DbConnection)
+        -> Result<Self::StructSelf, FydiaResponse<'a>>;
 
-    async fn get_model_by(
+    async fn get_model_by<'a>(
         simpl: &[SimpleExpr],
         executor: &DbConnection,
-    ) -> Result<<Self::Entity as EntityTrait>::Model, String> {
+    ) -> Result<<Self::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
         let mut find = <Self::Entity>::find();
 
         for i in simpl.iter() {
@@ -33,26 +35,28 @@ pub trait BasicModel {
         Ok(find
             .one(executor)
             .await
-            .map_err(|err| err.to_string())?
-            .ok_or_else(|| String::from("Model doesn't exists"))?)
+            .map_err(|err| FydiaResponse::StringError(err.to_string()))?
+            .ok_or(FydiaResponse::TextError("Model doesn't exists"))?)
     }
 
-    async fn get_models_by(
+    async fn get_models_by<'a>(
         simpl: &[SimpleExpr],
         executor: &DbConnection,
-    ) -> Result<Vec<<Self::Entity as EntityTrait>::Model>, String> {
+    ) -> Result<Vec<<Self::Entity as EntityTrait>::Model>, FydiaResponse<'a>> {
         let mut find = <Self::Entity>::find();
 
         for i in simpl {
             find = find.filter(i.clone().into_condition());
         }
 
-        Ok(find.all(executor).await.map_err(|err| err.to_string())?)
+        find.all(executor)
+            .await
+            .map_err(|err| FydiaResponse::StringError(err.to_string()))
     }
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         id: &str,
         executor: &DbConnection,
-    ) -> Result<<Self::Entity as EntityTrait>::Model, String>;
+    ) -> Result<<Self::Entity as EntityTrait>::Model, FydiaResponse<'a>>;
 }
 
 #[async_trait::async_trait]
@@ -60,7 +64,7 @@ impl BasicModel for entity::channels::Model {
     type StructSelf = fydia_struct::channel::Channel;
     type Entity = entity::channels::Entity;
 
-    async fn to_struct(&self, _: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(&self, _: &DbConnection) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let channel_type = ChannelType::from_int(self.channel_type);
 
         let parent_id = ServerId::new(self.server_id.clone());
@@ -74,10 +78,10 @@ impl BasicModel for entity::channels::Model {
         })
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         id: &str,
         executor: &DbConnection,
-    ) -> Result<<Self::Entity as EntityTrait>::Model, String> {
+    ) -> Result<<Self::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
         Self::get_model_by(&[entity::channels::Column::Id.eq(id)], executor).await
     }
 }
@@ -87,7 +91,10 @@ impl BasicModel for entity::server::Model {
     type StructSelf = fydia_struct::server::Server;
     type Entity = entity::server::Entity;
 
-    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(
+        &self,
+        executor: &DbConnection,
+    ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let id = ServerId::new(self.id.clone());
         let members = Members::users_of(&id, executor).await?;
         let roles = Role::by_server_id(&id.id, executor).await?;
@@ -105,10 +112,10 @@ impl BasicModel for entity::server::Model {
         })
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         id: &str,
         executor: &DbConnection,
-    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
         Self::get_model_by(&[entity::server::Column::Id.eq(id)], executor).await
     }
 }
@@ -118,7 +125,10 @@ impl BasicModel for entity::user::Model {
     type StructSelf = fydia_struct::user::User;
     type Entity = entity::user::Entity;
 
-    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(
+        &self,
+        executor: &DbConnection,
+    ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let servers = Members::servers_of(&UserId::new(self.id), executor).await?;
 
         Ok(User {
@@ -133,10 +143,10 @@ impl BasicModel for entity::user::Model {
         })
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         id: &str,
         executor: &DbConnection,
-    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
         Self::get_model_by(&[entity::user::Column::Id.eq(id)], executor).await
     }
 }
@@ -146,13 +156,16 @@ impl BasicModel for entity::messages::Model {
     type StructSelf = fydia_struct::messages::Message;
     type Entity = entity::messages::Entity;
 
-    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(
+        &self,
+        executor: &DbConnection,
+    ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let author_id = User::by_id(self.author_id, executor)
             .await
-            .ok_or_else(|| "Error Author_Id".to_string())?;
+            .ok_or(FydiaResponse::TextError("Error Author_Id"))?;
 
         let message_type = MessageType::from_string(&self.message_type)
-            .ok_or_else(|| "Error Message_type".to_string())?;
+            .ok_or(FydiaResponse::TextError("Error Message_type"))?;
 
         Ok(Message {
             id: self.id.clone(),
@@ -165,10 +178,10 @@ impl BasicModel for entity::messages::Model {
         })
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         id: &str,
         executor: &DbConnection,
-    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
         Self::get_model_by(&[entity::messages::Column::Id.eq(id)], executor).await
     }
 }
@@ -178,7 +191,10 @@ impl BasicModel for entity::permission::role::Model {
     type StructSelf = fydia_struct::permission::Permission;
     type Entity = entity::permission::role::Entity;
 
-    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(
+        &self,
+        executor: &DbConnection,
+    ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let channel = Channel::by_id(
             &ChannelId {
                 id: self.channel.clone(),
@@ -192,11 +208,11 @@ impl BasicModel for entity::permission::role::Model {
         Ok(Permission::role(role.id, Some(channel.id), self.value))
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         _: &str,
         _: &DbConnection,
-    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
-        Err(String::from("Mo primary key"))
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
+        Err(FydiaResponse::TextError("No primary key"))
     }
 }
 
@@ -205,10 +221,13 @@ impl BasicModel for entity::permission::user::Model {
     type StructSelf = fydia_struct::permission::Permission;
     type Entity = entity::permission::user::Entity;
 
-    async fn to_struct(&self, executor: &DbConnection) -> Result<Self::StructSelf, String> {
+    async fn to_struct<'a>(
+        &self,
+        executor: &DbConnection,
+    ) -> Result<Self::StructSelf, FydiaResponse<'a>> {
         let user = User::by_id(self.user, executor)
             .await
-            .ok_or_else(|| String::from("User doesn't exists"))?;
+            .ok_or(FydiaResponse::TextError("User doesn't exists"))?;
 
         let channel = Channel::by_id(
             &ChannelId {
@@ -221,10 +240,10 @@ impl BasicModel for entity::permission::user::Model {
         Ok(Permission::user(user.id, Some(channel.id), self.value))
     }
 
-    async fn get_model_by_id(
+    async fn get_model_by_id<'a>(
         _: &str,
         _: &DbConnection,
-    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, String> {
-        Err(String::from("Mo primary key"))
+    ) -> Result<<<Self as BasicModel>::Entity as EntityTrait>::Model, FydiaResponse<'a>> {
+        Err(FydiaResponse::TextError("No primary key"))
     }
 }

@@ -43,13 +43,7 @@ impl BasicValues {
     ) -> Result<(User, Server), FydiaResponse<'a>> {
         let user = Self::get_user(headers, executor).await?;
 
-        let server = ServerId::new(serverid)
-            .get(executor)
-            .await
-            .map_err(|error| {
-                error!("{error}");
-                FydiaResponse::TextError("Server not exists")
-            })?;
+        let server = ServerId::new(serverid).get(executor).await?;
 
         if !user.servers.is_join(&server.id) {
             return Err(FydiaResponse::TextError("Server not exists"));
@@ -69,13 +63,7 @@ impl BasicValues {
     ) -> Result<(User, Server), FydiaResponse<'a>> {
         let user = Self::get_user(headers, executor).await?;
 
-        let server = ServerId::new(serverid)
-            .get(executor)
-            .await
-            .map_err(|error| {
-                error!("{error}");
-                FydiaResponse::TextError("Bad ServerId")
-            })?;
+        let server = ServerId::new(serverid).get(executor).await?;
 
         Ok((user, server))
     }
@@ -94,10 +82,7 @@ impl BasicValues {
         let (user, server) =
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
 
-        let channel = ChannelId::new(channelid)
-            .channel(executor)
-            .await
-            .map_err(FydiaResponse::StringError)?;
+        let channel = ChannelId::new(channelid).channel(executor).await?;
 
         if !server.channel.is_exists(&channel.id) {
             return Err(FydiaResponse::TextError("Channel is not exists"));

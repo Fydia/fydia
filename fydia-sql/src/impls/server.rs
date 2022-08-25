@@ -1,5 +1,6 @@
 use fydia_struct::{
     channel::Channel,
+    response::FydiaResponse,
     server::{Channels, Members, Server, ServerId},
     user::{User, UserId},
 };
@@ -16,67 +17,81 @@ use super::{
 
 #[async_trait::async_trait]
 pub trait SqlServer {
-    async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String>;
-    async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String>;
-    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String>;
-    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn update_name<T: Into<String> + Send>(
+    async fn users<'a>(&self, executor: &DatabaseConnection) -> Result<Members, FydiaResponse<'a>>;
+    async fn by_id<'a>(
+        id: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Server, FydiaResponse<'a>>;
+    async fn channels<'a>(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Channels, FydiaResponse<'a>>;
+    async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    async fn update_name<'a, T: Into<String> + Send>(
         &mut self,
         name: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), String>;
-    async fn update(&self, executor: &DatabaseConnection) -> Result<(), String>;
-    async fn join(
+    ) -> Result<(), FydiaResponse<'a>>;
+    async fn update<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    async fn join<'a>(
         &mut self,
         mut user: &mut User,
         executor: &DatabaseConnection,
-    ) -> Result<(), String>;
-    async fn insert_channel(
+    ) -> Result<(), FydiaResponse<'a>>;
+    async fn insert_channel<'a>(
         &mut self,
         channel: &Channel,
         executor: &DatabaseConnection,
-    ) -> Result<(), String>;
+    ) -> Result<(), FydiaResponse<'a>>;
 }
 
 #[async_trait::async_trait]
 impl SqlServer for Server {
-    async fn users(&self, executor: &DatabaseConnection) -> Result<Members, String> {
+    async fn users<'a>(&self, executor: &DatabaseConnection) -> Result<Members, FydiaResponse<'a>> {
         Members::users_of(&self.id, executor).await
     }
 
-    async fn by_id(id: &ServerId, executor: &DatabaseConnection) -> Result<Server, String> {
+    async fn by_id<'a>(
+        id: &ServerId,
+        executor: &DatabaseConnection,
+    ) -> Result<Server, FydiaResponse<'a>> {
         Model::get_model_by_id(&id.id, executor)
             .await?
             .to_struct(executor)
             .await
     }
 
-    async fn channels(&self, executor: &DatabaseConnection) -> Result<Channels, String> {
+    async fn channels<'a>(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Channels, FydiaResponse<'a>> {
         Channel::by_serverid(&self.id, executor).await
     }
 
-    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
         let mut user = self.owner.to_user(executor).await?;
 
-        let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
+        let active_channel = entity::server::ActiveModel::try_from(self.clone())
+            .map_err(FydiaResponse::StringError)?;
 
         insert(active_channel, executor).await?;
 
         self.join(&mut user, executor).await
     }
 
-    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let active_channel = entity::server::ActiveModel::try_from(self.clone())?;
+    async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+        let active_channel = entity::server::ActiveModel::try_from(self.clone())
+            .map_err(FydiaResponse::StringError)?;
 
         delete(active_channel, executor).await
     }
 
-    async fn update_name<T: Into<String> + Send>(
+    async fn update_name<'a, T: Into<String> + Send>(
         &mut self,
         name: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), String> {
+    ) -> Result<(), FydiaResponse<'a>> {
         let name = name.into();
         let mut active_model: entity::server::ActiveModel =
             Model::get_model_by_id(&self.id.id, executor).await?.into();
@@ -90,13 +105,18 @@ impl SqlServer for Server {
         Ok(())
     }
 
-    async fn update(&self, executor: &DatabaseConnection) -> Result<(), String> {
-        let am = entity::server::ActiveModel::try_from(self.clone())?;
+    async fn update<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+        let am = entity::server::ActiveModel::try_from(self.clone())
+            .map_err(FydiaResponse::StringError)?;
 
         update(am, executor).await
     }
 
-    async fn join(&mut self, user: &mut User, executor: &DatabaseConnection) -> Result<(), String> {
+    async fn join<'a>(
+        &mut self,
+        user: &mut User,
+        executor: &DatabaseConnection,
+    ) -> Result<(), FydiaResponse<'a>> {
         Members::insert(&self.id, &user.id, executor).await?;
 
         user.insert_server(&self.id);
@@ -106,12 +126,13 @@ impl SqlServer for Server {
         Ok(())
     }
 
-    async fn insert_channel(
+    async fn insert_channel<'a>(
         &mut self,
         channel: &Channel,
         executor: &DatabaseConnection,
-    ) -> Result<(), String> {
-        let active_channel = entity::channels::ActiveModel::try_from(channel)?;
+    ) -> Result<(), FydiaResponse<'a>> {
+        let active_channel =
+            entity::channels::ActiveModel::try_from(channel).map_err(FydiaResponse::StringError)?;
 
         insert(active_channel, executor).await?;
 
@@ -123,25 +144,31 @@ impl SqlServer for Server {
 
 #[async_trait::async_trait]
 pub trait SqlServerId {
-    async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String>;
+    async fn get<'a>(&self, executor: &DatabaseConnection) -> Result<Server, FydiaResponse<'a>>;
 }
 
 #[async_trait::async_trait]
 impl SqlServerId for ServerId {
-    async fn get(&self, executor: &DatabaseConnection) -> Result<Server, String> {
+    async fn get<'a>(&self, executor: &DatabaseConnection) -> Result<Server, FydiaResponse<'a>> {
         Server::by_id(self, executor).await
     }
 }
 
 #[async_trait::async_trait]
 pub trait SqlMember {
-    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String>;
+    async fn users<'a>(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<User>, FydiaResponse<'a>>;
     async fn is_valid(&self, executor: &DatabaseConnection) -> bool;
 }
 
 #[async_trait::async_trait]
 impl SqlMember for Members {
-    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
+    async fn users<'a>(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<User>, FydiaResponse<'a>> {
         let mut result = Vec::new();
 
         for id in &self.members {
@@ -165,7 +192,10 @@ impl SqlMember for Members {
 
 #[async_trait::async_trait]
 impl SqlMember for Vec<UserId> {
-    async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, String> {
+    async fn users<'a>(
+        &self,
+        executor: &DatabaseConnection,
+    ) -> Result<Vec<User>, FydiaResponse<'a>> {
         let members = Members::new(self.clone());
 
         members.users(executor).await

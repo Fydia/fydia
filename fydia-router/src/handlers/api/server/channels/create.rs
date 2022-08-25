@@ -38,8 +38,4 @@ pub async fn create_channel<'a>(
         .insert_channel(&channel, &database)
         .await
         .map(|_| FydiaResponse::String(channel.id.id))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot create the channel")
-        })
 }

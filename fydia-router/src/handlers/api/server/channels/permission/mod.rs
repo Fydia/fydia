@@ -25,9 +25,7 @@ pub async fn get_permission<'a>(
     )
     .await?;
 
-    let perm = Permission::of_channel(&channel.id, &database)
-        .await
-        .map_err(FydiaResponse::StringError)?;
+    let perm = Permission::of_channel(&channel.id, &database).await?;
 
     FydiaResult::Ok(FydiaResponse::from_serialize(perm))
 }

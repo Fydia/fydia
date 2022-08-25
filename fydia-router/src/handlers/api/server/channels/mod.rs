@@ -22,5 +22,4 @@ pub async fn info_channel<'a>(
     Channel::by_id(&ChannelId::new(channelid), &database)
         .await
         .map(FydiaResponse::from_serialize)
-        .map_err(FydiaResponse::StringError)
 }

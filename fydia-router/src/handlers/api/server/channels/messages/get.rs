@@ -36,8 +36,4 @@ pub async fn get_messages<'a>(
         .messages(&database)
         .await
         .map(|value| FydiaResponse::from_serialize(&value))
-        .map_err(|error| {
-            error!("{error}");
-            FydiaResponse::TextError("Cannot get message")
-        })
 }
