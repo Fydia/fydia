@@ -35,10 +35,7 @@ impl DirectMessageMembers for DirectMessage {
         &self,
         executor: &DatabaseConnection,
     ) -> Result<Members, FydiaResponse<'a>> {
-        let directmessageid = self
-            .id
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let directmessageid = self.id.get_id_cloned_fydiaresponse()?;
 
         let userids = dm_members::Model::get_models_by(
             dm_members::Column::Directmessage.eq(directmessageid),
@@ -56,10 +53,7 @@ impl DirectMessageMembers for DirectMessage {
         executor: &DatabaseConnection,
     ) -> Result<Vec<DirectMessage>, FydiaResponse<'a>> {
         let mut result = Vec::new();
-        let userid = userid
-            .0
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let userid = userid.0.get_id_cloned_fydiaresponse()?;
 
         for i in
             dm_members::Model::get_models_by(dm_members::Column::User.eq(userid), executor).await?

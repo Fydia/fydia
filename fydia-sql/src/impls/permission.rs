@@ -78,8 +78,7 @@ impl PermissionSql for Permission {
     ) -> Result<Permission, FydiaResponse<'a>> {
         entity::permission::role::Entity::find()
             .filter(
-                entity::permission::role::Column::Role
-                    .eq(roleid.get_id_cloned().map_err(FydiaResponse::StringError)?),
+                entity::permission::role::Column::Role.eq(roleid.get_id_cloned_fydiaresponse()?),
             )
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .one(db)

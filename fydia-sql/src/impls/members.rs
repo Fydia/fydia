@@ -46,10 +46,7 @@ impl SqlMembers for Members {
         userid: &UserId,
         executor: &DatabaseConnection,
     ) -> Result<Vec<ServerId>, FydiaResponse<'a>> {
-        let userid = userid
-            .0
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let userid = userid.0.get_id_cloned_fydiaresponse()?;
 
         Ok(Model::get_models_by(Column::Userid.eq(userid), executor)
             .await?

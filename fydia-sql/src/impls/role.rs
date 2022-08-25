@@ -85,10 +85,7 @@ impl SqlRoles for Role {
             name: Set(name.clone()),
             ..Default::default()
         };
-        let id = self
-            .id
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let id = self.id.get_id_cloned_fydiaresponse()?;
 
         match entity::roles::Entity::update(active_model)
             .filter(entity::messages::Column::Id.eq(id))
@@ -113,10 +110,7 @@ impl SqlRoles for Role {
             color: Set(color.clone()),
             ..Default::default()
         };
-        let id = self
-            .id
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let id = self.id.get_id_cloned_fydiaresponse()?;
 
         match entity::roles::Entity::update(active_model)
             .filter(entity::messages::Column::Id.eq(id))
@@ -140,10 +134,7 @@ impl SqlRoles for Role {
         Ok(())
     }
     async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let id = self
-            .id
-            .get_id_cloned()
-            .map_err(FydiaResponse::StringError)?;
+        let id = self.id.get_id_cloned_fydiaresponse()?;
 
         let model = entity::roles::Entity::find_by_id(id)
             .one(executor)
@@ -162,14 +153,8 @@ impl SqlRoles for Role {
         executor: &DatabaseConnection,
     ) -> Result<(), FydiaResponse<'a>> {
         let am = assignation::ActiveModel {
-            role_id: Set(self
-                .id
-                .get_id_cloned()
-                .map_err(FydiaResponse::StringError)?),
-            user_id: Set(userid
-                .0
-                .get_id_cloned()
-                .map_err(FydiaResponse::StringError)?),
+            role_id: Set(self.id.get_id_cloned_fydiaresponse()?),
+            user_id: Set(userid.0.get_id_cloned_fydiaresponse()?),
             server_id: Set(self.server_id.id.clone()),
         };
 

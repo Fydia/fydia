@@ -65,10 +65,7 @@ impl Model {
     ) -> Result<ActiveModel, FydiaResponse<'a>> {
         Ok(ActiveModel {
             serverid: Set(serverid.id),
-            userid: Set(userid
-                .0
-                .get_id_cloned()
-                .map_err(FydiaResponse::StringError)?),
+            userid: Set(userid.0.get_id_cloned_fydiaresponse()?),
         })
     }
 }
