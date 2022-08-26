@@ -3,7 +3,7 @@ use axum::extract::{Extension, Path};
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 
 use fydia_utils::http::HeaderMap;
 
@@ -27,13 +27,12 @@ pub async fn update_name<'a>(
 
     if !user
         .permission_of_channel(&channel.id, &database)
-        .await
-        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .await?
         .calculate(Some(channel.id.clone()))
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .can_read()
     {
-        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+        return FydiaResult::Err("Unknow channel".into_error());
     }
 
     let json = get_json_value_from_body(&body)?;
@@ -43,7 +42,7 @@ pub async fn update_name<'a>(
     channel
         .update_name(name, &database)
         .await
-        .map(|_| FydiaResponse::Text("Channel name updated"))
+        .map(|_| "Channel name updated".into_ok())
 }
 
 /// Change description of a channel
@@ -68,5 +67,5 @@ pub async fn update_description<'a>(
     channel
         .update_description(description, &database)
         .await
-        .map(|_| FydiaResponse::Text("Channel description updated"))
+        .map(|_| "Channel description updated".into_ok())
 }

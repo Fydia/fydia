@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::extract::{Extension, Path};
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::{
     api::manager::typing::{TypingManagerChannel, TypingManagerChannelTrait},
@@ -28,13 +28,10 @@ pub async fn start_typing<'a>(
 
     typingmanager
         .start_typing(user.id, channel.id, server.id)
-        .map(|_| FydiaResponse::Text(""))
+        .map(|_| "".into_ok())
         .map_err(|error| {
             error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Can't start typing",
-            )
+            "Can't start typing".into_server_error()
         })
 }
 
@@ -56,12 +53,9 @@ pub async fn stop_typing<'a>(
 
     typingmanager
         .stop_typing(user.id, channel.id, server.id)
-        .map(|_| FydiaResponse::Text(""))
+        .map(|_| "".into_ok())
         .map_err(|error| {
             error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Can't stop typing",
-            )
+            "Can't stop typing".into_server_error()
         })
 }

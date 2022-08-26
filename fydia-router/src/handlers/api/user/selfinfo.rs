@@ -1,6 +1,6 @@
 use axum::extract::Extension;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResponse, FydiaResult, MapError};
 use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
@@ -16,7 +16,7 @@ pub async fn get_info_of_self<'a>(
     let value = BasicValues::get_user(&headers, &executor)
         .await?
         .self_json_output()
-        .map_err(FydiaResponse::StringError)?;
+        .error_to_fydiaresponse()?;
 
     Ok(FydiaResponse::from_serialize(value))
 }

@@ -1,6 +1,6 @@
 use axum::extract::Extension;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResult, IntoFydia};
 use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
@@ -17,5 +17,5 @@ pub async fn verify<'a>(
         return Err(res);
     }
 
-    Ok(FydiaResponse::Text(""))
+    Ok("".into_ok())
 }

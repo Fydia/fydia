@@ -6,7 +6,7 @@ use fydia_utils::http::HeaderMap;
 
 use fydia_struct::{
     channel::{Channel, ChannelId},
-    response::FydiaResponse,
+    response::{FydiaResponse, IntoFydia},
     server::{Server, ServerId},
     user::{Token, User},
 };
@@ -23,12 +23,12 @@ impl BasicValues {
         headers: &HeaderMap,
         executor: &DbConnection,
     ) -> Result<User, FydiaResponse<'a>> {
-        let token = Token::from_headervalue(headers).ok_or(FydiaResponse::TextError("No token"))?;
+        let token = Token::from_headervalue(headers).ok_or_else(|| "No token".into_error())?;
 
         token
             .get_user(executor)
             .await
-            .ok_or(FydiaResponse::TextError("Wrong token"))
+            .ok_or_else(|| "Wrong token".into_error())
     }
 
     /// Return user, server from url parameters
@@ -46,7 +46,7 @@ impl BasicValues {
         let server = ServerId::new(serverid).get(executor).await?;
 
         if !user.servers.is_join(&server.id) {
-            return Err(FydiaResponse::TextError("Server not exists"));
+            return Err("Server not exists".into_error());
         }
 
         Ok((user, server))
@@ -85,7 +85,7 @@ impl BasicValues {
         let channel = ChannelId::new(channelid).channel(executor).await?;
 
         if !server.channel.is_exists(&channel.id) {
-            return Err(FydiaResponse::TextError("Channel is not exists"));
+            return Err("Channel is not exists".into_error());
         }
 
         Ok((user, server, channel))

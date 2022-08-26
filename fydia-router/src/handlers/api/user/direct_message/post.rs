@@ -3,10 +3,10 @@ use fydia_sql::impls::direct_message::{DirectMessageMembers, SqlDirectMessage};
 use fydia_sql::impls::user::UserFrom;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::directmessage::DirectMessage;
-use fydia_struct::response::FydiaResult;
+use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 use fydia_struct::utils::Id;
-use fydia_struct::{format::UserFormat, response::FydiaResponse, user::UserId};
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_struct::{format::UserFormat, user::UserId};
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 
@@ -21,16 +21,10 @@ pub async fn create_direct_message<'a>(
 ) -> FydiaResult<'a> {
     let user = BasicValues::get_user(&headers, &database).await?;
     if UserFormat::from_string(&target_user).is_some() {
-        return Err(FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::NOT_IMPLEMENTED,
-            "Soon may be",
-        ));
+        return Err("Soon may be".into_not_implemented_error());
     }
 
-    let id = target_user.parse::<u32>().map_err(|error| {
-        error!("{error}");
-        FydiaResponse::TextError("Bad user id")
-    })?;
+    let id = target_user.parse::<u32>().error_to_fydiaresponse()?;
 
     let target = UserId::new(id).to_user(&database).await?;
 
@@ -41,5 +35,5 @@ pub async fn create_direct_message<'a>(
 
     dm.add(&target.id, &database).await?;
 
-    Ok(FydiaResponse::Text(""))
+    Ok("".into_error())
 }

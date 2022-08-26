@@ -9,6 +9,8 @@ use fydia_struct::channel::ChannelId;
 use fydia_struct::permission::Permission;
 use fydia_struct::permission::Permissions;
 use fydia_struct::response::FydiaResponse;
+use fydia_struct::response::IntoFydia;
+use fydia_struct::response::MapError;
 use fydia_struct::roles::Role;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::Token;
@@ -189,7 +191,7 @@ impl SqlUser for User {
         .await?
         .into();
 
-        let password = hash(clear_password).map_err(FydiaResponse::StringError)?;
+        let password = hash(clear_password).error_to_fydiaresponse()?;
         active_model.password = Set(password.clone());
 
         update(active_model, executor).await?;
@@ -207,7 +209,7 @@ impl SqlUser for User {
         }
 
         let active_model: UserActiveModel =
-            UserActiveModel::try_from(self.clone()).map_err(FydiaResponse::StringError)?;
+            UserActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
         let db = insert(active_model, executor).await?;
 
         self.id = UserId::new(db.last_insert_id);
@@ -254,7 +256,7 @@ impl SqlUser for User {
             .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned_fydiaresponse()?))
             .all(executor)
             .await
-            .map_err(|err| FydiaResponse::StringError(err.to_string()))?;
+            .error_to_fydiaresponse()?;
 
         let mut buf = Vec::new();
 
@@ -275,6 +277,6 @@ impl UserFrom for UserId {
     async fn to_user<'a>(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse<'a>> {
         User::by_id(self.0.get_id_cloned_fydiaresponse()?, executor)
             .await
-            .ok_or(FydiaResponse::TextError("No user with this id"))
+            .ok_or_else(|| "No user with this id".into_error())
     }
 }

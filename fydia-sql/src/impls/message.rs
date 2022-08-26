@@ -2,7 +2,11 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::{channel::ChannelId, messages::Message, response::FydiaResponse};
+use fydia_struct::{
+    channel::ChannelId,
+    messages::Message,
+    response::{FydiaResponse, MapError},
+};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
@@ -88,8 +92,8 @@ impl SqlMessage for Message {
     }
 
     async fn insert<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let active_model = entity::messages::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let active_model =
+            entity::messages::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         insert(active_model, executor).await.map(|_| ())
     }
@@ -99,14 +103,14 @@ impl SqlMessage for Message {
         content: &str,
         executor: &DatabaseConnection,
     ) -> Result<(), FydiaResponse<'a>> {
-        let model = entity::messages::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let model =
+            entity::messages::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         entity::messages::Entity::update(model)
             .filter(entity::messages::Column::Id.eq(self.id.as_str()))
             .exec(executor)
             .await
-            .map_err(|f| FydiaResponse::StringError(f.to_string()))?;
+            .error_to_fydiaresponse()?;
 
         self.content = content.to_string();
 

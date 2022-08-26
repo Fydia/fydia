@@ -9,7 +9,7 @@ use axum::{
 use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
 use fydia_struct::{
     file::File,
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResponse, FydiaResult, IntoFydia},
 };
 use fydia_utils::http::{HeaderMap, StatusCode};
 use mime::Mime;
@@ -31,16 +31,16 @@ pub async fn get_picture_of_server<'a>(
 
     let value = File::get(server.icon).get_value().map_err(|error| {
         error!("{error}");
-        FydiaResponse::TextError("Cannot get file")
+        "Cannot get file".into_error()
     })?;
 
     let mime_str = infer::get(&value)
-        .ok_or(FydiaResponse::TextError("Cannot get the mimetype"))?
+        .ok_or_else(|| "Cannot get the mimetype".into_error())?
         .to_string();
 
     let mime = Mime::from_str(mime_str.as_str()).map_err(|error| {
         error!("{error}");
-        FydiaResponse::TextError("Cannot convert mime")
+        "Cannot convert mime".into_error()
     })?;
 
     Ok(FydiaResponse::BytesWithContentType(value, mime))
@@ -64,27 +64,21 @@ pub async fn post_picture_of_server<'a>(
             .await?;
 
     if body.len() > MAX_CONTENT_LENGHT {
-        return Err(FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::PAYLOAD_TOO_LARGE,
-            "",
-        ));
+        return Err("".into_error_with_statuscode(StatusCode::PAYLOAD_TOO_LARGE));
     }
 
-    let mimetype = infer::get(&body).ok_or(FydiaResponse::TextError("No body"))?;
+    let mimetype = infer::get(&body).ok_or_else(|| "No body".into_error())?;
 
     let mimetype_str = mimetype.extension();
     if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {
-        return Err(FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::BAD_REQUEST,
-            "Bad Image type retry with png / jpg / gif",
-        ));
+        return Err("Bad Image type retry with png / jpg / gif".into_error());
     }
 
     let file = File::new();
 
     file.create_and_write(&body).map_err(|error| {
         error!("{error}");
-        FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "")
+        "".into_server_error()
     })?;
 
     server.icon = file.get_name();
@@ -92,5 +86,5 @@ pub async fn post_picture_of_server<'a>(
     server
         .update(&database)
         .await
-        .map(|_| FydiaResponse::Text("Icon have been update"))
+        .map(|_| "Icon have been update".into_ok())
 }

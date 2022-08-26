@@ -9,9 +9,9 @@ use fydia_struct::{
     event::EventContent,
     instance::RsaData,
     messages::Message,
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResult, IntoFydia, MapError},
 };
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::{
     api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},
@@ -38,19 +38,18 @@ pub async fn delete_message<'a>(
 
     if !user
         .permission_of_channel(&channel.id, &executor)
-        .await
-        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .await?
         .calculate(Some(channel.id.clone()))
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .can_read()
     {
-        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+        return FydiaResult::Err("Unknow channel".into_error());
     }
 
     let message = Message::by_id(&messageid, &executor).await?;
 
     if message.author_id.id != user.id {
-        return Err(FydiaResponse::TextError("You can't delete this message"));
+        return Err("You can't delete this message".into_error());
     }
 
     wbsocket
@@ -66,13 +65,10 @@ pub async fn delete_message<'a>(
         .await
         .map_err(|error| {
             error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot delete message",
-            )
+            "Cannot delete message".into_server_error()
         })?;
 
     message.delete(&executor).await?;
 
-    Ok(FydiaResponse::Text("Message delete"))
+    Ok("Message delete".into_error())
 }

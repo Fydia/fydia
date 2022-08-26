@@ -1,6 +1,6 @@
 use fydia_struct::{
     channel::Channel,
-    response::FydiaResponse,
+    response::{FydiaResponse, MapError},
     server::{Channels, Members, Server, ServerId},
     user::{User, UserId},
 };
@@ -72,8 +72,8 @@ impl SqlServer for Server {
     async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
         let mut user = self.owner.to_user(executor).await?;
 
-        let active_channel = entity::server::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let active_channel =
+            entity::server::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         insert(active_channel, executor).await?;
 
@@ -81,8 +81,8 @@ impl SqlServer for Server {
     }
 
     async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let active_channel = entity::server::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let active_channel =
+            entity::server::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         delete(active_channel, executor).await
     }
@@ -106,8 +106,7 @@ impl SqlServer for Server {
     }
 
     async fn update<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let am = entity::server::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let am = entity::server::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         update(am, executor).await
     }
@@ -132,7 +131,7 @@ impl SqlServer for Server {
         executor: &DatabaseConnection,
     ) -> Result<(), FydiaResponse<'a>> {
         let active_channel =
-            entity::channels::ActiveModel::try_from(channel).map_err(FydiaResponse::StringError)?;
+            entity::channels::ActiveModel::try_from(channel).error_to_fydiaresponse()?;
 
         insert(active_channel, executor).await?;
 

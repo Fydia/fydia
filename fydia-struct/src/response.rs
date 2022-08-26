@@ -50,7 +50,7 @@ impl<'a> FydiaResponse<'a> {
     pub fn from_serialize<T: Serialize>(ser: T) -> Self {
         match serde_json::to_value(ser) {
             Ok(value) => FydiaResponse::Json(value),
-            Err(_) => FydiaResponse::TextError("Cannot serialize"),
+            Err(_) => "Cannot serialize".into_server_error(),
         }
     }
 
@@ -107,31 +107,19 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
         };
 
         match self {
-            FydiaResponse::Text(text) => {
-                let value = json!(text);
-                build_response(FydiaStatus::Ok, value, response)
-            }
+            FydiaResponse::Text(text) => build_response(FydiaStatus::Ok, json!(text), response),
             FydiaResponse::TextError(text) => {
-                let value = json!(text);
-                build_response(FydiaStatus::Error, value, response)
+                build_response(FydiaStatus::Error, json!(text), response)
             }
             FydiaResponse::TextErrorWithStatusCode(statuscode, text) => {
-                let value = json!(text);
-                let builder = response.status(statuscode);
-                build_response(FydiaStatus::Error, value, builder)
+                build_response(FydiaStatus::Error, json!(text), response.status(statuscode))
             }
-            FydiaResponse::String(text) => {
-                let value = json!(text);
-                build_response(FydiaStatus::Ok, value, response)
-            }
+            FydiaResponse::String(text) => build_response(FydiaStatus::Ok, json!(text), response),
             FydiaResponse::StringError(text) => {
-                let value = json!(text);
-                build_response(FydiaStatus::Error, value, response)
+                build_response(FydiaStatus::Error, json!(text), response)
             }
             FydiaResponse::StringWithStatusCode(statuscode, text) => {
-                let value = json!(text);
-                let builder = response.status(statuscode);
-                build_response(FydiaStatus::Ok, value, builder)
+                build_response(FydiaStatus::Ok, json!(text), response.status(statuscode))
             }
             FydiaResponse::Json(value) => build_response(FydiaStatus::Ok, value, response),
             FydiaResponse::Bytes(bytes) => {
@@ -149,5 +137,72 @@ impl<'a> IntoResponse for FydiaResponse<'a> {
                 response.body(body::boxed(body::Full::from(bytes))).unwrap()
             }
         }
+    }
+}
+
+/// Map error value to `FydiaResponse`
+pub trait MapError<T> {
+    /// Convert error value to `FydiaResponse`
+    ///
+    /// # Errors
+    /// Return error type to `FydiaResponse`
+    fn error_to_fydiaresponse<'a>(self) -> Result<T, FydiaResponse<'a>>;
+}
+
+impl<T, E: ToString> MapError<T> for Result<T, E> {
+    fn error_to_fydiaresponse<'a>(self) -> Result<T, FydiaResponse<'a>> {
+        self.map_err(|f| f.to_string().into_error())
+    }
+}
+
+/// Convert types to `FydiaResponse`
+pub trait IntoFydia<'a>: Sized {
+    /// Convert this type to ok
+    fn into_ok(self) -> FydiaResponse<'a>;
+
+    /// Convert this type to error
+    fn into_error(self) -> FydiaResponse<'a>;
+
+    /// Convert this type to error with custom statuscode
+    fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse<'a>;
+
+    /// Convert this type to `INTERNAL_SERVER_ERROR` error
+    fn into_server_error(self) -> FydiaResponse<'a> {
+        Self::into_error_with_statuscode(self, StatusCode::INTERNAL_SERVER_ERROR)
+    }
+    /// Convert this type to `FORBIDDEN` error
+    fn into_forbidden_error(self) -> FydiaResponse<'a> {
+        Self::into_error_with_statuscode(self, StatusCode::FORBIDDEN)
+    }
+
+    /// Convert this type to `NOT_IMPLEMENTED` error
+    fn into_not_implemented_error(self) -> FydiaResponse<'a> {
+        Self::into_error_with_statuscode(self, StatusCode::NOT_IMPLEMENTED)
+    }
+}
+
+impl<'a> IntoFydia<'a> for &'a str {
+    fn into_ok(self) -> FydiaResponse<'a> {
+        FydiaResponse::Text(self)
+    }
+    fn into_error(self) -> FydiaResponse<'a> {
+        FydiaResponse::TextError(self)
+    }
+
+    fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse<'a> {
+        FydiaResponse::TextErrorWithStatusCode(statuscode, self)
+    }
+}
+
+impl<'a> IntoFydia<'a> for String {
+    fn into_ok(self) -> FydiaResponse<'a> {
+        FydiaResponse::String(self)
+    }
+    fn into_error(self) -> FydiaResponse<'a> {
+        FydiaResponse::StringError(self)
+    }
+
+    fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse<'a> {
+        FydiaResponse::StringWithStatusCode(statuscode, self)
     }
 }

@@ -2,7 +2,7 @@ use fydia_struct::{
     channel::{Channel, ChannelId},
     instance::Instance,
     messages::{Date, Message},
-    response::FydiaResponse,
+    response::{FydiaResponse, MapError},
     roles::Role,
     server::{Server, ServerId},
     user::{Token, User},
@@ -28,7 +28,7 @@ pub async fn insert_samples<'a>(db: &DbConnection) -> Result<(), FydiaResponse<'
         user
     } else {
         let mut user = User::new("user", "user@sample.com", "user", Instance::default())
-            .map_err(FydiaResponse::StringError)?;
+            .error_to_fydiaresponse()?;
 
         user.token = Some(String::from("default_token"));
 
@@ -37,22 +37,22 @@ pub async fn insert_samples<'a>(db: &DbConnection) -> Result<(), FydiaResponse<'
         user
     };
 
-    let mut server =
-        if let Ok(server) = Server::by_id(&ServerId::new("server_default_id"), db).await {
-            info!("Server already exists");
-            server
-        } else {
-            let mut server = Server::new("server_default", user.id.clone())
-                .map_err(FydiaResponse::StringError)?;
+    let mut server = if let Ok(server) =
+        Server::by_id(&ServerId::new("server_default_id"), db).await
+    {
+        info!("Server already exists");
+        server
+    } else {
+        let mut server = Server::new("server_default", user.id.clone()).error_to_fydiaresponse()?;
 
-            server.id = ServerId::new("server_default_id");
+        server.id = ServerId::new("server_default_id");
 
-            if let Err(error) = server.insert(db).await {
-                error!("{}", error.get_string());
-            }
+        if let Err(error) = server.insert(db).await {
+            error!("{}", error.get_string());
+        }
 
-            server
-        };
+        server
+    };
 
     user.update_from_database(db).await?;
 
@@ -72,7 +72,7 @@ pub async fn insert_samples<'a>(db: &DbConnection) -> Result<(), FydiaResponse<'
             ServerId::new("server_default_id"),
             fydia_struct::channel::ChannelType::Text,
         )
-        .map_err(FydiaResponse::StringError)?;
+        .error_to_fydiaresponse()?;
 
         channel.id = ChannelId::new("channel_default_id");
 
@@ -92,7 +92,7 @@ pub async fn insert_samples<'a>(db: &DbConnection) -> Result<(), FydiaResponse<'
                     user.clone(),
                     ChannelId::new("channel_default_id"),
                 )
-                .map_err(FydiaResponse::StringError)?;
+                .error_to_fydiaresponse()?;
 
                 if let Err(error) = message.insert(db).await {
                     error!("{}", error.get_string());

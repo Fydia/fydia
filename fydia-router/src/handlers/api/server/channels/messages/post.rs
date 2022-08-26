@@ -16,11 +16,11 @@ use fydia_struct::event::{Event, EventContent};
 use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Date, Message, MessageType};
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia, MapError};
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::User;
 use fydia_utils::http::header::CONTENT_TYPE;
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_utils::http::HeaderMap;
 use fydia_utils::serde_json::Value;
 use mime::Mime;
 use multer::Multipart;
@@ -58,27 +58,26 @@ pub async fn post_messages<'a>(
 
     if !user
         .permission_of_channel(&channel.id, &database)
-        .await
-        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .await?
         .calculate(Some(channel.id.clone()))
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .can_read()
     {
-        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+        return Err("Unknow channel".into_error());
     }
 
     let content_type = headers
         .get(CONTENT_TYPE)
-        .ok_or(FydiaResponse::TextError("No Content-Type header found"))?
+        .ok_or_else(|| "No Content-Type header found".into_error())?
         .to_str()
         .map_err(|error| {
             error!("{error}");
-            FydiaResponse::TextError("Content-Type error")
+            "Content-Type error".into_error()
         })?;
 
     let mime_type = Mime::from_str(content_type).map_err(|error| {
         error!("{error}");
-        FydiaResponse::TextError("Bad Content-Type")
+        "Bad Content-Type".into_error()
     })?;
 
     if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
@@ -89,8 +88,7 @@ pub async fn post_messages<'a>(
 
     if mime_type == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
-        let boundary =
-            get_boundary(&headers).ok_or(FydiaResponse::TextError("No boundary found"))?;
+        let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found".into_error())?;
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
@@ -99,7 +97,7 @@ pub async fn post_messages<'a>(
         return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
-    Err(FydiaResponse::TextError("Content-Type error"))
+    Err("Content-Type error".into_error())
 }
 
 /// Transform a multipart request to a Message event
@@ -108,12 +106,12 @@ pub async fn post_messages<'a>(
 /// Return an error if:
 /// * body isn't valid
 /// * Cannot write file
-pub async fn multipart_to_event<'a, 'b>(
-    mut multipart: Multipart<'a>,
+pub async fn multipart_to_event<'a, 'r>(
+    mut multipart: Multipart<'r>,
     user: User,
     channelid: &ChannelId,
     server_id: &ServerId,
-) -> Result<Event, FydiaResponse<'b>> {
+) -> Result<Event, FydiaResponse<'a>> {
     let file = File::new();
     while let Ok(Some(field)) = multipart.next_field().await {
         if let Some(field_name) = field.name() {
@@ -127,10 +125,7 @@ pub async fn multipart_to_event<'a, 'b>(
                 ))
                 .map_err(|error| {
                     error!("{error}");
-                    FydiaResponse::TextErrorWithStatusCode(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "File creation error",
-                    )
+                    "File creation error".into_server_error()
                 })?;
 
                 let body = field
@@ -138,16 +133,14 @@ pub async fn multipart_to_event<'a, 'b>(
                     .await
                     .map_err(|error| {
                         error!("{error}");
-                        FydiaResponse::TextError("Body error")
+                        "Body error".into_error()
                     })?
                     .to_vec();
 
                 file.write(&body).map_err(|error| {
                     error!("{error}");
-                    FydiaResponse::TextErrorWithStatusCode(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Can't write the file",
-                    )
+
+                    "Can't write the file".into_server_error()
                 })?;
 
                 break;
@@ -165,7 +158,7 @@ pub async fn multipart_to_event<'a, 'b>(
         user,
         channelid.clone(),
     )
-    .map_err(FydiaResponse::StringError)?;
+    .error_to_fydiaresponse()?;
 
     let event = Event::new(
         server_id.clone(),
@@ -190,8 +183,8 @@ pub async fn json_message<'a>(
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse<'a>> {
     let type_from_json = get_json("type", &value)?.to_string();
-    let messagetype = MessageType::from_string(type_from_json)
-        .ok_or(FydiaResponse::TextError("Bad Message Type"))?;
+    let messagetype =
+        MessageType::from_string(type_from_json).ok_or_else(|| "Bad Message Type".into_error())?;
 
     let content = get_json("content", &value)?.to_string();
 
@@ -203,7 +196,7 @@ pub async fn json_message<'a>(
         user,
         channelid.clone(),
     )
-    .map_err(FydiaResponse::StringError)?;
+    .error_to_fydiaresponse()?;
 
     Ok(Event::new(
         server_id.clone(),
@@ -256,20 +249,12 @@ pub async fn send_event<'a>(
 ) -> FydiaResult<'a> {
     let members = match server.users(&database).await {
         Ok(members) => members.members,
-        Err(_) => {
-            return Err(FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot get users of the server",
-            ))
-        }
+        Err(_) => return Err("Cannot get users of the server".into_server_error()),
     };
 
     if let EventContent::Message { ref content } = event.content {
         if content.insert(&database).await.is_err() {
-            return Err(FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot send message",
-            ));
+            return Err("Cannot send message".into_server_error());
         }
 
         let key = rsa.clone();
@@ -283,5 +268,5 @@ pub async fn send_event<'a>(
         });
     }
 
-    Ok(FydiaResponse::Text("Message send"))
+    Ok("Message send".into_error())
 }

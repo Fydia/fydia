@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use fydia_struct::{
     channel::ChannelId,
     permission::{Permission, Permissions},
-    response::FydiaResponse,
+    response::{FydiaResponse, IntoFydia, MapError},
     roles::RoleId,
     server::ServerId,
     user::UserId,
@@ -83,8 +83,8 @@ impl PermissionSql for Permission {
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
             .await
-            .map_err(|error| FydiaResponse::StringError(error.to_string()))?
-            .ok_or(FydiaResponse::TextError("No role permission"))?
+            .error_to_fydiaresponse()?
+            .ok_or_else(|| "No role permission".into_error())?
             .to_struct(db)
             .await
     }
@@ -96,17 +96,14 @@ impl PermissionSql for Permission {
     ) -> Result<Permission, FydiaResponse<'a>> {
         entity::permission::user::Entity::find()
             .filter(
-                entity::permission::user::Column::User.eq(user
-                    .0
-                    .clone()
-                    .get_id()
-                    .map_err(FydiaResponse::StringError)?),
+                entity::permission::user::Column::User
+                    .eq(user.0.clone().get_id_cloned_fydiaresponse()?),
             )
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
             .await
-            .map_err(|error| FydiaResponse::StringError(error.to_string()))?
-            .ok_or(FydiaResponse::TextError("No role permission"))?
+            .error_to_fydiaresponse()?
+            .ok_or_else(|| "No role permission".into_error())?
             .to_struct(db)
             .await
     }
@@ -141,7 +138,7 @@ impl PermissionSql for Permission {
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
             .await
-            .map_err(|error| FydiaResponse::StringError(error.to_string()))?;
+            .error_to_fydiaresponse()?;
 
         let mut vec = Vec::new();
         for i in result {
@@ -152,7 +149,7 @@ impl PermissionSql for Permission {
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
             .await
-            .map_err(|error| FydiaResponse::StringError(error.to_string()))?;
+            .error_to_fydiaresponse()?;
 
         for i in result {
             vec.push(i.to_struct(db).await?);
@@ -165,19 +162,19 @@ impl PermissionSql for Permission {
         match self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
                 let am = entity::permission::role::ActiveModel::try_from(self.clone())
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 insert(am, db).await?;
             }
             fydia_struct::permission::PermissionType::User(_) => {
                 let am = entity::permission::user::ActiveModel::try_from(self.clone())
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 insert(am, db).await?;
             }
 
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err(FydiaResponse::TextError("Bad Type"))
+                return Err("Bad Type".into_error())
             }
         }
 
@@ -191,13 +188,13 @@ impl PermissionSql for Permission {
         let channelid = self
             .channelid
             .clone()
-            .ok_or(FydiaResponse::TextError("No channelid"))?
+            .ok_or_else(|| "No channelid".into_error())?
             .id;
 
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(role) => {
                 let am = entity::permission::role::ActiveModel::try_from(&self)
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 entity::permission::role::Entity::update(am)
                     .filter(entity::permission::role::Column::Channel.eq(channelid.as_str()))
@@ -208,11 +205,11 @@ impl PermissionSql for Permission {
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .map_err(|error| FydiaResponse::StringError(error.to_string()))?;
+                    .error_to_fydiaresponse()?;
             }
             fydia_struct::permission::PermissionType::User(user) => {
                 let am = entity::permission::user::ActiveModel::try_from(&self)
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 entity::permission::user::Entity::update(am)
                     .filter(entity::permission::user::Column::Channel.eq(channelid.as_str()))
@@ -223,10 +220,10 @@ impl PermissionSql for Permission {
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .map_err(|error| FydiaResponse::StringError(error.to_string()))?;
+                    .error_to_fydiaresponse()?;
             }
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err(FydiaResponse::TextError("Bad Type"))
+                return Err("Bad Type".into_error())
             }
         }
 
@@ -237,18 +234,18 @@ impl PermissionSql for Permission {
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
                 let am = entity::permission::role::ActiveModel::try_from(&self)
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 delete(am, db).await?;
             }
             fydia_struct::permission::PermissionType::User(_) => {
                 let am = entity::permission::user::ActiveModel::try_from(&self)
-                    .map_err(FydiaResponse::StringError)?;
+                    .error_to_fydiaresponse()?;
 
                 delete(am, db).await?;
             }
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err(FydiaResponse::TextError("Bad Type"))
+                return Err("Bad Type".into_error())
             }
         }
 

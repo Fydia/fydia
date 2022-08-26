@@ -2,7 +2,7 @@ use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
 use fydia_sql::impls::{channel::SqlChannel, user::SqlUser};
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia, MapError};
 use fydia_utils::http::HeaderMap;
 
 /// Return all message of channel
@@ -23,13 +23,12 @@ pub async fn get_messages<'a>(
 
     if !user
         .permission_of_channel(&channel.id, &database)
-        .await
-        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .await?
         .calculate(Some(channel.id.clone()))
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .can_read()
     {
-        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+        return FydiaResult::Err("Unknow channel".into_error());
     }
 
     channel

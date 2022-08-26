@@ -3,7 +3,7 @@ use axum::extract::{Extension, Path};
 use fydia_sql::impls::server::SqlServer;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::{Channel, ChannelType};
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
@@ -32,10 +32,10 @@ pub async fn create_channel<'a>(
     let channeltype = ChannelType::from_string(get_json("type", &json)?.to_string());
 
     let channel = Channel::new_with_serverid(name, "".to_string(), server.id.clone(), channeltype)
-        .map_err(FydiaResponse::StringError)?;
+        .error_to_fydiaresponse()?;
 
     server
         .insert_channel(&channel, &database)
         .await
-        .map(|_| FydiaResponse::String(channel.id.id))
+        .map(|_| channel.id.id.into_ok())
 }

@@ -2,7 +2,11 @@ use std::convert::TryFrom;
 
 use super::{delete, insert, user::UserFrom};
 use fydia_struct::{
-    directmessage::DirectMessage, response::FydiaResponse, server::Members, user::UserId, utils::Id,
+    directmessage::DirectMessage,
+    response::{FydiaResponse, IntoFydia, MapError},
+    server::Members,
+    user::UserId,
+    utils::Id,
 };
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
@@ -71,7 +75,7 @@ impl DirectMessageMembers for DirectMessage {
         userid.to_user(executor).await?;
 
         insert(
-            dm_members::Model::new_activemodel(userid, self).map_err(FydiaResponse::StringError)?,
+            dm_members::Model::new_activemodel(userid, self).error_to_fydiaresponse()?,
             executor,
         )
         .await
@@ -88,8 +92,7 @@ impl DirectMessageMembers for DirectMessage {
         for i in members.members {
             if &i == user {
                 delete(
-                    dm_members::Model::new_activemodel(user, self)
-                        .map_err(FydiaResponse::StringError)?,
+                    dm_members::Model::new_activemodel(user, self).error_to_fydiaresponse()?,
                     executor,
                 )
                 .await?;
@@ -97,9 +100,7 @@ impl DirectMessageMembers for DirectMessage {
             }
         }
 
-        Err(FydiaResponse::TextError(
-            "User is not a member of this direct_message",
-        ))
+        Err("User is not a member of this direct_message".into_error())
     }
 }
 
@@ -116,11 +117,11 @@ pub trait SqlDirectMessage {
 #[async_trait::async_trait]
 impl SqlDirectMessage for DirectMessage {
     async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let am = dm::ActiveModel::try_from(self.clone()).map_err(FydiaResponse::StringError)?;
+        let am = dm::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
         let result = dm::Entity::insert(am)
             .exec(executor)
             .await
-            .map_err(|f| FydiaResponse::StringError(f.to_string()))?;
+            .error_to_fydiaresponse()?;
 
         self.id.set(result.last_insert_id);
 
@@ -130,13 +131,13 @@ impl SqlDirectMessage for DirectMessage {
         dm_id: Id<u32>,
         executor: &DatabaseConnection,
     ) -> Result<DirectMessage, FydiaResponse<'a>> {
-        let id = dm_id.get_id().map_err(FydiaResponse::StringError)?;
+        let id = dm_id.get_id().error_to_fydiaresponse()?;
         Ok(dm::Model::get_model_by(dm::Column::Id.eq(id), executor)
             .await?
             .to_directmessage())
     }
     async fn delete<'a>(self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let am = dm::ActiveModel::try_from(self.clone()).map_err(FydiaResponse::StringError)?;
+        let am = dm::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
         delete(am, executor).await
     }
 }

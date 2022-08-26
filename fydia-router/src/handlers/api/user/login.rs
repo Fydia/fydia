@@ -4,7 +4,7 @@ use axum::extract::Extension;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::{
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResult, IntoFydia},
     user::User,
 };
 
@@ -23,11 +23,11 @@ pub async fn user_login<'a>(
 
     let mut user = User::by_email_and_password(email, password, &database)
         .await
-        .ok_or(FydiaResponse::TextError("User not exists"))?;
+        .ok_or_else(|| "User not exists".into_error())?;
 
     user.update_token(&database).await?;
 
-    let token = user.token.ok_or(FydiaResponse::Text("Token error"))?;
+    let token = user.token.ok_or_else(|| "Token error".into_error())?;
 
-    Ok(FydiaResponse::String(token))
+    Ok(token.into_ok())
 }

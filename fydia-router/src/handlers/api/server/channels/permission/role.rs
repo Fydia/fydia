@@ -1,7 +1,4 @@
-use std::num::ParseIntError;
-
 use axum::body::Bytes;
-use axum::http::StatusCode;
 use axum::Extension;
 use axum::{extract::Path, http::HeaderMap};
 use fydia_sql::impls::permission::PermissionSql;
@@ -9,7 +6,7 @@ use fydia_sql::impls::role::SqlRoles;
 use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::permission::Permission;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia, MapError};
 use fydia_struct::roles::{Role, RoleId};
 
 use crate::handlers::basic::BasicValues;
@@ -30,10 +27,7 @@ pub async fn get_permission_of_role<'a>(
     )
     .await?;
 
-    let roleid = roleid
-        .as_str()
-        .parse()
-        .map_err(|err: ParseIntError| FydiaResponse::StringError(err.to_string()))?;
+    let roleid = roleid.as_str().parse().error_to_fydiaresponse()?;
 
     let role = Role::by_id(roleid, &server.id, &database).await?;
 
@@ -61,33 +55,23 @@ pub async fn post_permission_of_user<'a>(
     let perm = user.permission_of_server(&server.id, &database).await?;
 
     if !perm.can(&fydia_struct::permission::PermissionValue::Admin) {
-        return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
-            StatusCode::FORBIDDEN,
-            "Not enought permission",
-        ));
+        return FydiaResult::Err("Not enought permission".into_forbidden_error());
     }
 
     let json = get_json_value_from_body(&body)?;
 
-    let value = get_json("value", &json)?.parse().map_err(|_err| {
-        FydiaResponse::TextErrorWithStatusCode(StatusCode::INTERNAL_SERVER_ERROR, "Bad value")
-    })?;
+    let value = get_json("value", &json)?
+        .parse()
+        .map_err(|_err| "Bad value".into_server_error())?;
 
-    let roleid = RoleId::Id(
-        roleid
-            .parse()
-            .map_err(|_err| FydiaResponse::TextError("Bad Value"))?,
-    );
+    let roleid = RoleId::Id(roleid.parse().map_err(|_err| "Bad Value".into_error())?);
 
     if let Ok(mut permission) =
         Permission::of_role_in_channel(&channel.id, &roleid, &database).await
     {
         permission.value = value;
         if permission.update_value(&database).await.is_err() {
-            return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot update value",
-            ));
+            return FydiaResult::Err("Cannot update value".into_server_error());
         };
     } else {
         let perm = Permission {
@@ -97,12 +81,9 @@ pub async fn post_permission_of_user<'a>(
         };
 
         if perm.insert(&database).await.is_err() {
-            return FydiaResult::Err(FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot insert value",
-            ));
+            return FydiaResult::Err("Cannot insert value".into_server_error());
         }
     }
 
-    FydiaResult::Ok(FydiaResponse::Text(""))
+    Ok("".into_ok())
 }

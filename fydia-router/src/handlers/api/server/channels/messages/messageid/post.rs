@@ -13,9 +13,9 @@ use fydia_struct::{
     event::EventContent,
     instance::RsaData,
     messages::{Message, MessageType},
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResult, IntoFydia, MapError},
 };
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_utils::http::HeaderMap;
 
 use crate::handlers::{
     api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},
@@ -44,23 +44,22 @@ pub async fn update_message<'a>(
 
     if !user
         .permission_of_channel(&channel.id, &executor)
-        .await
-        .map_err(|_err| FydiaResponse::TextError("Cannot get permission"))?
+        .await?
         .calculate(Some(channel.id.clone()))
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .can_read()
     {
-        return FydiaResult::Err(FydiaResponse::TextError("Unknow channel"));
+        return Err("Unknow channel".into_error());
     }
 
     let mut message = Message::by_id(&messageid, &executor).await?;
 
     if message.message_type != MessageType::TEXT && message.message_type != MessageType::URL {
-        return Err(FydiaResponse::TextError("Cannot edit this type of message"));
+        return Err("Cannot edit this type of message".into_error());
     }
 
     if message.author_id.id != user.id {
-        return Err(FydiaResponse::TextError("You can't edit this message"));
+        return Err("You can't edit this message".into_error());
     }
 
     let value = get_json_value_from_body(&body)?;
@@ -85,11 +84,8 @@ pub async fn update_message<'a>(
         .await
         .map_err(|error| {
             error!("{error}");
-            FydiaResponse::TextErrorWithStatusCode(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Cannot delete message",
-            )
+            "Cannot delete message".into_server_error()
         })?;
 
-    Ok(FydiaResponse::Text("Message delete"))
+    Ok("Message delete".into_ok())
 }

@@ -1,7 +1,7 @@
 //! Usefull data structure
 use fydia_utils::serde::{Deserialize, Serialize};
 
-use crate::response::FydiaResponse;
+use crate::response::{FydiaResponse, IntoFydia};
 
 /// Enum to add a state of Id of a structure
 #[derive(Debug, PartialEq, PartialOrd, Eq, Clone, Hash, Serialize, Deserialize)]
@@ -38,7 +38,7 @@ impl<T> Id<T> {
             return Ok(id);
         }
 
-        Err(FydiaResponse::TextError("Id is unset"))
+        Err("Id is unset".into_error())
     }
 
     /// Return true if Id is `Id(T)`
@@ -85,6 +85,6 @@ impl<T: Clone> Id<T> {
             return Ok(id.clone());
         }
 
-        Err(FydiaResponse::TextError("Id is unset"))
+        Err("Id is unset".into_error())
     }
 }

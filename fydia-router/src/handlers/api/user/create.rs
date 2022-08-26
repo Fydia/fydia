@@ -3,7 +3,7 @@ use axum::{body::Bytes, extract::Extension};
 use fydia_sql::{impls::user::SqlUser, sqlpool::DbConnection};
 use fydia_struct::{
     instance::Instance,
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResult, IntoFydia, MapError},
     user::User,
 };
 
@@ -23,8 +23,8 @@ pub async fn create_user<'a>(
     let password = get_json("password".to_string(), &json)?;
 
     User::new(name, email, password, Instance::default())
-        .map_err(FydiaResponse::StringError)?
+        .error_to_fydiaresponse()?
         .insert(&database)
         .await
-        .map(|_| FydiaResponse::Text("Register successfully"))
+        .map(|_| "Register successfully".into_ok())
 }

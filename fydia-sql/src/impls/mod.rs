@@ -1,4 +1,4 @@
-use fydia_struct::response::FydiaResponse;
+use fydia_struct::response::{FydiaResponse, MapError};
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel};
 
 pub mod basic_model;
@@ -24,10 +24,7 @@ pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
 ) -> Result<InsertResult<A>, FydiaResponse<'a>> {
-    T::insert(am)
-        .exec(executor)
-        .await
-        .map_err(|error| FydiaResponse::StringError(error.to_string()))
+    T::insert(am).exec(executor).await.error_to_fydiaresponse()
 }
 
 /// Update any model
@@ -47,7 +44,7 @@ where
         .exec(executor)
         .await
         .map(|_| ())
-        .map_err(|error| FydiaResponse::StringError(error.to_string()))
+        .error_to_fydiaresponse()
 }
 
 /// Delete any model
@@ -64,5 +61,5 @@ pub async fn delete<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
         .exec(executor)
         .await
         .map(|_| ())
-        .map_err(|error| FydiaResponse::StringError(error.to_string()))
+        .error_to_fydiaresponse()
 }

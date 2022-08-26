@@ -3,10 +3,10 @@ use fydia_sql::{impls::message::SqlMessage, sqlpool::DbConnection};
 use fydia_struct::{
     channel::ChannelId,
     messages::Message,
-    response::{FydiaResponse, FydiaResult},
+    response::{FydiaResult, IntoFydia},
 };
 
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_utils::http::HeaderMap;
 
 /// Get messages of a dm
 ///
@@ -20,8 +20,5 @@ pub async fn get_message_dm<'a>(
     let message = Message::by_channel(ChannelId::new(dm_id.clone()), &database).await;
     println!("{:?}", message);
 
-    Err(FydiaResponse::TextErrorWithStatusCode(
-        StatusCode::NOT_IMPLEMENTED,
-        "",
-    ))
+    Err("".into_not_implemented_error())
 }

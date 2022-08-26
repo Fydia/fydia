@@ -12,7 +12,7 @@ use entity::channels::Model;
 use fydia_struct::{
     channel::{Channel, ChannelId},
     messages::Message,
-    response::FydiaResponse,
+    response::{FydiaResponse, IntoFydia, MapError},
     server::{Channels, ServerId},
     user::UserId,
 };
@@ -59,7 +59,7 @@ impl SqlChannel for Channel {
     ) -> Result<Channel, FydiaResponse<'a>> {
         match Model::get_model_by_id(&id.id, executor).await {
             Ok(model) => model.to_struct(executor).await,
-            _ => Err(FydiaResponse::TextError("This Channel doesn't exists")),
+            _ => Err("This Channel doesn't exists".into_error()),
         }
     }
     async fn by_serverid<'a>(
@@ -94,8 +94,8 @@ impl SqlChannel for Channel {
     }
 
     async fn insert<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
-        let active_channel = entity::channels::ActiveModel::try_from(self.clone())
-            .map_err(FydiaResponse::StringError)?;
+        let active_channel =
+            entity::channels::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         insert(active_channel, executor).await.map(|_| ())
     }
@@ -110,7 +110,7 @@ impl SqlChannel for Channel {
             .await
             .map_err(|error| {
                 error!("{}", error.get_string());
-                FydiaResponse::TextError("Can't update name")
+                "Can't update name".into_error()
             })?;
 
         let mut active_model: entity::channels::ActiveModel = model.clone().into();
@@ -134,7 +134,7 @@ impl SqlChannel for Channel {
             .await
             .map_err(|error| {
                 error!("{}", error.get_string());
-                FydiaResponse::Text("Can't update description")
+                "Can't update description".into_error()
             })?;
 
         let mut active_model: entity::channels::ActiveModel = model.clone().into();
@@ -152,7 +152,7 @@ impl SqlChannel for Channel {
                 .await
                 .map_err(|error| {
                     error!("{}", error.get_string());
-                    FydiaResponse::TextError("Can't find this channel")
+                    "Can't find this channel".into_error()
                 })?
                 .into();
 

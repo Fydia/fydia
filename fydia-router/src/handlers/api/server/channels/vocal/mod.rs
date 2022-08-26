@@ -1,6 +1,6 @@
 use axum::extract::{Extension, Path};
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResult, IntoFydia};
 use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
@@ -20,8 +20,8 @@ pub async fn join_channel<'a>(
     .await?;
 
     if channel.channel_type.is_voice() {
-        Ok(FydiaResponse::Text("Vocal Channel"))
+        Ok("Vocal Channel".into_ok())
     } else {
-        Err(FydiaResponse::TextError("Text Channel"))
+        Err("Text Channel".into_error())
     }
 }

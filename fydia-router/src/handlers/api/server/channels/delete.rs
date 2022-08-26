@@ -2,7 +2,7 @@ use crate::handlers::basic::BasicValues;
 use axum::extract::{Extension, Path};
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::response::{FydiaResponse, FydiaResult};
+use fydia_struct::response::{FydiaResult, IntoFydia};
 use fydia_utils::http::HeaderMap;
 
 /// Delete a channel in a server
@@ -24,5 +24,5 @@ pub async fn delete_channel<'a>(
     channel
         .delete(&database)
         .await
-        .map(|_| FydiaResponse::Text("Channel deleted"))
+        .map(|_| "Channel deleted".into_ok())
 }

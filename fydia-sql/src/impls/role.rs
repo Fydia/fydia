@@ -1,6 +1,10 @@
 use entity::roles::assignation;
 use fydia_struct::{
-    response::FydiaResponse, roles::Role, server::ServerId, user::UserId, utils::Id,
+    response::{FydiaResponse, IntoFydia, MapError},
+    roles::Role,
+    server::ServerId,
+    user::UserId,
+    utils::Id,
 };
 
 use super::{delete, insert};
@@ -70,8 +74,8 @@ impl SqlRoles for Role {
             .await;
         match query {
             Ok(Some(model)) => Ok(model.to_role()),
-            Err(e) => Err(FydiaResponse::StringError(e.to_string())),
-            _ => Err(FydiaResponse::TextError("No Role with this id")),
+            Err(e) => Err(e.to_string().into_error()),
+            _ => Err("No Role with this id".into_error()),
         }
     }
 
@@ -96,7 +100,7 @@ impl SqlRoles for Role {
                 self.name = name;
                 Ok(())
             }
-            Err(e) => Err(FydiaResponse::StringError(e.to_string())),
+            Err(e) => Err(e.to_string().into_error()),
         }
     }
 
@@ -121,7 +125,7 @@ impl SqlRoles for Role {
                 self.color = color;
                 Ok(())
             }
-            Err(e) => Err(FydiaResponse::StringError(e.to_string())),
+            Err(e) => Err(e.to_string().into_error()),
         }
     }
     async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
@@ -139,8 +143,8 @@ impl SqlRoles for Role {
         let model = entity::roles::Entity::find_by_id(id)
             .one(executor)
             .await
-            .map_err(|f| FydiaResponse::StringError(f.to_string()))?
-            .ok_or(FydiaResponse::TextError("Can't the role"))?;
+            .error_to_fydiaresponse()?
+            .ok_or_else(|| "Can't the role".into_error())?;
 
         let active_model: entity::roles::ActiveModel = model.into();
 

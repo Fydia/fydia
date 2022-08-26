@@ -26,14 +26,14 @@ pub async fn event_handler<'a>(
     let body = body.to_vec();
     let msg = receive_message(&headers, &body, &rsa)
         .await
-        .ok_or(FydiaResponse::TextError("Decryption Error"))?;
+        .ok_or("Decryption Error".into_error())?;
 
     let event = serde_json::from_str::<Event>(msg.as_str())
-        .map_err(|_| FydiaResponse::TextError("Bad Body"))?;
+        .map_err(|_| "Bad Body".into_error())?;
 
     crate::handlers::event::event_handler(event, &database, &wbsockets).await;
 
-    Ok(FydiaResponse::Text(""))
+    Ok("".into_error())
 }
 
 pub async fn send_test_message<'a>(Extension(keys): Extension<Arc<RsaData>>) -> FydiaResult<'a> {
