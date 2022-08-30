@@ -15,7 +15,7 @@ async fn main() -> Result<(), ()> {
             let level = colored_level(&mut style, record.level());
             writeln!(
                 f,
-                "{}:{} {} [ {}] - {}",
+                "{}:{} {} [ {} ] - {}",
                 record.file().unwrap_or("unknown"),
                 record.line().unwrap_or(0),
                 chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
@@ -46,8 +46,8 @@ fn colored_level<'a>(style: &'a mut Style, level: Level) -> StyledValue<'a, &'st
     match level {
         Level::Trace => style.set_color(Color::Magenta).value("TRACE"),
         Level::Debug => style.set_color(Color::Blue).value("DEBUG"),
-        Level::Info => style.set_color(Color::Green).value("INFO "),
-        Level::Warn => style.set_color(Color::Yellow).value("WARN "),
+        Level::Info => style.set_color(Color::Green).value("INFO"),
+        Level::Warn => style.set_color(Color::Yellow).value("WARN"),
         Level::Error => style.set_color(Color::Red).value("ERROR"),
     }
 }
