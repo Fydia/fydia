@@ -9,7 +9,7 @@ flutter_client = ["fydia-router/flutter_client"]
 
 
 [dependencies]
-axum = "0.5.15"
+axum = "0.5.16"
 tokio = { version = "1.20.1", default-features = false, features = [
     "rt",
     "macros",
