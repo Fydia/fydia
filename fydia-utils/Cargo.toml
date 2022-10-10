@@ -9,6 +9,6 @@ edition = "2018"
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
 serde = { version = "1.0.144", features = ["derive"] }
-serde_json = "1.0.85"
+serde_json = "1.0.86"
 http = "0.2.8"
 async-trait = "0.1.57"
