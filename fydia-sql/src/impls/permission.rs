@@ -1,5 +1,11 @@
 use std::convert::TryFrom;
 
+use super::{
+    basic_model::BasicModel,
+    channel::SqlChannelId,
+    delete, insert,
+    user::{SqlUser, UserFrom},
+};
 use fydia_struct::{
     channel::ChannelId,
     permission::{Permission, Permissions},
@@ -10,13 +16,7 @@ use fydia_struct::{
 };
 use fydia_utils::async_trait::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-
-use super::{
-    basic_model::BasicModel,
-    channel::SqlChannelId,
-    delete, insert,
-    user::{SqlUser, UserFrom},
-};
+use shared::sea_orm;
 
 #[async_trait]
 pub trait PermissionSql {

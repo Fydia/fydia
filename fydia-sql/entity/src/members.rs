@@ -7,6 +7,7 @@ use fydia_struct::{
     utils::Id,
 };
 use sea_orm::{entity::prelude::*, sea_query::SimpleExpr, Set};
+use shared::sea_orm;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "members")]
 pub struct Model {

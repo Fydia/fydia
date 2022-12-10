@@ -1,5 +1,6 @@
 use fydia_struct::response::{FydiaResponse, MapError};
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel};
+use shared::sea_orm;
 
 pub mod basic_model;
 pub mod channel;

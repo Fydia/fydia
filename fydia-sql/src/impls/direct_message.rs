@@ -10,6 +10,7 @@ use fydia_struct::{
 };
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
+use shared::sea_orm;
 use {entity::direct_message as dm, entity::direct_message_members as dm_members};
 #[async_trait::async_trait]
 pub trait DirectMessageMembers {

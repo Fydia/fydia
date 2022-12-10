@@ -1,7 +1,7 @@
 use migration::sea_orm::{DbConn, DbErr};
 use sea_orm::{ConnectionTrait, Statement};
+use shared::sea_orm;
 use std::sync::Arc;
-
 /// Create default tables in database
 ///
 /// # Errors

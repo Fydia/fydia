@@ -10,7 +10,7 @@ use fydia_struct::{
 use super::{delete, insert};
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-
+use shared::sea_orm;
 #[async_trait::async_trait]
 pub trait SqlRoles {
     async fn by_server_id<'r>(

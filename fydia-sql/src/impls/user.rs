@@ -1,3 +1,9 @@
+use super::basic_model::BasicModel;
+use super::delete;
+use super::insert;
+use super::permission::PermissionSql;
+use super::role::SqlRoles;
+use super::update;
 use async_trait::async_trait;
 use entity::roles::assignation;
 use entity::user::ActiveModel as UserActiveModel;
@@ -23,14 +29,8 @@ use sea_orm::DatabaseConnection;
 use sea_orm::EntityTrait;
 use sea_orm::QueryFilter;
 use sea_orm::Set;
+use shared::sea_orm;
 use std::convert::TryFrom;
-
-use super::basic_model::BasicModel;
-use super::delete;
-use super::insert;
-use super::permission::PermissionSql;
-use super::role::SqlRoles;
-use super::update;
 
 #[async_trait]
 pub trait SqlUser {

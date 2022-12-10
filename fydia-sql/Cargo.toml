@@ -8,15 +8,8 @@ fydia-config = { path = "../fydia-config" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
+shared = { path = "./shared" }
 log = "0.4.16"
-
-sea-orm = { git = "https://github.com/rheydskey/sea-orm", default-features = false, features = [
-    "sqlx-mysql",
-    #"sqlx-postgres",
-    #"sqlx-sqlite",
-    "runtime-tokio-rustls",
-    "macros",
-] }
 
 tokio = { version = "1.23.0", default-features = false, features = [
     "rt",

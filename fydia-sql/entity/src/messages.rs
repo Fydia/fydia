@@ -4,6 +4,7 @@ use std::convert::TryFrom;
 
 use fydia_struct::messages::Message;
 use sea_orm::{entity::prelude::*, Set};
+use shared::sea_orm;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "messages")]

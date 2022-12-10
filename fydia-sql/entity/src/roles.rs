@@ -2,6 +2,7 @@
 
 use fydia_struct::{roles::Role, server::ServerId, utils::Id};
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
+use shared::sea_orm;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "roles")]
@@ -60,7 +61,7 @@ impl From<Role> for ActiveModel {
 
 pub mod assignation {
     use sea_orm::entity::prelude::*;
-
+    use shared::sea_orm;
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "roles_assignation")]
     pub struct Model {

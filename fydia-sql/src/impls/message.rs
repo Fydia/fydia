@@ -2,18 +2,18 @@
 
 use std::convert::TryFrom;
 
+use super::{basic_model::BasicModel, delete, insert};
+use entity::messages::Model;
 use fydia_struct::{
     channel::ChannelId,
     messages::Message,
     response::{FydiaResponse, MapError},
 };
+use fydia_utils::async_trait;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
-
-use super::{basic_model::BasicModel, delete, insert};
-use entity::messages::Model;
-use fydia_utils::async_trait;
+use shared::sea_orm;
 
 #[async_trait::async_trait]
 pub trait SqlMessage {

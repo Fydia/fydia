@@ -2,7 +2,7 @@
 pub mod role {
     use fydia_struct::permission::{Permission, PermissionType};
     use sea_orm::{entity::prelude::*, Set};
-
+    use shared::sea_orm;
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "permission_roles")]
     pub struct Model {
@@ -79,7 +79,7 @@ pub mod role {
 pub mod user {
     use fydia_struct::permission::{Permission, PermissionType};
     use sea_orm::{entity::prelude::*, Set};
-
+    use shared::sea_orm;
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "permission_users")]
     pub struct Model {

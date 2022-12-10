@@ -8,6 +8,7 @@ use sea_orm::{
     sea_query::{Expr, SimpleExpr},
     Set,
 };
+use shared::sea_orm;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "direct_message")]

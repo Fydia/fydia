@@ -1,3 +1,4 @@
+use super::insert;
 use entity::members::*;
 use fydia_struct::{
     response::FydiaResponse,
@@ -6,8 +7,7 @@ use fydia_struct::{
 };
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection};
-
-use super::insert;
+use shared::sea_orm;
 
 #[async_trait::async_trait]
 pub trait SqlMembers {

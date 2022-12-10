@@ -10,4 +10,4 @@ path = "src/lib.rs"
 
 [dependencies]
 entity = { path = "../entity" }
-sea-orm-migration = { git = "https://github.com/rheydskey/sea-orm", default-features = false }
+sea-orm-migration = { version = "0.10.5", default-features = false }

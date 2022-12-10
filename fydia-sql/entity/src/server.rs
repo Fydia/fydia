@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 
 use fydia_struct::server::Server;
 use sea_orm::{entity::prelude::*, Set};
-
+use shared::sea_orm;
 //use crate::impls::{channel::SqlChannel, members::SqlMembers, role::SqlRoles};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]

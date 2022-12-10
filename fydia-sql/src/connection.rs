@@ -2,6 +2,7 @@
 
 use fydia_config::{DatabaseConfig, DatabaseType};
 use sea_orm::{Database, DatabaseConnection};
+use shared::sea_orm;
 
 pub async fn get_connection(configdatabase: &DatabaseConfig) -> DatabaseConnection {
     if configdatabase.database_type == DatabaseType::Sqlite

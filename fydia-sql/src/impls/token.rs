@@ -1,9 +1,9 @@
+use super::user::SqlUser;
 use fydia_struct::user::{Token, User};
 use fydia_utils::async_trait;
 use sea_orm::DatabaseConnection;
+use shared::sea_orm;
 use std::sync::Arc;
-
-use super::user::SqlUser;
 
 #[async_trait::async_trait]
 pub trait SqlToken {

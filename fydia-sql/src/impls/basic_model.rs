@@ -1,3 +1,4 @@
+use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlUser};
 use fydia_struct::{
     channel::{Channel, ChannelId, ChannelType},
     instance::Instance,
@@ -11,8 +12,7 @@ use fydia_struct::{
 use fydia_utils::async_trait;
 use migration::{IntoCondition, SimpleExpr};
 use sea_orm::{ColumnTrait, DatabaseConnection as DbConnection, EntityTrait, QueryFilter};
-
-use super::{channel::SqlChannel, members::SqlMembers, role::SqlRoles, user::SqlUser};
+use shared::sea_orm;
 
 #[async_trait::async_trait]
 pub trait BasicModel {

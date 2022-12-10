@@ -1,3 +1,4 @@
+use entity::server::Model;
 use fydia_struct::{
     channel::Channel,
     response::{FydiaResponse, MapError},
@@ -6,9 +7,8 @@ use fydia_struct::{
 };
 use fydia_utils::async_trait;
 use sea_orm::{DatabaseConnection, Set};
+use shared::sea_orm;
 use std::convert::TryFrom;
-
-use entity::server::Model;
 
 use super::{
     basic_model::BasicModel, channel::SqlChannel, delete, insert, members::SqlMembers, update,
