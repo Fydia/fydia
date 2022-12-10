@@ -23,7 +23,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          components: clippy, rustfmt
+          components: clippy
           override: true
       - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
@@ -31,26 +31,6 @@ jobs:
           command: clippy
           args: >
             --no-deps
-
-  cargo_bloat:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: rui314/setup-mold@v1
-      - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: latest
-          platform: x64
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: Run cargo bloat
-        uses: orf/cargo-bloat-action@v1
-        with:
-          bloat_args: "--features ''"
-          token: ${{ secrets.GITHUB_TOKEN }}
 
   build_fydia:
     name: Build Fydia
@@ -71,9 +51,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          
       - uses: Swatinem/rust-cache@v2
-      
       - name: Fydia
         uses: actions-rs/cargo@v1
         with:
@@ -90,22 +68,21 @@ jobs:
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
           
   build_with_flutter:
-    name: "Build fydia with fydia"
+    name: "Build fydia with fydia client web"
     strategy:
       matrix:
         os: [ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Clone fydiapackages
-        uses: actions/checkout@v3
+      - run: cd /home/runner/work/fydia/fydia/fydia-router/
+      - name: Clone fydia client web
+        uses: GuillaumeFalourd/clone-github-repo-action@v2
         with:
-          ref: "origin/main"
-          repository: "fydia/fydiapackages"
-          path: "./fydia/fydia-router/fydiapackages"
-          token: ${{ secrets.GH_TOKEN }}
-
+          owner: 'fydia'
+          repository: 'fydiapackages'
+          access-token: ${{ secrets.ACCESS_TOKEN }}
+      - run: cd /home/runner/work/fydia/fydia/
       - uses: rui314/setup-mold@v1
       - name: Set up Clang
         uses: egor-tensin/setup-clang@v1
@@ -117,23 +94,18 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          
       - uses: Swatinem/rust-cache@v2
-          
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
-        
       - name: Fydia with Flutter Client
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p fydia --features flutter_client --release
-          
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
           file: "/home/runner/work/fydia/fydia/target/release/fydia"
-          
       - name: upload artifact
         uses: actions/upload-artifact@v3
         with:
@@ -153,7 +125,6 @@ jobs:
         with:
             version: 1.7.3
             arch: x64
-    
       - uses: actions/download-artifact@v3
         with:
           name: "Linux-release"
