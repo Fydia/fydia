@@ -18,7 +18,7 @@ sea-orm = { git = "https://github.com/rheydskey/sea-orm", default-features = fal
     "macros",
 ] }
 
-tokio = { version = "1.21.1", default-features = false, features = [
+tokio = { version = "1.23.0", default-features = false, features = [
     "rt",
     "macros",
 ] }
