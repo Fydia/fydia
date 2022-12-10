@@ -12,20 +12,41 @@ jobs:
     name: Clippy
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: warchant/setup-mold@v1
+        with:
+          version: 1.1.0
+          make_default: false
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           components: clippy, rustfmt
           override: true
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: >
             --no-deps
-            
+
+  cargo_bloat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: warchant/setup-mold@v1
+        with:
+          version: 1.1.0
+          make_default: false
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run cargo bloat
+        uses: orf/cargo-bloat-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   build_fydia:
     name: Build Fydia
     strategy:
@@ -33,15 +54,18 @@ jobs:
         os: [ubuntu-18.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      
+      - uses: actions/checkout@v3
+      - uses: warchant/setup-mold@v1
+        with:
+          version: 1.1.0
+          make_default: false
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
           
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       
       - name: Fydia
         uses: actions-rs/cargo@v1
@@ -53,7 +77,7 @@ jobs:
         with:
           file: "/home/runner/work/fydia/fydia/target/release/fydia"
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
@@ -65,23 +89,28 @@ jobs:
         os: [ubuntu-18.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       
       - name: Clone fydiapackages
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
         with:
           ref: "origin/main"
           repository: "fydia/fydiapackages"
           path: "./fydia/fydia-router/fydiapackages"
           token: ${{ secrets.GH_TOKEN }}
-          
+
+      - uses: warchant/setup-mold@v1
+        with:
+          version: 1.1.0
+          make_default: false
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
           
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
           
       - name: Install Flutter
         uses: britannio/action-install-flutter@v1
@@ -98,10 +127,11 @@ jobs:
           file: "/home/runner/work/fydia/fydia/target/release/fydia"
           
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: "Linux-flutter-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
+  
   tests_fydia:
     needs: build_fydia
     name: "Test fydia"
@@ -110,7 +140,7 @@ jobs:
         os: [ubuntu-18.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
             version: 1.7.3
