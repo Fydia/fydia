@@ -14,6 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: rui314/setup-mold@v1
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: latest
+          platform: x64
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -32,6 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: rui314/setup-mold@v1
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: latest
+          platform: x64
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -50,6 +60,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: rui314/setup-mold@v1
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: latest
+          platform: x64
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -91,7 +106,11 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
 
       - uses: rui314/setup-mold@v1
-
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: latest
+          platform: x64
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
