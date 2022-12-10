@@ -48,6 +48,7 @@ jobs:
           toolchain: stable
       - name: Run cargo bloat
         uses: orf/cargo-bloat-action@v1
+        bloat_args: "--features ''"
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
