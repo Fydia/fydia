@@ -8,4 +8,4 @@ edition = "2018"
 [dependencies]
 argon2 = "0.4.1"
 fydia-utils = { path = "../fydia-utils" }
-openssl = { version = "0.10.41" }
+openssl = { version = "0.10.44" }
