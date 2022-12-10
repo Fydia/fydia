@@ -75,14 +75,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      - run: cd /home/runner/work/fydia/fydia/fydia-router/
-      - name: Clone fydia client web
-        uses: GuillaumeFalourd/clone-github-repo-action@v2
+      - name: Clone fydiapackages
+        uses: actions/checkout@v3
         with:
-          owner: 'fydia'
-          repository: 'fydiapackages'
-          access-token: ${{ secrets.ACCESS_TOKEN }}
-      - run: cd /home/runner/work/fydia/fydia/
+          ref: "origin/main"
+          repository: "fydia/fydiapackages"
+          path: "./fydia/fydia-router/fydiapackages"
+          token: ${{ secrets.GH_TOKEN }}
       - uses: rui314/setup-mold@v1
       - name: Set up Clang
         uses: egor-tensin/setup-clang@v1
