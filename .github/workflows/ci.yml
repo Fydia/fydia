@@ -48,8 +48,8 @@ jobs:
           toolchain: stable
       - name: Run cargo bloat
         uses: orf/cargo-bloat-action@v1
-        bloat_args: "--features ''"
         with:
+          bloat_args: "--features ''"
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build_fydia:
