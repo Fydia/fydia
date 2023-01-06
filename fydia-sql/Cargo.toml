@@ -11,7 +11,7 @@ fydia-utils = { path = "../fydia-utils" }
 shared = { path = "./shared" }
 log = "0.4.16"
 
-tokio = { version = "1.23.0", default-features = false, features = [
+tokio = { version = "1.23.1", default-features = false, features = [
     "rt",
     "macros",
 ] }
