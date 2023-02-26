@@ -15,11 +15,11 @@ use crate::handlers::basic::BasicValues;
 /// # Errors
 /// Return an error if :
 /// * channelid, serverid isn't valid
-pub async fn get_permission<'a>(
+pub async fn get_permission(
     Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )

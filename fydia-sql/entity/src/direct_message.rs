@@ -21,14 +21,14 @@ pub struct Model {
 }
 
 impl<'m> Model {
-    const MESSAGE: FydiaResponse<'m> = FydiaResponse::TextError("No DirectMessage with this expr");
+    const MESSAGE: FydiaResponse = FydiaResponse::TextError("No DirectMessage with this expr");
 
     /// Return max id of `DirectMessage` Id
     ///
     /// # Errors
     /// Return an error if :
     /// * Database is unreachable
-    pub async fn get_max_id<'a>(executor: &DatabaseConnection) -> Result<u32, FydiaResponse<'a>> {
+    pub async fn get_max_id(executor: &DatabaseConnection) -> Result<u32, FydiaResponse> {
         Ok(Model::get_model_by(Expr::col(Column::Id).max(), executor)
             .await?
             .id)
@@ -40,10 +40,10 @@ impl<'m> Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_model_by<'a>(
+    pub async fn get_model_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse<'a>> {
+    ) -> Result<Self, FydiaResponse> {
         match Entity::find().filter(simpl).one(executor).await {
             Ok(Some(model)) => Ok(model),
             _ => Err(Self::MESSAGE),
@@ -56,10 +56,10 @@ impl<'m> Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_models_by<'a>(
+    pub async fn get_models_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Self>, FydiaResponse> {
         match Entity::find().filter(simpl).all(executor).await {
             Ok(model) => Ok(model),
             _ => Err(Self::MESSAGE),
@@ -72,10 +72,10 @@ impl<'m> Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_model_by_id<'a>(
+    pub async fn get_model_by_id(
         id: u32,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse<'a>> {
+    ) -> Result<Self, FydiaResponse> {
         match Entity::find().filter(Column::Id.eq(id)).one(executor).await {
             Ok(Some(model)) => Ok(model),
             _ => Err(Self::MESSAGE),
@@ -87,10 +87,10 @@ impl<'m> Model {
     /// # Errors
     /// Return an error if :
     /// * Database is unreachable
-    pub async fn from<'a>(
+    pub async fn from(
         dm: DirectMessage,
         executor: &DatabaseConnection,
-    ) -> Result<Model, FydiaResponse<'a>> {
+    ) -> Result<Model, FydiaResponse> {
         Ok(Model {
             id: Model::get_max_id(executor).await? + 1,
             name: dm.name,

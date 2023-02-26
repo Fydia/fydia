@@ -1,7 +1,5 @@
-use axum::body::Bytes;
 use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia};
 use fydia_utils::serde_json::{self, Value};
-
 pub mod api;
 pub mod basic;
 pub mod event;
@@ -11,7 +9,7 @@ pub mod federation;
 ///
 /// # Errors
 /// This function return an error by default
-pub async fn default<'a>() -> FydiaResult<'a> {
+pub async fn default() -> FydiaResult {
     Err("Default. This request will be implemented soon".into_not_implemented_error())
 }
 
@@ -19,15 +17,10 @@ pub async fn default<'a>() -> FydiaResult<'a> {
 ///
 /// # Errors
 /// This function will return an error if body cannot be convert to a json value
-pub fn get_json_value_from_body<'a>(body: &Bytes) -> Result<Value, FydiaResponse<'a>> {
+pub fn get_json_value_from_body(body: &String) -> Result<Value, FydiaResponse> {
     if body.is_empty() {
         return Err("Body is empty".into_error());
     }
-
-    let body = String::from_utf8(body.to_vec()).map_err(|error| {
-        error!("{error}");
-        "Bad Body".into_error()
-    })?;
 
     serde_json::from_str::<Value>(body.as_str()).map_err(|error| {
         error!("{error}");
@@ -39,7 +32,7 @@ pub fn get_json_value_from_body<'a>(body: &Bytes) -> Result<Value, FydiaResponse
 ///
 /// # Errors
 /// This function will return an error if value isn't found
-pub fn get_json<'a, T: Into<String>>(string: T, json: &Value) -> Result<&str, FydiaResponse<'a>> {
+pub fn get_json<T: Into<String>>(string: T, json: &Value) -> Result<&str, FydiaResponse> {
     let string = string.into();
     json.get(&string)
         .ok_or_else(|| format!("No `{string}` in JSON").into_error())?

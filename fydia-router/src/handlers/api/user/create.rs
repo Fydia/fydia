@@ -1,6 +1,9 @@
-use crate::handlers::{get_json, get_json_value_from_body};
-use axum::{body::Bytes, extract::Extension};
-use fydia_sql::{impls::user::SqlUser, sqlpool::DbConnection};
+use crate::{
+    handlers::{get_json, get_json_value_from_body},
+    ServerState,
+};
+use axum::extract::State;
+use fydia_sql::impls::user::SqlUser;
 use fydia_struct::{
     instance::Instance,
     response::{FydiaResult, IntoFydia, MapError},
@@ -12,10 +15,7 @@ use fydia_struct::{
 /// # Errors
 /// This function will return an error if database is unreachable or if body
 /// isn't valid
-pub async fn create_user<'a>(
-    body: Bytes,
-    Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+pub async fn create_user(State(state): State<ServerState>, body: String) -> FydiaResult {
     let json = get_json_value_from_body(&body)?;
 
     let name = get_json("name".to_string(), &json)?;
@@ -24,7 +24,7 @@ pub async fn create_user<'a>(
 
     User::new(name, email, password, Instance::default())
         .error_to_fydiaresponse()?
-        .insert(&database)
+        .insert(&state.database)
         .await
         .map(|_| "Register successfully".into_ok())
 }

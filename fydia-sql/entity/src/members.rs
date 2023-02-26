@@ -42,10 +42,10 @@ impl Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_models_by<'a>(
+    pub async fn get_models_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Self>, FydiaResponse> {
         match Entity::find().filter(simpl).all(executor).await {
             Ok(model) => Ok(model),
             _ => Err(Self::MESSAGE.to_string().into_error()),
@@ -65,10 +65,10 @@ impl Model {
     /// # Errors
     /// Return an error if :
     /// * Id is unset
-    pub fn new_activemodel<'a>(
+    pub fn new_activemodel(
         userid: &UserId,
         serverid: ServerId,
-    ) -> Result<ActiveModel, FydiaResponse<'a>> {
+    ) -> Result<ActiveModel, FydiaResponse> {
         Ok(ActiveModel {
             serverid: Set(serverid.id),
             userid: Set(userid.0.get_id_cloned_fydiaresponse()?),

@@ -12,11 +12,11 @@ use fydia_utils::http::HeaderMap;
 ///
 /// # Errors
 /// This function will return an error if dm does not exist
-pub async fn get_message_dm<'a>(
+pub async fn get_message_dm(
     _headers: HeaderMap,
     Path(dm_id): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let message = Message::by_channel(ChannelId::new(dm_id.clone()), &database).await;
     println!("{:?}", message);
 

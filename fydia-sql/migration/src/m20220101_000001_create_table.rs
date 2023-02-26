@@ -72,7 +72,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(entity::server::Column::Owner)
-                            .integer_len(10)
+                            .integer()
                             .unsigned()
                             .not_null(),
                     )

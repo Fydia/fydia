@@ -15,12 +15,12 @@ pub mod roles;
 ///
 /// # Errors
 /// This function will return if the token or serverid isn't valid
-pub async fn get_server<'a>(
+pub async fn get_server(
     headers: HeaderMap,
     Path(serverid): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
         .await
-        .map(|(_, server)| FydiaResponse::from_serialize(&server))
+        .map(|(_, server)| FydiaResponse::from_serialize(server))
 }

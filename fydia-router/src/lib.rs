@@ -16,9 +16,8 @@ use crate::routes::instance::instance_routes;
 use crate::routes::server::server_routes;
 use crate::routes::user::user_routes;
 use axum::body::Body;
-use axum::handler::Handler;
-use axum::response::IntoResponse;
-use axum::{extract::Extension, Router};
+use axum::http::StatusCode;
+use axum::Router;
 use client::client_router;
 use fydia_config::{Config, DatabaseConfig, InstanceConfig};
 use fydia_crypto::key::{private_to_public, Private, Rsa};
@@ -59,7 +58,7 @@ pub async fn get_database_connection(config: &DatabaseConfig) -> Result<DbConnec
 /// # Errors
 /// This function will return an error if `get_axum_router` return an error
 /// or if `get_database_connection` return an error
-pub async fn get_axum_router_from_config(config: Config) -> Result<axum::Router, String> {
+pub async fn get_axum_router_from_config(config: Config) -> Result<axum::Router<()>, String> {
     info!(
         "Fydia - {}({})",
         env!("CARGO_PKG_VERSION"),
@@ -98,7 +97,7 @@ pub async fn get_axum_router(
     instance: &InstanceConfig,
     formated_ip: &str,
     port: u16,
-) -> Result<axum::Router, String> {
+) -> Result<axum::Router<()>, String> {
     #[cfg(not(test))]
     #[cfg(debug_assertions)]
     if let Err(error) = fydia_sql::samples::insert_samples(&database).await {
@@ -151,8 +150,16 @@ pub fn get_router(
     rsadata: Arc<RsaData>,
     websocket_manager: Arc<WebsocketManagerChannel>,
     typing_manager: Arc<TypingManagerChannel>,
-) -> Router {
-    axum::Router::new()
+) -> Router<()> {
+    let state = ServerState {
+        database,
+        instance,
+        rsa: rsadata,
+        wbsocket: websocket_manager,
+        typing: typing_manager,
+    };
+
+    axum::Router::<ServerState>::new()
         .nest("/", client_router())
         .nest(
             "/api",
@@ -161,16 +168,22 @@ pub fn get_router(
                 .nest("/user", user_routes())
                 .nest("/server", server_routes()),
         )
-        .fallback(not_found.into_service())
-        .layer(Extension(database))
-        .layer(Extension(instance))
-        .layer(Extension(rsadata))
-        .layer(Extension(websocket_manager))
-        .layer(Extension(typing_manager))
+        .fallback(not_found)
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http().on_request(Log).on_response(Log)),
         )
+        .with_state(state)
+}
+
+/// ServerState contains all required data for response
+#[derive(Clone, Debug)]
+pub struct ServerState {
+    pub database: DbConnection,
+    pub instance: Arc<Instance>,
+    pub rsa: Arc<RsaData>,
+    pub wbsocket: Arc<WebsocketManagerChannel>,
+    pub typing: Arc<TypingManagerChannel>,
 }
 
 #[derive(Clone)]
@@ -189,20 +202,22 @@ impl<B> OnResponse<B> for Log {
 }
 
 /// Return index client
-async fn not_found() -> impl IntoResponse {
-    (http::StatusCode::NOT_FOUND, String::from(""))
+async fn not_found() -> (StatusCode, String) {
+    (StatusCode::NOT_FOUND, String::from(""))
 }
 
 #[cfg(not(feature = "flutter_client"))]
 mod client {
     use axum::{response::Html, routing, Router};
 
+    use crate::ServerState;
+
     /// Return index client
     pub async fn client() -> Html<String> {
         Html(INDEX.to_string())
     }
 
-    pub fn client_router() -> Router {
+    pub fn client_router() -> Router<ServerState> {
         Router::new().route("/", routing::get(client))
     }
 

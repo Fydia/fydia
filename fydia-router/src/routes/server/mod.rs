@@ -1,45 +1,48 @@
 use axum::Router;
 
-use crate::handlers::{
-    api::server::{
-        channels::{
-            create::create_channel,
-            delete::delete_channel,
-            info_channel,
-            messages::{
-                get::get_messages,
-                messageid::{delete::delete_message, get::get_message, post::update_message},
-                post::post_messages,
+use crate::{
+    handlers::{
+        api::server::{
+            channels::{
+                create::create_channel,
+                delete::delete_channel,
+                info_channel,
+                messages::{
+                    get::get_messages,
+                    messageid::{delete::delete_message, get::get_message, post::update_message},
+                    post::post_messages,
+                },
+                permission::{
+                    get_permission,
+                    role::get_permission_of_role,
+                    user::{get_permission_of_user, post_permission_of_user},
+                },
+                typing::{start_typing, stop_typing},
+                update::{update_description, update_name},
+                vocal::join_channel,
             },
-            permission::{
-                get_permission,
-                role::get_permission_of_role,
-                user::{get_permission_of_user, post_permission_of_user},
-            },
-            typing::{start_typing, stop_typing},
-            update::{update_description, update_name},
-            vocal::join_channel,
+            create::create_server,
+            get_server,
+            info::get_server_of_user,
+            join::join,
+            picture::{get_picture_of_server, post_picture_of_server},
         },
-        create::create_server,
-        get_server,
-        info::get_server_of_user,
-        join::join,
-        picture::{get_picture_of_server, post_picture_of_server},
+        default,
     },
-    default,
+    ServerState,
 };
 
 use super::roles::roles_routes;
 
 /// All routes related to the server
-pub fn server_routes() -> Router {
+pub fn server_routes() -> Router<ServerState> {
     axum::Router::new()
         .route("/", axum::routing::get(get_server_of_user))
         .route("/create", axum::routing::post(create_server))
         .route("/join/:serverid", axum::routing::get(join))
         .nest(
             "/:serverid",
-            axum::Router::new()
+            axum::Router::<ServerState>::new()
                 .route("/", axum::routing::get(get_server))
                 .route(
                     "/picture",
@@ -61,7 +64,7 @@ pub fn server_routes() -> Router {
 ///         - GET /messages -> Give message of channel
 ///         - POST /messages -> Post a message into channel
 /// ```
-pub fn channelid() -> Router {
+pub fn channelid() -> Router<ServerState> {
     axum::Router::new()
         .route("/create", axum::routing::post(create_channel))
         .nest(
@@ -104,8 +107,8 @@ pub fn channelid() -> Router {
 ///         - POST /
 ///         - DELETE /
 /// ```
-pub fn messageid() -> Router {
-    axum::Router::new()
+pub fn messageid() -> Router<ServerState> {
+    axum::Router::<ServerState>::new()
         .route(
             "/",
             axum::routing::get(get_message)

@@ -11,11 +11,11 @@ use fydia_utils::http::HeaderMap;
 /// Return an error if:
 /// * serverid, channelid, token isn't valid
 /// * database is unreachable
-pub async fn delete_channel<'a>(
+pub async fn delete_channel(
     headers: HeaderMap,
     Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )

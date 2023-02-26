@@ -17,33 +17,33 @@ use shared::sea_orm;
 
 #[async_trait::async_trait]
 pub trait SqlMessage {
-    async fn by_userid<'a>(
+    async fn by_userid(
         id: i32,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Message>, FydiaResponse<'a>>;
-    async fn by_channel<'a>(
+    ) -> Result<Vec<Message>, FydiaResponse>;
+    async fn by_channel(
         channel_id: ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Message>, FydiaResponse<'a>>;
-    async fn by_id<'a>(
+    ) -> Result<Vec<Message>, FydiaResponse>;
+    async fn by_id(
         message_id: &str,
         executor: &DatabaseConnection,
-    ) -> Result<Message, FydiaResponse<'a>>;
-    async fn insert<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
-    async fn update<'a>(
+    ) -> Result<Message, FydiaResponse>;
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    async fn update(
         &mut self,
         content: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn delete<'a>(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<(), FydiaResponse>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
 }
 
 #[async_trait::async_trait]
 impl SqlMessage for Message {
-    async fn by_userid<'a>(
+    async fn by_userid(
         id: i32,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Message>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Message>, FydiaResponse> {
         let mut messages = Vec::new();
         let mut query = entity::messages::Entity::find()
             .filter(entity::messages::Column::AuthorId.eq(id))
@@ -61,10 +61,10 @@ impl SqlMessage for Message {
         Ok(messages)
     }
 
-    async fn by_channel<'a>(
+    async fn by_channel(
         channel_id: ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Message>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Message>, FydiaResponse> {
         let mut messages = Vec::new();
         let query = entity::messages::Entity::find()
             .filter(entity::messages::Column::ChannelId.eq(channel_id.id))
@@ -82,27 +82,27 @@ impl SqlMessage for Message {
         Ok(messages)
     }
 
-    async fn by_id<'a>(
+    async fn by_id(
         message_id: &str,
         executor: &DatabaseConnection,
-    ) -> Result<Message, FydiaResponse<'a>> {
+    ) -> Result<Message, FydiaResponse> {
         let message = Model::get_model_by_id(message_id, executor).await?;
 
         message.to_struct(executor).await
     }
 
-    async fn insert<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn insert(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let active_model =
             entity::messages::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
         insert(active_model, executor).await.map(|_| ())
     }
 
-    async fn update<'a>(
+    async fn update(
         &mut self,
         content: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let model =
             entity::messages::ActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
 
@@ -117,7 +117,7 @@ impl SqlMessage for Message {
         Ok(())
     }
 
-    async fn delete<'a>(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let model = Model::get_model_by_id(&self.id, executor).await?;
         let active_model: entity::messages::ActiveModel = model.clone().into();
         delete(active_model, executor).await?;

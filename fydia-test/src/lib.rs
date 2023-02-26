@@ -4,11 +4,13 @@ mod tests;
 use std::collections::HashMap;
 
 use fydia_utils::{
+    http::HeaderValue,
     serde::{Deserialize, Serialize},
     serde_json::Value,
 };
+use reqwest::header::HeaderName;
 
-#[derive(Deserialize, Serialize, Default)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(crate = "fydia_utils::serde")]
 struct LibTest {
     #[serde(skip)]
@@ -23,16 +25,16 @@ impl LibTest {
         fydia_utils::serde_json::from_str::<LibTest>(str).unwrap()
     }
 
-    pub fn run_tests(&self) {
+    pub async fn run_tests(&self) {
         for i in self.tests.values() {
-            i.run()
+            i.run(&self.context).await
         }
     }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "fydia_utils::serde")]
-struct Context {
+pub struct Context {
     url: String,
     port: u16,
 }
@@ -51,6 +53,15 @@ impl Default for Context {
 pub enum Body {
     String(String),
     Json(fydia_utils::serde_json::Value),
+}
+
+impl ToString for Body {
+    fn to_string(&self) -> String {
+        match self {
+            Body::String(string) => string.to_owned(),
+            Body::Json(json) => fydia_utils::serde_json::to_string(json).unwrap(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -87,7 +98,7 @@ pub struct Step {
 }
 
 impl Step {
-    pub fn run(&self) {
+    pub async fn run(&self, ctx: &Context) {
         match &self.test_type {
             StepType::Ws { body } => todo!(),
             StepType::Http {
@@ -95,39 +106,63 @@ impl Step {
                 url,
                 headers,
                 body,
-            } => todo!(),
+            } => {
+                let client = reqwest::Client::new();
+                let url = format!("http://{}:{}{}", ctx.url, ctx.port, url);
+                let mut rq = match method.to_uppercase().as_str() {
+                    "POST" => client.post(url),
+                    "GET" => client.get(url),
+                    "DELETE" => client.delete(url),
+                    _ => panic!("Unknown method"),
+                };
+
+                if let Some(headers) = headers {
+                    for (key, value) in headers.iter() {
+                        let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
+                        let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
+
+                        rq = rq.header(name, value);
+                    }
+                }
+
+                rq = rq.body(body.to_string());
+
+                let res = rq.send().await.unwrap();
+
+                println!("{:?}", res.text().await);
+            }
         }
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(crate = "fydia_utils::serde")]
 #[serde(untagged)]
 pub enum Test {
     OneStep(Step),
     Steps(Vec<Step>),
     Other(Value),
+
+    #[default]
     None,
 }
 
 impl Test {
-    pub fn run(&self) {
+    pub async fn run(&self, ctx: &Context) {
         match self {
-            Test::OneStep(test) => println!("{:?}", test),
-            Test::Steps(tests) => println!("{:?}", tests),
+            Test::OneStep(test) => test.run(ctx).await,
+            Test::Steps(tests) => {
+                for test in tests {
+                    test.run(ctx).await;
+                }
+            }
             Test::Other(v) => {
                 let tos = fydia_utils::serde_json::to_string(v).unwrap();
                 println!("{:#?}", v.as_array().unwrap());
                 let a = fydia_utils::serde_json::from_str::<Vec<Step>>(&tos);
                 println!("{:?}", a);
             }
-            _ => panic!(),
+            Test::None => panic!(),
         }
-    }
-}
-
-impl Default for Test {
-    fn default() -> Self {
-        Test::None
     }
 }

@@ -1,9 +1,9 @@
 use axum::Router;
 
-use crate::handlers::default;
+use crate::{handlers::default, ServerState};
 
 /// All routes related to the roles
-pub fn roles_routes() -> Router {
+pub fn roles_routes() -> Router<ServerState> {
     axum::Router::new()
         .route("/create", axum::routing::get(default))
         .nest(

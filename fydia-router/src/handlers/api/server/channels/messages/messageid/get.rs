@@ -16,12 +16,12 @@ use crate::handlers::basic::BasicValues;
 /// # Errors
 /// Return error if:
 /// * serverid, channelid, messageid, token isn't valid
-pub async fn get_message<'a>(
+pub async fn get_message(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
     Extension(_rsa): Extension<Arc<RsaData>>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, _, _) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &executor,
     )
@@ -29,5 +29,5 @@ pub async fn get_message<'a>(
 
     let message = Message::by_id(&messageid, &executor).await?;
 
-    Ok(FydiaResponse::from_serialize(&message))
+    Ok(FydiaResponse::from_serialize(message))
 }

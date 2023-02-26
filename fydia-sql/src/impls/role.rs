@@ -13,40 +13,40 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use shared::sea_orm;
 #[async_trait::async_trait]
 pub trait SqlRoles {
-    async fn by_server_id<'r>(
+    async fn by_server_id(
         shortid: &str,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Role>, FydiaResponse<'r>>;
-    async fn by_id<'a>(
+    ) -> Result<Vec<Role>, FydiaResponse>;
+    async fn by_id(
         role_id: u32,
         shortid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Role, FydiaResponse<'a>>;
-    async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<Role, FydiaResponse>;
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
     async fn update_name<'a, T: Into<String> + Send>(
         &mut self,
         name: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<(), FydiaResponse>;
     async fn update_color<'a, T: Into<String> + Send>(
         &mut self,
         color: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
-    async fn add_user<'a>(
+    ) -> Result<(), FydiaResponse>;
+    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    async fn add_user(
         &self,
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<(), FydiaResponse>;
 }
 
 #[async_trait::async_trait]
 impl SqlRoles for Role {
-    async fn by_server_id<'r>(
+    async fn by_server_id(
         shortid: &str,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse<'r>> {
+    ) -> Result<Vec<Self>, FydiaResponse> {
         let mut result = Vec::new();
         let query = entity::roles::Entity::find()
             .filter(entity::roles::Column::Serverid.eq(shortid))
@@ -62,11 +62,11 @@ impl SqlRoles for Role {
         Ok(result)
     }
 
-    async fn by_id<'a>(
+    async fn by_id(
         role_id: u32,
         shortid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse<'a>> {
+    ) -> Result<Self, FydiaResponse> {
         let query = entity::roles::Entity::find()
             .filter(entity::roles::Column::Id.eq(role_id))
             .filter(entity::roles::Column::Serverid.eq(shortid.id.as_str()))
@@ -83,7 +83,7 @@ impl SqlRoles for Role {
         &mut self,
         name: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let name = name.into();
         let active_model = entity::roles::ActiveModel {
             name: Set(name.clone()),
@@ -108,7 +108,7 @@ impl SqlRoles for Role {
         &mut self,
         color: T,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let color = color.into();
         let active_model = entity::roles::ActiveModel {
             color: Set(color.clone()),
@@ -128,7 +128,7 @@ impl SqlRoles for Role {
             Err(e) => Err(e.to_string().into_error()),
         }
     }
-    async fn insert<'a>(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let model = entity::roles::ActiveModel::from(self.clone());
 
         let result = insert(model, executor).await?;
@@ -137,7 +137,7 @@ impl SqlRoles for Role {
 
         Ok(())
     }
-    async fn delete<'a>(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn delete(&self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let id = self.id.get_id_cloned_fydiaresponse()?;
 
         let model = entity::roles::Entity::find_by_id(id)
@@ -151,11 +151,11 @@ impl SqlRoles for Role {
         delete(active_model, executor).await
     }
 
-    async fn add_user<'a>(
+    async fn add_user(
         &self,
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let am = assignation::ActiveModel {
             role_id: Set(self.id.get_id_cloned_fydiaresponse()?),
             user_id: Set(userid.0.get_id_cloned_fydiaresponse()?),

@@ -14,11 +14,11 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// This function will return an error if body isn't valid or if the target isn't exist
-pub async fn create_direct_message<'a>(
+pub async fn create_direct_message(
     headers: HeaderMap,
     Path(target_user): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let user = BasicValues::get_user(&headers, &database).await?;
     if UserFormat::from_string(&target_user).is_some() {
         return Err("Soon may be".into_not_implemented_error());

@@ -9,11 +9,11 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// Return an error if the token isn't valid
-pub async fn get_server_of_user<'a>(
+pub async fn get_server_of_user(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let user = BasicValues::get_user(&headers, &database).await?;
 
-    Ok(FydiaResponse::from_serialize(&user.servers))
+    Ok(FydiaResponse::from_serialize(user.servers))
 }

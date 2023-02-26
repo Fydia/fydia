@@ -1,26 +1,19 @@
-use std::sync::Arc;
+use axum::extract::{Path, State};
 
-use axum::{
-    body::Bytes,
-    extract::{Extension, Path},
-};
-
-use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage, user::SqlUser},
-    sqlpool::DbConnection,
-};
+use fydia_sql::impls::{channel::SqlChannel, message::SqlMessage, user::SqlUser};
 use fydia_struct::{
     event::EventContent,
-    instance::RsaData,
     messages::{Message, MessageType},
     response::{FydiaResult, IntoFydia, MapError},
 };
 use fydia_utils::http::HeaderMap;
 
-use crate::handlers::{
-    api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},
-    basic::BasicValues,
-    get_json, get_json_value_from_body,
+use crate::{
+    handlers::{
+        api::manager::websockets::manager::WbManagerChannelTrait, basic::BasicValues, get_json,
+        get_json_value_from_body,
+    },
+    ServerState,
 };
 
 /// Change content of a message
@@ -29,21 +22,22 @@ use crate::handlers::{
 /// Return an error if :
 /// * channelid, serverid isn't valid
 /// * body isn't valid
-pub async fn update_message<'a>(
-    body: Bytes,
-    headers: HeaderMap,
-    Extension(executor): Extension<DbConnection>,
-    Extension(_rsa): Extension<Arc<RsaData>>,
-    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
+pub async fn update_message(
+    State(state): State<ServerState>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult<'a> {
+    headers: HeaderMap,
+    body: String,
+) -> FydiaResult {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &executor,
+        &headers,
+        &serverid,
+        &channelid,
+        &state.database,
     )
     .await?;
 
     if !user
-        .permission_of_channel(&channel.id, &executor)
+        .permission_of_channel(&channel.id, &state.database)
         .await?
         .calculate(Some(channel.id.clone()))
         .error_to_fydiaresponse()?
@@ -52,7 +46,7 @@ pub async fn update_message<'a>(
         return Err("Unknow channel".into_error());
     }
 
-    let mut message = Message::by_id(&messageid, &executor).await?;
+    let mut message = Message::by_id(&messageid, &state.database).await?;
 
     if message.message_type != MessageType::TEXT && message.message_type != MessageType::URL {
         return Err("Cannot edit this type of message".into_error());
@@ -66,11 +60,12 @@ pub async fn update_message<'a>(
 
     let content = get_json("content", &value)?.to_string();
 
-    message.update(&content, &executor).await?;
+    message.update(&content, &state.database).await?;
 
-    let users = &channel.users(&executor).await?;
+    let users = &channel.users(&state.database).await?;
 
-    wbsocket
+    let _ = &state
+        .wbsocket
         .send(
             &fydia_struct::event::Event {
                 server_id: server.id,

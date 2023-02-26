@@ -12,10 +12,10 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// This function will return an error if the token isn't valid
-pub async fn get_direct_messages<'a>(
+pub async fn get_direct_messages(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let user = BasicValues::get_user(&headers, &database).await?;
     let channels = DirectMessage::of_user(&user.id, &database).await?;
     Ok(FydiaResponse::from_serialize(channels))

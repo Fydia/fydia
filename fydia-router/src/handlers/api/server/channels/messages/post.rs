@@ -3,8 +3,9 @@ use crate::handlers::api::manager::websockets::manager::{
 };
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};
-use axum::body::Bytes;
-use axum::extract::{Extension, Path};
+use crate::ServerState;
+
+use axum::extract::{Path, State};
 use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
@@ -43,21 +44,22 @@ const CHECK_MIME: [mime::Mime; 3] = [
 /// * Channelid, Serverid isn't valid
 /// * Body is bad
 /// * Content-Type isn't valid
-pub async fn post_messages<'a>(
-    body: Bytes,
-    headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-    Extension(rsa): Extension<Arc<RsaData>>,
-    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
+pub async fn post_messages(
+    State(state): State<ServerState>,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult<'a> {
+    headers: HeaderMap,
+    body: String,
+) -> FydiaResult {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
+        &headers,
+        &serverid,
+        &channelid,
+        &state.database,
     )
     .await?;
 
     if !user
-        .permission_of_channel(&channel.id, &database)
+        .permission_of_channel(&channel.id, &state.database)
         .await?
         .calculate(Some(channel.id.clone()))
         .error_to_fydiaresponse()?
@@ -83,18 +85,18 @@ pub async fn post_messages<'a>(
     if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
         let json = get_json_value_from_body(&body)?;
         let event = json_message(json, user, &channel.id, &server.id).await?;
-        return send_event(event, server, &rsa, wbsocket, database).await;
+        return send_event(event, server, &state.rsa, state.wbsocket, state.database).await;
     }
 
     if mime_type == mime::MULTIPART_FORM_DATA {
-        let stream = once(async move { Result::<Bytes, Infallible>::Ok(body) });
+        let stream = once(async move { Result::<String, Infallible>::Ok(body) });
         let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found".into_error())?;
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
         let event = multipart_to_event(multer, user.clone(), &channel.id, &server.id).await?;
 
-        return send_event(event, server, &rsa, wbsocket, database).await;
+        return send_event(event, server, &state.rsa, state.wbsocket, state.database).await;
     }
 
     Err("Content-Type error".into_error())
@@ -111,7 +113,7 @@ pub async fn multipart_to_event<'a, 'r>(
     user: User,
     channelid: &ChannelId,
     server_id: &ServerId,
-) -> Result<Event, FydiaResponse<'a>> {
+) -> Result<Event, FydiaResponse> {
     let file = File::new();
     while let Ok(Some(field)) = multipart.next_field().await {
         if let Some(field_name) = field.name() {
@@ -176,12 +178,12 @@ pub async fn multipart_to_event<'a, 'r>(
 /// Return an error if:
 /// * The body isn't valid
 /// * The channelid, serverid isn't valid
-pub async fn json_message<'a>(
+pub async fn json_message(
     value: Value,
     user: User,
     channelid: &ChannelId,
     server_id: &ServerId,
-) -> Result<Event, FydiaResponse<'a>> {
+) -> Result<Event, FydiaResponse> {
     let type_from_json = get_json("type", &value)?.to_string();
     let messagetype =
         MessageType::from_string(type_from_json).ok_or_else(|| "Bad Message Type".into_error())?;
@@ -240,13 +242,13 @@ pub fn get_boundary(headers: &HeaderMap) -> Option<String> {
 /// Return error if :
 /// * cannot get members of server
 /// * cannot get websocket manager
-pub async fn send_event<'a>(
+pub async fn send_event(
     event: Event,
     server: Server,
     rsa: &Arc<RsaData>,
     wbsocket: Arc<WebsocketManagerChannel>,
     database: DbConnection,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let members = match server.users(&database).await {
         Ok(members) => members.members,
         Err(_) => return Err("Cannot get users of the server".into_server_error()),

@@ -263,7 +263,7 @@ impl File {
             .description
             .as_ref()
             .ok_or_else(|| "No file".to_string())?;
-        let file = std::fs::File::open(&desc).map_err(|f| f.to_string())?;
+        let file = std::fs::File::open(desc).map_err(|f| f.to_string())?;
         let buf = BufReader::new(file);
         Ok(stream::iter(buf.bytes()))
     }

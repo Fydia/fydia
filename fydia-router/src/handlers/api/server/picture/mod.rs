@@ -2,10 +2,7 @@
 
 use std::str::FromStr;
 
-use axum::{
-    body::Bytes,
-    extract::{Extension, Path},
-};
+use axum::extract::{Extension, Path, State};
 use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
 use fydia_struct::{
     file::File,
@@ -14,17 +11,17 @@ use fydia_struct::{
 use fydia_utils::http::{HeaderMap, StatusCode};
 use mime::Mime;
 
-use crate::handlers::basic::BasicValues;
+use crate::{handlers::basic::BasicValues, ServerState};
 
 /// Return icon of server
 ///
 /// # Errors
 /// Return an error if serverid isn't valid
-pub async fn get_picture_of_server<'a>(
+pub async fn get_picture_of_server(
     Path(server_id): Path<String>,
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, server) =
         BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &database)
             .await?;
@@ -53,16 +50,15 @@ const MAX_CONTENT_LENGHT: usize = 8_000_000;
 /// # Errors
 /// This function will return an error if file given isn't a file or if file is too large
 /// of if server doesn't exist
-pub async fn post_picture_of_server<'a>(
+pub async fn post_picture_of_server(
+    State(state): State<ServerState>,
     Path(server_id): Path<String>,
-    body: Bytes,
     headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, mut server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &database)
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &state.database)
             .await?;
-
+    let body = vec![];
     if body.len() > MAX_CONTENT_LENGHT {
         return Err("".into_error_with_statuscode(StatusCode::PAYLOAD_TOO_LARGE));
     }
@@ -84,7 +80,7 @@ pub async fn post_picture_of_server<'a>(
     server.icon = file.get_name();
 
     server
-        .update(&database)
+        .update(&state.database)
         .await
         .map(|_| "Icon have been update".into_ok())
 }

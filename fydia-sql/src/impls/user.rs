@@ -47,43 +47,39 @@ pub trait SqlUser {
     async fn by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
     where
         Self: Sized;
-    async fn update_from_database<'a>(
+    async fn update_from_database(
         &mut self,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn update_token<'a>(
-        &mut self,
-        executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn update_name<'a>(
+    ) -> Result<(), FydiaResponse>;
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    async fn update_name(
         &mut self,
         name: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn update_password<'a>(
+    ) -> Result<(), FydiaResponse>;
+    async fn update_password(
         &mut self,
         clear_password: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
-    async fn insert<'a>(mut self, executor: &DatabaseConnection)
-        -> Result<User, FydiaResponse<'a>>;
-    async fn delete<'a>(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
-    async fn permission_of_channel<'a>(
+    ) -> Result<(), FydiaResponse>;
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, FydiaResponse>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    async fn permission_of_channel(
         &self,
         channelid: &ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>>;
-    async fn permission_of_server<'a>(
+    ) -> Result<Permissions, FydiaResponse>;
+    async fn permission_of_server(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>>;
+    ) -> Result<Permissions, FydiaResponse>;
 
-    async fn roles<'a>(
+    async fn roles(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Role>, FydiaResponse<'a>>;
+    ) -> Result<Vec<Role>, FydiaResponse>;
 }
 
 #[async_trait]
@@ -125,10 +121,10 @@ impl SqlUser for User {
             .ok()
     }
 
-    async fn update_from_database<'a>(
+    async fn update_from_database(
         &mut self,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let model = Model::get_model_by(
             &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
             executor,
@@ -140,10 +136,7 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn update_token<'a>(
-        &mut self,
-        executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let token = generate_string(30);
         let mut active_model: UserActiveModel = Model::get_model_by(
             &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
@@ -159,11 +152,11 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn update_name<'a>(
+    async fn update_name(
         &mut self,
         name: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let mut active_model: UserActiveModel = Model::get_model_by(
             &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
             executor,
@@ -179,11 +172,11 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn update_password<'a>(
+    async fn update_password(
         &mut self,
         clear_password: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let mut active_model: UserActiveModel = Model::get_model_by(
             &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
             executor,
@@ -200,10 +193,7 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn insert<'a>(
-        mut self,
-        executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse<'a>> {
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<Self, FydiaResponse> {
         if self.token.is_none() {
             self.token = Some(generate_string(30));
         }
@@ -217,7 +207,7 @@ impl SqlUser for User {
         Ok(self)
     }
 
-    async fn delete<'a>(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
         let model = Model::get_model_by(
             &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
             executor,
@@ -232,25 +222,25 @@ impl SqlUser for User {
         Ok(())
     }
 
-    async fn permission_of_channel<'a>(
+    async fn permission_of_channel(
         &self,
         channelid: &ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>> {
+    ) -> Result<Permissions, FydiaResponse> {
         Permission::of_user_with_role_in_channel(channelid, &self.id, executor).await
     }
-    async fn permission_of_server<'a>(
+    async fn permission_of_server(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>> {
+    ) -> Result<Permissions, FydiaResponse> {
         Permission::of_user(&self.id, serverid, executor).await
     }
-    async fn roles<'a>(
+    async fn roles(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Role>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Role>, FydiaResponse> {
         let roles = assignation::Entity::find()
             .filter(assignation::Column::ServerId.eq(serverid.id.as_str()))
             .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned_fydiaresponse()?))
@@ -269,12 +259,12 @@ impl SqlUser for User {
 }
 #[async_trait]
 pub trait UserFrom {
-    async fn to_user<'a>(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse<'a>>;
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse>;
 }
 
 #[async_trait]
 impl UserFrom for UserId {
-    async fn to_user<'a>(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse<'a>> {
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse> {
         User::by_id(self.0.get_id_cloned_fydiaresponse()?, executor)
             .await
             .ok_or_else(|| "No user with this id".into_error())

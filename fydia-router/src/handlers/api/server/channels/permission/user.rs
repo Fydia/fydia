@@ -1,4 +1,4 @@
-use axum::body::Bytes;
+use axum::extract::State;
 use axum::Extension;
 use axum::{extract::Path, http::HeaderMap};
 use fydia_sql::impls::permission::PermissionSql;
@@ -10,17 +10,18 @@ use fydia_struct::user::UserId;
 
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};
+use crate::ServerState;
 
 /// Get permission of user
 ///
 /// # Errors
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
-pub async fn get_permission_of_user<'a>(
+pub async fn get_permission_of_user(
     Path((serverid, channelid)): Path<(String, String)>,
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (user, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
@@ -36,18 +37,23 @@ pub async fn get_permission_of_user<'a>(
 /// # Errors
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
-pub async fn post_permission_of_user<'a>(
-    body: Bytes,
+pub async fn post_permission_of_user(
     Path((serverid, channelid, userid)): Path<(String, String, String)>,
-    Extension(database): Extension<DbConnection>,
+    State(state): State<ServerState>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+    body: String,
+) -> FydiaResult {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
+        &headers,
+        &serverid,
+        &channelid,
+        &state.database,
     )
     .await?;
 
-    let perm = user.permission_of_server(&server.id, &database).await?;
+    let perm = user
+        .permission_of_server(&server.id, &state.database)
+        .await?;
 
     if !perm.can(&fydia_struct::permission::PermissionValue::Admin) {
         return FydiaResult::Err("Not enought permission".into_forbidden_error());
@@ -62,10 +68,10 @@ pub async fn post_permission_of_user<'a>(
     let userid = UserId::new(userid.parse().map_err(|_err| "Bad Value".into_error())?);
 
     if let Ok(mut permission) =
-        Permission::of_user_in_channel(&channel.id, &userid, &database).await
+        Permission::of_user_in_channel(&channel.id, &userid, &state.database).await
     {
         permission.value = value;
-        if permission.update_value(&database).await.is_err() {
+        if permission.update_value(&state.database).await.is_err() {
             return FydiaResult::Err("Cannot update value".into_server_error());
         };
     } else {
@@ -75,7 +81,7 @@ pub async fn post_permission_of_user<'a>(
             value,
         };
 
-        if perm.insert(&database).await.is_err() {
+        if perm.insert(&state.database).await.is_err() {
             return FydiaResult::Err("Cannot insert value".into_server_error());
         }
     }

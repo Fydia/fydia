@@ -15,10 +15,10 @@ use fydia_struct::response::{FydiaResponse, FydiaResult};
 ///
 /// # Errors
 /// Return an error if channelid isn't valid
-pub async fn info_channel<'a>(
+pub async fn info_channel(
     Extension(database): Extension<DbConnection>,
     Path((_serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     Channel::by_id(&ChannelId::new(channelid), &database)
         .await
         .map(FydiaResponse::from_serialize)

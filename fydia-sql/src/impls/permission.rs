@@ -20,46 +20,43 @@ use shared::sea_orm;
 
 #[async_trait]
 pub trait PermissionSql {
-    async fn of_role_in_channel<'a>(
+    async fn of_role_in_channel(
         channelid: &ChannelId,
         role: &RoleId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>>;
+    ) -> Result<Permission, FydiaResponse>;
 
-    async fn of_user_in_channel<'a>(
+    async fn of_user_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>>;
-    async fn of_user_with_role_in_channel<'a>(
+    ) -> Result<Permission, FydiaResponse>;
+    async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>>;
-    async fn of_user<'a>(
+    ) -> Result<Permissions, FydiaResponse>;
+    async fn of_user(
         user: &UserId,
         serverid: &ServerId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>>;
-    async fn of_channel<'a>(
+    ) -> Result<Permissions, FydiaResponse>;
+    async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>>;
-    async fn insert<'a>(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
-    async fn update_value<'a>(
-        self,
-        db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>>;
-    async fn delete<'a>(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<Permissions, FydiaResponse>;
+    async fn insert(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, FydiaResponse>;
+    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse>;
 }
 
 #[async_trait]
 impl PermissionSql for Permission {
-    async fn of_user<'a>(
+    async fn of_user(
         user: &UserId,
         serverid: &ServerId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>> {
+    ) -> Result<Permissions, FydiaResponse> {
         let user = user.to_user(db).await?;
         let roles = user.roles(serverid, db).await?;
         let mut vec = Vec::new();
@@ -71,11 +68,11 @@ impl PermissionSql for Permission {
         Ok(Permissions::new(vec))
     }
 
-    async fn of_role_in_channel<'a>(
+    async fn of_role_in_channel(
         channelid: &ChannelId,
         roleid: &RoleId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>> {
+    ) -> Result<Permission, FydiaResponse> {
         entity::permission::role::Entity::find()
             .filter(
                 entity::permission::role::Column::Role.eq(roleid.get_id_cloned_fydiaresponse()?),
@@ -89,11 +86,11 @@ impl PermissionSql for Permission {
             .await
     }
 
-    async fn of_user_in_channel<'a>(
+    async fn of_user_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>> {
+    ) -> Result<Permission, FydiaResponse> {
         entity::permission::user::Entity::find()
             .filter(
                 entity::permission::user::Column::User
@@ -108,11 +105,11 @@ impl PermissionSql for Permission {
             .await
     }
 
-    async fn of_user_with_role_in_channel<'a>(
+    async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>> {
+    ) -> Result<Permissions, FydiaResponse> {
         let channel = channelid.channel(db).await?;
         let user = user.to_user(db).await?;
         let roles = user.roles(&channel.parent_id, db).await?;
@@ -130,10 +127,10 @@ impl PermissionSql for Permission {
 
         return Ok(Permissions::new(vec));
     }
-    async fn of_channel<'a>(
+    async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse<'a>> {
+    ) -> Result<Permissions, FydiaResponse> {
         let result = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
@@ -158,7 +155,7 @@ impl PermissionSql for Permission {
         Ok(Permissions::new(vec))
     }
 
-    async fn insert<'a>(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn insert(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse> {
         match self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
                 let am = entity::permission::role::ActiveModel::try_from(self.clone())
@@ -181,10 +178,7 @@ impl PermissionSql for Permission {
         Ok(())
     }
 
-    async fn update_value<'a>(
-        self,
-        db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse<'a>> {
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, FydiaResponse> {
         let channelid = self
             .channelid
             .clone()
@@ -230,7 +224,7 @@ impl PermissionSql for Permission {
         Ok(self)
     }
 
-    async fn delete<'a>(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse<'a>> {
+    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse> {
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
                 let am = entity::permission::role::ActiveModel::try_from(&self)

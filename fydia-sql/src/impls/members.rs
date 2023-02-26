@@ -11,27 +11,27 @@ use shared::sea_orm;
 
 #[async_trait::async_trait]
 pub trait SqlMembers {
-    async fn users_of<'a>(
+    async fn users_of(
         server: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Members, FydiaResponse<'a>>;
-    async fn servers_of<'a>(
+    ) -> Result<Members, FydiaResponse>;
+    async fn servers_of(
         user: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<ServerId>, FydiaResponse<'a>>;
-    async fn insert<'a>(
+    ) -> Result<Vec<ServerId>, FydiaResponse>;
+    async fn insert(
         serverid: &ServerId,
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>>;
+    ) -> Result<(), FydiaResponse>;
 }
 
 #[async_trait::async_trait]
 impl SqlMembers for Members {
-    async fn users_of<'a>(
+    async fn users_of(
         server: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Members, FydiaResponse<'a>> {
+    ) -> Result<Members, FydiaResponse> {
         let model: Vec<UserId> =
             Model::get_models_by(Column::Serverid.contains(&server.id), executor)
                 .await?
@@ -42,10 +42,10 @@ impl SqlMembers for Members {
         Ok(Members::new(model))
     }
 
-    async fn servers_of<'a>(
+    async fn servers_of(
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<ServerId>, FydiaResponse<'a>> {
+    ) -> Result<Vec<ServerId>, FydiaResponse> {
         let userid = userid.0.get_id_cloned_fydiaresponse()?;
 
         Ok(Model::get_models_by(Column::Userid.eq(userid), executor)
@@ -55,11 +55,11 @@ impl SqlMembers for Members {
             .collect())
     }
 
-    async fn insert<'a>(
+    async fn insert(
         server: &ServerId,
         user: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse<'a>> {
+    ) -> Result<(), FydiaResponse> {
         let acmodel = Model::new_activemodel(user, server.clone())?;
 
         insert(acmodel, executor).await.map(|_| ())

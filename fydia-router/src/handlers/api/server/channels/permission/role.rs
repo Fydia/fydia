@@ -1,4 +1,3 @@
-use axum::body::Bytes;
 use axum::Extension;
 use axum::{extract::Path, http::HeaderMap};
 use fydia_sql::impls::permission::PermissionSql;
@@ -17,11 +16,11 @@ use crate::handlers::{get_json, get_json_value_from_body};
 /// # Errors
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
-pub async fn get_permission_of_role<'a>(
+pub async fn get_permission_of_role(
     Path((serverid, channelid, roleid)): Path<(String, String, String)>,
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
@@ -41,12 +40,12 @@ pub async fn get_permission_of_role<'a>(
 /// # Errors
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
-pub async fn post_permission_of_user<'a>(
-    body: Bytes,
+pub async fn post_permission_of_user(
+    body: String,
     Path((serverid, channelid, roleid)): Path<(String, String, String)>,
     Extension(database): Extension<DbConnection>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )

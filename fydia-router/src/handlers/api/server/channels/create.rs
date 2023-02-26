@@ -1,13 +1,12 @@
-use axum::body::Bytes;
-use axum::extract::{Extension, Path};
+use axum::extract::{Path, State};
 use fydia_sql::impls::server::SqlServer;
-use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::{Channel, ChannelType};
 use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 use fydia_utils::http::HeaderMap;
 
 use crate::handlers::basic::BasicValues;
 use crate::handlers::{get_json, get_json_value_from_body};
+use crate::ServerState;
 
 /// Create a new channel in a server
 ///
@@ -16,14 +15,14 @@ use crate::handlers::{get_json, get_json_value_from_body};
 /// * serverid, token isn't valid
 /// * body isn't valid
 /// * database is unreachable
-pub async fn create_channel<'a>(
-    body: Bytes,
+pub async fn create_channel(
     Path(serverid): Path<String>,
-    Extension(database): Extension<DbConnection>,
+    State(state): State<ServerState>,
     headers: HeaderMap,
-) -> FydiaResult<'a> {
+    body: String,
+) -> FydiaResult {
     let (_, mut server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
+        BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &state.database)
             .await?;
 
     let json = get_json_value_from_body(&body)?;
@@ -35,7 +34,7 @@ pub async fn create_channel<'a>(
         .error_to_fydiaresponse()?;
 
     server
-        .insert_channel(&channel, &database)
+        .insert_channel(&channel, &state.database)
         .await
         .map(|_| channel.id.id.into_ok())
 }

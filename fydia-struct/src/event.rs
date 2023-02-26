@@ -13,7 +13,7 @@ use fydia_utils::serde::{Deserialize, Serialize};
 ///use fydia_struct::server::ServerId;
 ///use fydia_struct::event::Event;
 ///
-///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete(String::new()));
+///let event = Event::new(ServerId::new(String::new()), EventContent::MessageDelete { message_id: String::new() });
 ///```
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

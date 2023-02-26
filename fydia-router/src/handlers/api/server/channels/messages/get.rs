@@ -11,11 +11,11 @@ use fydia_utils::http::HeaderMap;
 /// Return an error if:
 /// * serverid, channelid, token isn't valid
 /// * database is unreachable
-pub async fn get_messages<'a>(
+pub async fn get_messages(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (user, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )
@@ -34,5 +34,5 @@ pub async fn get_messages<'a>(
     channel
         .messages(&database)
         .await
-        .map(|value| FydiaResponse::from_serialize(&value))
+        .map(|value| FydiaResponse::from_serialize(value))
 }

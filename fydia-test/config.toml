@@ -1,0 +1,14 @@
+[instance]
+domain = ""
+
+[server]
+ip = "0.0.0.0"
+port = 8080
+
+[database]
+database_type = "Sqlite"
+ip = "test.db"
+port = 0
+name = "default"
+password = "default"
+database_name = "default"

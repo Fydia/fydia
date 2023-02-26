@@ -24,7 +24,7 @@ pub mod user;
 pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<InsertResult<A>, FydiaResponse<'a>> {
+) -> Result<InsertResult<A>, FydiaResponse> {
     T::insert(am).exec(executor).await.error_to_fydiaresponse()
 }
 
@@ -37,7 +37,7 @@ pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
 pub async fn update<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), FydiaResponse<'a>>
+) -> Result<(), FydiaResponse>
 where
     <A::Entity as EntityTrait>::Model: IntoActiveModel<A>,
 {
@@ -57,7 +57,7 @@ where
 pub async fn delete<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), FydiaResponse<'a>> {
+) -> Result<(), FydiaResponse> {
     T::delete(am)
         .exec(executor)
         .await

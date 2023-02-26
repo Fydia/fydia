@@ -184,7 +184,10 @@ impl Date {
 
     /// Create a new `Date` with minimal `DateTime`
     pub fn null() -> Self {
-        Self(DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc))
+        Self(DateTime::from_utc(
+            NaiveDateTime::from_timestamp_opt(0, 0).expect("Timestamp cannot be parsed"),
+            Utc,
+        ))
     }
 }
 

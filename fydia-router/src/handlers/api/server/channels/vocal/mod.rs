@@ -9,11 +9,11 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// Return an error if channelid isn't valid or if channel is text
-pub async fn join_channel<'a>(
+pub async fn join_channel(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
     Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &database,
     )

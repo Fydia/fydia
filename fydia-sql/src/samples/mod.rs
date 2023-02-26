@@ -20,7 +20,7 @@ use crate::{
 /// Return an error if:
 /// * Database is unreachable
 /// * Any tables errors
-pub async fn insert_samples<'a>(db: &DbConnection) -> Result<(), FydiaResponse<'a>> {
+pub async fn insert_samples(db: &DbConnection) -> Result<(), FydiaResponse> {
     warn!("Insert Sample Values");
 
     let mut user = if let Some(user) = User::by_token(&Token("default_token".to_string()), db).await

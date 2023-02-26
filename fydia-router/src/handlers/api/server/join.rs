@@ -10,11 +10,11 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// Return an error if serverid doesn't exist
-pub async fn join<'a>(
+pub async fn join(
     headers: HeaderMap,
     Path(server_id): Path<String>,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (mut user, mut server) =
         BasicValues::get_user_and_server(&headers, server_id, &database).await?;
 

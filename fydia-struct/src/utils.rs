@@ -33,7 +33,7 @@ impl<T> Id<T> {
     /// # Errors
     /// Returns an error if:
     /// * Id is unset
-    pub fn get_id_fydiaresponse<'a>(self) -> Result<T, FydiaResponse<'a>> {
+    pub fn get_id_fydiaresponse(self) -> Result<T, FydiaResponse> {
         if let Self::Id(id) = self {
             return Ok(id);
         }
@@ -43,11 +43,7 @@ impl<T> Id<T> {
 
     /// Return true if Id is `Id(T)`
     pub fn is_set(&self) -> bool {
-        if let Id::Unset = self {
-            return false;
-        }
-
-        true
+        !matches!(self, Id::Unset)
     }
 
     /// Return true if Id is `Unset`
@@ -80,7 +76,7 @@ impl<T: Clone> Id<T> {
     /// # Errors
     /// Returns an error if:
     /// * Id is unset
-    pub fn get_id_cloned_fydiaresponse<'a>(&self) -> Result<T, FydiaResponse<'a>> {
+    pub fn get_id_cloned_fydiaresponse(&self) -> Result<T, FydiaResponse> {
         if let Self::Id(id) = &self {
             return Ok(id.clone());
         }

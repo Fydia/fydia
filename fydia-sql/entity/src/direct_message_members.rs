@@ -15,7 +15,7 @@ pub struct Model {
 }
 
 impl<'m> Model {
-    const MESSAGE: FydiaResponse<'m> = FydiaResponse::Text("No DirectMessage with this expr");
+    const MESSAGE: FydiaResponse = FydiaResponse::TextError("No DirectMessage with this expr");
 
     /// Get models with any condition
     ///
@@ -23,10 +23,10 @@ impl<'m> Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_model_by<'a>(
+    pub async fn get_model_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse<'a>> {
+    ) -> Result<Self, FydiaResponse> {
         match Entity::find().filter(simpl).one(executor).await {
             Ok(Some(model)) => Ok(model),
             _ => Err(Self::MESSAGE),
@@ -39,10 +39,10 @@ impl<'m> Model {
     /// Return an error if:
     /// * Database is unreachable
     /// * Model doesn't exist with this condition
-    pub async fn get_models_by<'a>(
+    pub async fn get_models_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse<'a>> {
+    ) -> Result<Vec<Self>, FydiaResponse> {
         match Entity::find().filter(simpl).all(executor).await {
             Ok(model) => Ok(model),
             _ => Err(Self::MESSAGE),
@@ -58,13 +58,12 @@ impl<'m> Model {
     /// # Errors
     /// Return an error if :
     /// * Model with this id isn't exists
-    pub async fn get_directmessage<'a>(
+    pub async fn get_directmessage(
         &self,
         executor: &DatabaseConnection,
-    ) -> Result<DirectMessage, FydiaResponse<'a>> {
+    ) -> Result<DirectMessage, FydiaResponse> {
         let direct_message =
-            super::direct_message::Model::get_model_by_id(self.directmessage as u32, executor)
-                .await?;
+            super::direct_message::Model::get_model_by_id(self.directmessage, executor).await?;
 
         Ok(direct_message.to_directmessage())
     }

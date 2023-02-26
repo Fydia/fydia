@@ -8,10 +8,11 @@ use crate::handlers::api::user::login::user_login;
 use crate::handlers::api::user::selfinfo::get_info_of_self;
 use crate::handlers::api::user::token::verify;
 use crate::handlers::default;
+use crate::ServerState;
 use axum::Router;
 
 /// All routes related to the users
-pub fn user_routes() -> Router {
+pub fn user_routes() -> Router<ServerState> {
     axum::Router::new()
         .route("/create", axum::routing::post(create_user))
         .route("/update", axum::routing::put(default))
@@ -24,7 +25,7 @@ pub fn user_routes() -> Router {
         .nest("/direct_message", direct_message())
 }
 
-pub fn direct_message() -> Router {
+pub fn direct_message() -> Router<ServerState> {
     axum::Router::new()
         .route("/", axum::routing::get(get_direct_messages).post(default))
         .nest(

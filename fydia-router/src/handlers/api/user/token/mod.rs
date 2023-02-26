@@ -9,13 +9,11 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// This function will return an error if token isn't valid
-pub async fn verify<'a>(
+pub async fn verify(
     headers: HeaderMap,
     Extension(database): Extension<DbConnection>,
-) -> FydiaResult<'a> {
-    if let Err(res) = BasicValues::get_user(&headers, &database).await {
-        return Err(res);
-    }
+) -> FydiaResult {
+    BasicValues::get_user(&headers, &database).await?;
 
     Ok("".into_ok())
 }

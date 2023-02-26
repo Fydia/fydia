@@ -19,10 +19,10 @@ impl BasicValues {
     ///
     /// # Errors
     /// This function will return an errors if user token isn't correct
-    pub async fn get_user<'a>(
+    pub async fn get_user(
         headers: &HeaderMap,
         executor: &DbConnection,
-    ) -> Result<User, FydiaResponse<'a>> {
+    ) -> Result<User, FydiaResponse> {
         let token = Token::from_headervalue(headers).ok_or_else(|| "No token".into_error())?;
 
         token
@@ -36,11 +36,11 @@ impl BasicValues {
     /// # Errors
     /// This function will return an errors if serverid or user token isn't correct
     /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined<'a>(
+    pub async fn get_user_and_server_and_check_if_joined(
         headers: &HeaderMap,
         serverid: &String,
         executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse<'a>> {
+    ) -> Result<(User, Server), FydiaResponse> {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid).get(executor).await?;
@@ -60,7 +60,7 @@ impl BasicValues {
         headers: &HeaderMap,
         serverid: T,
         executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse<'a>> {
+    ) -> Result<(User, Server), FydiaResponse> {
         let user = Self::get_user(headers, executor).await?;
 
         let server = ServerId::new(serverid).get(executor).await?;
@@ -73,12 +73,12 @@ impl BasicValues {
     /// # Errors
     /// This function will return an errors if serverid, channelid isn't correct
     /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined_and_channel<'a>(
+    pub async fn get_user_and_server_and_check_if_joined_and_channel(
         headers: &HeaderMap,
         serverid: &String,
         channelid: &String,
         executor: &DbConnection,
-    ) -> Result<(User, Server, Channel), FydiaResponse<'a>> {
+    ) -> Result<(User, Server, Channel), FydiaResponse> {
         let (user, server) =
             Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
 

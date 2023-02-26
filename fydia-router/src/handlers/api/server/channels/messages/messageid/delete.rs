@@ -24,13 +24,13 @@ use crate::handlers::{
 /// Return an error if:
 /// * serverid, channelid, messageid, token isn't valid
 /// * The owner user and token user is different
-pub async fn delete_message<'a>(
+pub async fn delete_message(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
     Extension(_rsa): Extension<Arc<RsaData>>,
     Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
     Path((serverid, channelid, messageid)): Path<(String, String, String)>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
         &headers, &serverid, &channelid, &executor,
     )

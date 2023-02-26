@@ -2,7 +2,6 @@
 use std::sync::Arc;
 
 use crate::handlers::api::manager::websockets::manager::WebsocketManagerChannel;
-use axum::body::Bytes;
 use axum::extract::Extension;
 use fydia_dispatcher::keys::get::get_public_key;
 use fydia_dispatcher::message::receive::receive_message;
@@ -16,13 +15,13 @@ use fydia_struct::server::ServerId;
 use fydia_struct::user::UserInfo;
 use fydia_utils::http::HeaderMap;
 
-pub async fn event_handler<'a>(
+pub async fn event_handler(
     headers: HeaderMap,
-    body: Bytes,
+    body: String,
     Extension(rsa): Extension<Arc<RsaData>>,
     Extension(database): Extension<DbConnection>,
     Extension(wbsockets): Extension<Arc<WebsocketManagerChannel>>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let body = body.to_vec();
     let msg = receive_message(&headers, &body, &rsa)
         .await
@@ -36,7 +35,7 @@ pub async fn event_handler<'a>(
     Ok("".into_error())
 }
 
-pub async fn send_test_message<'a>(Extension(keys): Extension<Arc<RsaData>>) -> FydiaResult<'a> {
+pub async fn send_test_message(Extension(keys): Extension<Arc<RsaData>>) -> FydiaResult {
     let event = Event::new(
         ServerId::new("1ENwYDlsoepW9HHZEmYxEl9KKRQFBD"),
         EventContent::Message {

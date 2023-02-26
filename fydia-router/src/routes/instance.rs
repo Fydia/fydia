@@ -1,9 +1,10 @@
 use crate::handlers::api::instance::public_key::public_key;
+use crate::ServerState;
 use axum::response::IntoResponse;
 use axum::Router;
 
 /// All routes related to the instances
-pub fn instance_routes() -> Router {
+pub fn instance_routes() -> Router<ServerState> {
     Router::new()
         .route("/public_key", axum::routing::get(public_key))
         .route("/version", axum::routing::get(version))

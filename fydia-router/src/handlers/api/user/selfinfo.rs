@@ -9,10 +9,10 @@ use crate::handlers::basic::BasicValues;
 ///
 /// # Errors
 /// This function will return an error if the token is wrong
-pub async fn get_info_of_self<'a>(
+pub async fn get_info_of_self(
     headers: HeaderMap,
     Extension(executor): Extension<DbConnection>,
-) -> FydiaResult<'a> {
+) -> FydiaResult {
     let value = BasicValues::get_user(&headers, &executor)
         .await?
         .self_json_output()
