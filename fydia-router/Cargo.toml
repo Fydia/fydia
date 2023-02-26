@@ -17,7 +17,7 @@ fydia-dispatcher = { path = "../fydia-dispatcher" }
 tokio = { version = "1.25.0", default-features = false }
 futures = "0.3.26"
 chrono = "0.4.23"
-axum = { version = "0.6.7", features = ["ws", "headers"] }
+axum = { version = "0.6.8", features = ["ws", "headers"] }
 log = "0.4.17"
 mime = "0.3.16"
 multer = "2.0.4"
