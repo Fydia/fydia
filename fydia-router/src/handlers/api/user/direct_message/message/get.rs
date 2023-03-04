@@ -1,5 +1,5 @@
-use axum::extract::{Extension, Path};
-use fydia_sql::{impls::message::SqlMessage, sqlpool::DbConnection};
+use axum::extract::Path;
+use fydia_sql::impls::message::SqlMessage;
 use fydia_struct::{
     channel::ChannelId,
     messages::Message,
@@ -8,6 +8,8 @@ use fydia_struct::{
 
 use fydia_utils::http::HeaderMap;
 
+use crate::handlers::basic::Database;
+
 /// Get messages of a dm
 ///
 /// # Errors
@@ -15,7 +17,7 @@ use fydia_utils::http::HeaderMap;
 pub async fn get_message_dm(
     _headers: HeaderMap,
     Path(dm_id): Path<String>,
-    Extension(database): Extension<DbConnection>,
+    Database(database): Database,
 ) -> FydiaResult {
     let message = Message::by_channel(ChannelId::new(dm_id.clone()), &database).await;
     println!("{:?}", message);

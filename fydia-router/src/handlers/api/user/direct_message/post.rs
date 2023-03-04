@@ -1,25 +1,21 @@
-use axum::extract::{Extension, Path};
+use crate::handlers::basic::{Database, UserFromToken};
+use axum::extract::Path;
 use fydia_sql::impls::direct_message::{DirectMessageMembers, SqlDirectMessage};
 use fydia_sql::impls::user::UserFrom;
-use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::directmessage::DirectMessage;
 use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 use fydia_struct::utils::Id;
 use fydia_struct::{format::UserFormat, user::UserId};
-use fydia_utils::http::HeaderMap;
-
-use crate::handlers::basic::BasicValues;
 
 /// Create a new direct message
 ///
 /// # Errors
 /// This function will return an error if body isn't valid or if the target isn't exist
 pub async fn create_direct_message(
-    headers: HeaderMap,
+    UserFromToken(user): UserFromToken,
     Path(target_user): Path<String>,
-    Extension(database): Extension<DbConnection>,
+    Database(database): Database,
 ) -> FydiaResult {
-    let user = BasicValues::get_user(&headers, &database).await?;
     if UserFormat::from_string(&target_user).is_some() {
         return Err("Soon may be".into_not_implemented_error());
     }

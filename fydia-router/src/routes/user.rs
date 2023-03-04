@@ -29,14 +29,14 @@ pub fn direct_message() -> Router<ServerState> {
     axum::Router::new()
         .route("/", axum::routing::get(get_direct_messages).post(default))
         .nest(
-            "/create/:id",
+            "/create/:dmid",
             Router::new().route(
                 "/",
                 axum::routing::get(direct_message::post::create_direct_message),
             ),
         )
         .nest(
-            "/:id",
+            "/:dmid",
             Router::new()
                 .route("/message", axum::routing::get(get_message_dm).post(default))
                 .route("/message/:message_id", axum::routing::get(post_message_dm))

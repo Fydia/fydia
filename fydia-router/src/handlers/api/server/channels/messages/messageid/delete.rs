@@ -1,21 +1,14 @@
-use std::sync::Arc;
-
-use axum::extract::{Extension, Path};
-use fydia_sql::{
-    impls::{channel::SqlChannel, message::SqlMessage, user::SqlUser},
-    sqlpool::DbConnection,
-};
+use fydia_sql::impls::{channel::SqlChannel, message::SqlMessage};
 use fydia_struct::{
     event::EventContent,
-    instance::RsaData,
-    messages::Message,
-    response::{FydiaResult, IntoFydia, MapError},
+    response::{FydiaResult, IntoFydia},
 };
-use fydia_utils::http::HeaderMap;
 
 use crate::handlers::{
-    api::manager::websockets::manager::{WbManagerChannelTrait, WebsocketManagerChannel},
-    basic::BasicValues,
+    api::manager::websockets::manager::WbManagerChannelTrait,
+    basic::{
+        ChannelFromId, Database, MessageFromId, ServerJoinedFromId, UserFromToken, WebsocketManager,
+    },
 };
 
 /// Delete a requested message
@@ -25,29 +18,13 @@ use crate::handlers::{
 /// * serverid, channelid, messageid, token isn't valid
 /// * The owner user and token user is different
 pub async fn delete_message(
-    headers: HeaderMap,
-    Extension(executor): Extension<DbConnection>,
-    Extension(_rsa): Extension<Arc<RsaData>>,
-    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
-    Path((serverid, channelid, messageid)): Path<(String, String, String)>,
+    Database(database): Database,
+    UserFromToken(user): UserFromToken,
+    ServerJoinedFromId(server): ServerJoinedFromId,
+    ChannelFromId(channel): ChannelFromId,
+    MessageFromId(message): MessageFromId,
+    WebsocketManager(wbsocket): WebsocketManager,
 ) -> FydiaResult {
-    let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &executor,
-    )
-    .await?;
-
-    if !user
-        .permission_of_channel(&channel.id, &executor)
-        .await?
-        .calculate(Some(channel.id.clone()))
-        .error_to_fydiaresponse()?
-        .can_read()
-    {
-        return FydiaResult::Err("Unknow channel".into_error());
-    }
-
-    let message = Message::by_id(&messageid, &executor).await?;
-
     if message.author_id.id != user.id {
         return Err("You can't delete this message".into_error());
     }
@@ -57,10 +34,10 @@ pub async fn delete_message(
             &fydia_struct::event::Event {
                 server_id: server.id,
                 content: EventContent::MessageDelete {
-                    message_id: messageid,
+                    message_id: message.id.clone(),
                 },
             },
-            &channel.users(&executor).await?,
+            &channel.users(&database).await?,
         )
         .await
         .map_err(|error| {
@@ -68,7 +45,7 @@ pub async fn delete_message(
             "Cannot delete message".into_server_error()
         })?;
 
-    message.delete(&executor).await?;
+    message.delete(&database).await?;
 
     Ok("Message delete".into_error())
 }

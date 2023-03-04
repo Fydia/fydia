@@ -181,14 +181,6 @@ impl Date {
     pub fn new_fixed(date: DateTime<FixedOffset>) -> Self {
         Self(DateTime::from(date))
     }
-
-    /// Create a new `Date` with minimal `DateTime`
-    pub fn null() -> Self {
-        Self(DateTime::from_utc(
-            NaiveDateTime::from_timestamp_opt(0, 0).expect("Timestamp cannot be parsed"),
-            Utc,
-        ))
-    }
 }
 
 impl Default for Date {

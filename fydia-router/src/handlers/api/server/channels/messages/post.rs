@@ -1,16 +1,14 @@
 use crate::handlers::api::manager::websockets::manager::{
     WbManagerChannelTrait, WebsocketManagerChannel,
 };
-use crate::handlers::basic::BasicValues;
+use crate::handlers::basic::{ChannelFromId, ContentType, ServerJoinedFromId, UserFromToken};
 use crate::handlers::{get_json, get_json_value_from_body};
 use crate::ServerState;
-
-use axum::extract::{Path, State};
+use axum::extract::State;
 use chrono::DateTime;
 use futures::stream::once;
 use fydia_sql::impls::message::SqlMessage;
 use fydia_sql::impls::server::SqlServer;
-use fydia_sql::impls::user::SqlUser;
 use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::event::{Event, EventContent};
@@ -45,50 +43,28 @@ const CHECK_MIME: [mime::Mime; 3] = [
 /// * Body is bad
 /// * Content-Type isn't valid
 pub async fn post_messages(
+    UserFromToken(user): UserFromToken,
+    ServerJoinedFromId(server): ServerJoinedFromId,
+    ChannelFromId(channel): ChannelFromId,
+    ContentType(mime, raw_content_type): ContentType,
     State(state): State<ServerState>,
-    Path((serverid, channelid)): Path<(String, String)>,
     headers: HeaderMap,
     body: String,
 ) -> FydiaResult {
-    let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers,
-        &serverid,
-        &channelid,
-        &state.database,
-    )
-    .await?;
+    let ServerState {
+        database,
+        rsa,
+        wbsocket,
+        ..
+    } = state;
 
-    if !user
-        .permission_of_channel(&channel.id, &state.database)
-        .await?
-        .calculate(Some(channel.id.clone()))
-        .error_to_fydiaresponse()?
-        .can_read()
-    {
-        return Err("Unknow channel".into_error());
-    }
-
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .ok_or_else(|| "No Content-Type header found".into_error())?
-        .to_str()
-        .map_err(|error| {
-            error!("{error}");
-            "Content-Type error".into_error()
-        })?;
-
-    let mime_type = Mime::from_str(content_type).map_err(|error| {
-        error!("{error}");
-        "Bad Content-Type".into_error()
-    })?;
-
-    if CHECK_MIME.contains(&mime_type) || content_type == "application/json; charset=utf-8" {
+    if CHECK_MIME.contains(&mime) || raw_content_type == "application/json; charset=utf-8" {
         let json = get_json_value_from_body(&body)?;
         let event = json_message(json, user, &channel.id, &server.id).await?;
-        return send_event(event, server, &state.rsa, state.wbsocket, state.database).await;
+        return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
-    if mime_type == mime::MULTIPART_FORM_DATA {
+    if mime == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<String, Infallible>::Ok(body) });
         let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found".into_error())?;
 
@@ -96,7 +72,7 @@ pub async fn post_messages(
 
         let event = multipart_to_event(multer, user.clone(), &channel.id, &server.id).await?;
 
-        return send_event(event, server, &state.rsa, state.wbsocket, state.database).await;
+        return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
     Err("Content-Type error".into_error())
@@ -270,5 +246,5 @@ pub async fn send_event(
         });
     }
 
-    Ok("Message send".into_error())
+    Ok("Message send".into_ok())
 }

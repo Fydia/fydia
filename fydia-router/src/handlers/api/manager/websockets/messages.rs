@@ -3,12 +3,12 @@
 use std::sync::Arc;
 
 use crate::handlers::api::manager::websockets::ChannelMessage;
+use crate::handlers::basic::{Database, WebsocketManager};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Extension, Query};
+use axum::extract::Query;
 use axum::response::IntoResponse;
 use futures::prelude::*;
 use fydia_sql::impls::token::SqlToken;
-use fydia_sql::sqlpool::DbConnection;
 use fydia_struct::querystring::QsToken;
 use fydia_struct::user::{Token, User};
 use fydia_utils::{serde::Serialize, serde_json};
@@ -16,8 +16,8 @@ use fydia_utils::{serde::Serialize, serde_json};
 use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
 
 pub async fn ws_handler(
-    Extension(database): Extension<DbConnection>,
-    Extension(wbsocket): Extension<Arc<WebsocketManagerChannel>>,
+    Database(database): Database,
+    WebsocketManager(wbsocket): WebsocketManager,
     Query(token): Query<QsToken>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {

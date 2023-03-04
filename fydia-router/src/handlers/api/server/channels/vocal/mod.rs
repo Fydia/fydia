@@ -1,27 +1,13 @@
-use axum::extract::{Extension, Path};
-use fydia_sql::sqlpool::DbConnection;
+use crate::handlers::basic::ChannelFromId;
 use fydia_struct::response::{FydiaResult, IntoFydia};
-use fydia_utils::http::HeaderMap;
-
-use crate::handlers::basic::BasicValues;
 
 /// Join a vocal channel
 ///
 /// # Errors
 /// Return an error if channelid isn't valid or if channel is text
-pub async fn join_channel(
-    headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-    Path((serverid, channelid)): Path<(String, String)>,
-) -> FydiaResult {
-    let (_, _, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
-    )
-    .await?;
-
+pub async fn join_channel(ChannelFromId(channel): ChannelFromId) -> FydiaResult {
     if channel.channel_type.is_voice() {
-        Ok("Vocal Channel".into_ok())
-    } else {
-        Err("Text Channel".into_error())
+        return Ok("Vocal Channel".into_ok());
     }
+    Err("Text Channel".into_error())
 }

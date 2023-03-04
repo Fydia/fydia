@@ -1,93 +1,318 @@
+use crate::ServerState;
+use axum::{
+    extract::{FromRequest, FromRequestParts, RawPathParams},
+    http::{header::CONTENT_TYPE, Request},
+};
 use fydia_sql::{
-    impls::{channel::SqlChannelId, server::SqlServerId, token::SqlToken},
+    impls::{
+        channel::SqlChannelId, message::SqlMessage, role::SqlRoles, server::SqlServerId,
+        token::SqlToken, user::SqlUser,
+    },
     sqlpool::DbConnection,
 };
-use fydia_utils::http::HeaderMap;
-
 use fydia_struct::{
     channel::{Channel, ChannelId},
-    response::{FydiaResponse, IntoFydia},
+    instance::RsaData,
+    messages::Message,
+    response::{FydiaResponse, IntoFydia, MapError},
+    roles::Role,
     server::{Server, ServerId},
     user::{Token, User},
 };
+use fydia_utils::async_trait;
+use mime::Mime;
+use std::{marker::PhantomData, str::FromStr, sync::Arc};
 
 #[derive(Debug)]
-pub struct BasicValues;
+pub struct ContentType(pub mime::Mime, pub String);
 
-impl BasicValues {
-    /// Return user from token
-    ///
-    /// # Errors
-    /// This function will return an errors if user token isn't correct
-    pub async fn get_user(
-        headers: &HeaderMap,
-        executor: &DbConnection,
-    ) -> Result<User, FydiaResponse> {
-        let token = Token::from_headervalue(headers).ok_or_else(|| "No token".into_error())?;
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for ContentType {
+    type Rejection = FydiaResponse;
 
-        token
-            .get_user(executor)
-            .await
-            .ok_or_else(|| "Wrong token".into_error())
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let content_type = parts
+            .headers
+            .get(CONTENT_TYPE)
+            .ok_or_else(|| "No Content-Type header found".into_error())?
+            .to_str()
+            .map_err(|error| {
+                error!("{error}");
+                "Content-Type error".into_error()
+            })?;
+
+        let mime_type = Mime::from_str(content_type).map_err(|error| {
+            error!("{error}");
+            "Bad Content-Type".into_error()
+        })?;
+
+        Ok(Self(mime_type, content_type.to_string()))
     }
+}
 
-    /// Return user, server from url parameters
-    ///
-    /// # Errors
-    /// This function will return an errors if serverid or user token isn't correct
-    /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined(
-        headers: &HeaderMap,
-        serverid: &String,
-        executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse> {
-        let user = Self::get_user(headers, executor).await?;
+macro_rules! create_from_state {
+    ($name:ident, $type:ty, $value:ident) => {
+        #[derive(Debug)]
+        pub struct $name(pub $type);
 
-        let server = ServerId::new(serverid).get(executor).await?;
+        #[async_trait::async_trait]
+        impl FromRequestParts<ServerState> for $name {
+            type Rejection = FydiaResponse;
 
-        if !user.servers.is_join(&server.id) {
-            return Err("Server not exists".into_error());
+            async fn from_request_parts(
+                _: &mut axum::http::request::Parts,
+                state: &ServerState,
+            ) -> Result<Self, Self::Rejection> {
+                Ok(Self(state.$value.clone()))
+            }
+        }
+    };
+}
+
+create_from_state!(WebsocketManager, Arc<WebsocketManagerChannel>, wbsocket);
+create_from_state!(Rsa, Arc<RsaData>, rsa);
+create_from_state!(Database, DbConnection, database);
+create_from_state!(TypingManager, Arc<TypingManagerChannel>, typing);
+
+#[derive(Debug)]
+struct UrlGetter<T: UrlName>(String, PhantomData<T>);
+
+impl<T: UrlName> UrlGetter<T> {
+    pub fn get_key() -> String {
+        T::URL_KEY.to_string()
+    }
+}
+
+trait UrlName: Sized {
+    const URL_KEY: &'static str;
+}
+
+#[async_trait::async_trait]
+impl<T: UrlName> FromRequestParts<ServerState> for UrlGetter<T> {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let raw = RawPathParams::from_request_parts(parts, state)
+            .await
+            .map_err(|f| FydiaResponse::StringError(Box::new(f.to_string())))?;
+
+        for (key, value) in raw.iter() {
+            if key == Self::get_key() {
+                return Ok(Self(value.to_string(), PhantomData));
+            }
         }
 
-        Ok((user, server))
+        Err("No message id".into_error())
     }
+}
+#[derive(Debug)]
+pub struct RoleFromId(pub Role);
 
-    /// Return user, server from url parameters
-    ///
-    /// # Errors
-    /// This function will return an errors if serverid or user token isn't correct
-    pub async fn get_user_and_server<'a, T: Into<String>>(
-        headers: &HeaderMap,
-        serverid: T,
-        executor: &DbConnection,
-    ) -> Result<(User, Server), FydiaResponse> {
-        let user = Self::get_user(headers, executor).await?;
+impl UrlName for RoleFromId {
+    const URL_KEY: &'static str = "roleid";
+}
 
-        let server = ServerId::new(serverid).get(executor).await?;
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for RoleFromId {
+    type Rejection = FydiaResponse;
 
-        Ok((user, server))
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let UserFromToken(user) = UserFromToken::from_request_parts(parts, state).await?;
+        let ChannelFromId(channel) = ChannelFromId::from_request_parts(parts, state).await?;
+        let ServerJoinedFromId(server) =
+            ServerJoinedFromId::from_request_parts(parts, state).await?;
+
+        let UrlGetter(roleid, _) =
+            UrlGetter::<RoleFromId>::from_request_parts(parts, state).await?;
+
+        if !user
+            .permission_of_channel(&channel.id, &state.database)
+            .await?
+            .calculate(Some(channel.id.clone()))
+            .error_to_fydiaresponse()?
+            .is_admin()
+        {
+            return Err("Unknow channel".into_error());
+        }
+        let roleid = roleid.as_str().parse().error_to_fydiaresponse()?;
+        let role = Role::by_id(roleid, &server.id, &state.database).await?;
+
+        Ok(Self(role))
     }
+}
 
-    /// Return user, server and channel from url parameters
-    ///
-    /// # Errors
-    /// This function will return an errors if serverid, channelid isn't correct
-    /// or if the user has not joined the server
-    pub async fn get_user_and_server_and_check_if_joined_and_channel(
-        headers: &HeaderMap,
-        serverid: &String,
-        channelid: &String,
-        executor: &DbConnection,
-    ) -> Result<(User, Server, Channel), FydiaResponse> {
-        let (user, server) =
-            Self::get_user_and_server_and_check_if_joined(headers, serverid, executor).await?;
+struct MessageId(pub String);
 
-        let channel = ChannelId::new(channelid).channel(executor).await?;
+impl UrlName for MessageId {
+    const URL_KEY: &'static str = "messageid";
+}
+#[derive(Debug)]
+pub struct MessageFromId(pub Message);
+
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for MessageFromId {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let UserFromToken(user) = UserFromToken::from_request_parts(parts, state).await?;
+        let ChannelFromId(channel) = ChannelFromId::from_request_parts(parts, state).await?;
+
+        let UrlGetter(url_param, _) =
+            UrlGetter::<MessageId>::from_request_parts(parts, state).await?;
+
+        if !user
+            .permission_of_channel(&channel.id, &state.database)
+            .await?
+            .calculate(Some(channel.id.clone()))
+            .error_to_fydiaresponse()?
+            .can_read()
+        {
+            return Err("Unknow channel".into_error());
+        }
+
+        let message = Message::by_id(&url_param, &state.database).await?;
+
+        Ok(Self(message))
+    }
+}
+
+use super::{
+    api::manager::{typing::TypingManagerChannel, websockets::manager::WebsocketManagerChannel},
+    get_json, get_json_value_from_body,
+};
+
+#[derive(Debug)]
+pub struct ChannelFromId(pub Channel);
+
+impl UrlName for ChannelFromId {
+    const URL_KEY: &'static str = "channelid";
+}
+
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for ChannelFromId {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let ServerJoinedFromId(server) =
+            ServerJoinedFromId::from_request_parts(parts, state).await?;
+
+        let UrlGetter(channelid, _) =
+            UrlGetter::<ChannelFromId>::from_request_parts(parts, state).await?;
+
+        let channel = ChannelId::new(channelid).channel(&state.database).await?;
 
         if !server.channel.is_exists(&channel.id) {
             return Err("Channel is not exists".into_error());
         }
 
-        Ok((user, server, channel))
+        Ok(Self(channel))
+    }
+}
+
+#[derive(Debug)]
+pub struct ServerJoinedFromId(pub Server);
+
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for ServerJoinedFromId {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let UserFromToken(user) = UserFromToken::from_request_parts(parts, state).await?;
+        let ServerFromId(server) = ServerFromId::from_request_parts(parts, state).await?;
+
+        if !user.servers.is_join(&server.id) {
+            return Err("Server not exists".into_error());
+        }
+
+        Ok(Self(server))
+    }
+}
+
+#[derive(Debug)]
+pub struct ServerFromId(pub Server);
+
+impl UrlName for ServerFromId {
+    const URL_KEY: &'static str = "serverid";
+}
+
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for ServerFromId {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let UrlGetter(serverid, _) =
+            UrlGetter::<ServerFromId>::from_request_parts(parts, state).await?;
+
+        ServerId::new(serverid).get(&state.database).await.map(Self)
+    }
+}
+
+#[derive(Debug)]
+pub struct UserFromJson(pub User);
+
+#[async_trait::async_trait]
+impl FromRequest<ServerState, axum::body::Body> for UserFromJson {
+    type Rejection = FydiaResponse;
+
+    async fn from_request(
+        req: Request<axum::body::Body>,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let body = String::from_request(req, state)
+            .await
+            .map_err(|f| FydiaResponse::StringError(Box::new(f.to_string())))?;
+
+        let json = get_json_value_from_body(&body)?;
+
+        let email = get_json("email", &json)?;
+        let password = get_json("password", &json)?;
+
+        User::by_email_and_password(email, password, &state.database)
+            .await
+            .ok_or_else(|| "User not exists".into_error())
+            .map(Self)
+    }
+}
+
+#[derive(Debug)]
+pub struct UserFromToken(pub User);
+
+#[async_trait::async_trait]
+impl FromRequestParts<ServerState> for UserFromToken {
+    type Rejection = FydiaResponse;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let token =
+            Token::from_headervalue(&parts.headers).ok_or_else(|| "No token".into_error())?;
+
+        token
+            .get_user(&state.database)
+            .await
+            .ok_or_else(|| "Wrong token".into_error())
+            .map(UserFromToken)
     }
 }

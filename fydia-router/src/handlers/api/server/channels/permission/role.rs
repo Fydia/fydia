@@ -1,15 +1,11 @@
-use axum::Extension;
-use axum::{extract::Path, http::HeaderMap};
-use fydia_sql::impls::permission::PermissionSql;
-use fydia_sql::impls::role::SqlRoles;
-use fydia_sql::impls::user::SqlUser;
-use fydia_sql::sqlpool::DbConnection;
-use fydia_struct::permission::Permission;
-use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia, MapError};
-use fydia_struct::roles::{Role, RoleId};
-
-use crate::handlers::basic::BasicValues;
+use crate::handlers::basic::{
+    ChannelFromId, Database, RoleFromId, ServerJoinedFromId, UserFromToken,
+};
 use crate::handlers::{get_json, get_json_value_from_body};
+use fydia_sql::impls::permission::PermissionSql;
+use fydia_sql::impls::user::SqlUser;
+use fydia_struct::permission::Permission;
+use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia};
 
 /// Get permission of role
 ///
@@ -17,19 +13,11 @@ use crate::handlers::{get_json, get_json_value_from_body};
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
 pub async fn get_permission_of_role(
-    Path((serverid, channelid, roleid)): Path<(String, String, String)>,
-    Extension(database): Extension<DbConnection>,
-    headers: HeaderMap,
+    ServerJoinedFromId(_): ServerJoinedFromId,
+    ChannelFromId(channel): ChannelFromId,
+    RoleFromId(role): RoleFromId,
+    Database(database): Database,
 ) -> FydiaResult {
-    let (_, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
-    )
-    .await?;
-
-    let roleid = roleid.as_str().parse().error_to_fydiaresponse()?;
-
-    let role = Role::by_id(roleid, &server.id, &database).await?;
-
     let perm = Permission::of_role_in_channel(&channel.id, &role.id, &database).await?;
 
     FydiaResult::Ok(FydiaResponse::from_serialize(perm))
@@ -41,16 +29,13 @@ pub async fn get_permission_of_role(
 /// Return an error if :
 /// * channelid, serverid, roleid isn't valid
 pub async fn post_permission_of_user(
+    UserFromToken(user): UserFromToken,
+    ServerJoinedFromId(server): ServerJoinedFromId,
+    ChannelFromId(channel): ChannelFromId,
+    RoleFromId(role): RoleFromId,
+    Database(database): Database,
     body: String,
-    Path((serverid, channelid, roleid)): Path<(String, String, String)>,
-    Extension(database): Extension<DbConnection>,
-    headers: HeaderMap,
 ) -> FydiaResult {
-    let (user, server, channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
-    )
-    .await?;
-
     let perm = user.permission_of_server(&server.id, &database).await?;
 
     if !perm.can(&fydia_struct::permission::PermissionValue::Admin) {
@@ -63,10 +48,8 @@ pub async fn post_permission_of_user(
         .parse()
         .map_err(|_err| "Bad value".into_server_error())?;
 
-    let roleid = RoleId::Id(roleid.parse().map_err(|_err| "Bad Value".into_error())?);
-
     if let Ok(mut permission) =
-        Permission::of_role_in_channel(&channel.id, &roleid, &database).await
+        Permission::of_role_in_channel(&channel.id, &role.id, &database).await
     {
         permission.value = value;
         if permission.update_value(&database).await.is_err() {
@@ -74,7 +57,7 @@ pub async fn post_permission_of_user(
         };
     } else {
         let perm = Permission {
-            permission_type: fydia_struct::permission::PermissionType::Role(roleid),
+            permission_type: fydia_struct::permission::PermissionType::Role(role.id),
             channelid: Some(channel.id),
             value,
         };

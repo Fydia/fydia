@@ -1,30 +1,21 @@
-use axum::extract::{Extension, Path, State};
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::user::SqlUser;
-use fydia_sql::sqlpool::DbConnection;
+
 use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
 
-use fydia_utils::http::HeaderMap;
-
-use crate::handlers::basic::BasicValues;
+use crate::handlers::basic::{ChannelFromId, Database, UserFromToken};
 use crate::handlers::{get_json, get_json_value_from_body};
-use crate::ServerState;
 
 /// Change name of a channel
 ///
 /// # Errors
 /// Return an error if serverid or channelid or body isn't valid
 pub async fn update_name(
-    headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-    Path((serverid, channelid)): Path<(String, String)>,
+    UserFromToken(user): UserFromToken,
+    ChannelFromId(mut channel): ChannelFromId,
+    Database(database): Database,
     body: String,
 ) -> FydiaResult {
-    let (user, _, mut channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers, &serverid, &channelid, &database,
-    )
-    .await?;
-
     if !user
         .permission_of_channel(&channel.id, &database)
         .await?
@@ -50,25 +41,16 @@ pub async fn update_name(
 /// # Errors
 /// Return an error if channelid or serverid or body isn't valid
 pub async fn update_description(
-    State(state): State<ServerState>,
-    Path((serverid, channelid)): Path<(String, String)>,
-    headers: HeaderMap,
+    ChannelFromId(mut channel): ChannelFromId,
+    Database(database): Database,
     body: String,
 ) -> FydiaResult {
-    let (_, _, mut channel) = BasicValues::get_user_and_server_and_check_if_joined_and_channel(
-        &headers,
-        &serverid,
-        &channelid,
-        &state.database,
-    )
-    .await?;
-
     let json = get_json_value_from_body(&body)?;
 
     let description = get_json("description", &json)?;
 
     channel
-        .update_description(description, &state.database)
+        .update_description(description, &database)
         .await
         .map(|_| "Channel description updated".into_ok())
 }

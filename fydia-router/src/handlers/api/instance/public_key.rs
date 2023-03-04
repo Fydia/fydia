@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
-use axum::{extract::Extension, response::IntoResponse};
-use fydia_struct::instance::RsaData;
+use crate::handlers::basic::Rsa;
+use axum::response::IntoResponse;
 use fydia_utils::http::StatusCode;
 
-pub async fn public_key(Extension(rsa): Extension<Arc<RsaData>>) -> impl IntoResponse {
+pub async fn public_key(Rsa(rsa): Rsa) -> impl IntoResponse {
     if let Some(pem) = fydia_crypto::pem::key_to_string(&rsa.1) {
         (StatusCode::OK, pem)
     } else {

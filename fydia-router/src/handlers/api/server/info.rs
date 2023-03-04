@@ -1,19 +1,10 @@
-use axum::extract::Extension;
-use fydia_sql::sqlpool::DbConnection;
+use crate::handlers::basic::UserFromToken;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
-use fydia_utils::http::HeaderMap;
-
-use crate::handlers::basic::BasicValues;
 
 /// Return all server of user
 ///
 /// # Errors
 /// Return an error if the token isn't valid
-pub async fn get_server_of_user(
-    headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
-    let user = BasicValues::get_user(&headers, &database).await?;
-
+pub async fn get_server_of_user(UserFromToken(user): UserFromToken) -> FydiaResult {
     Ok(FydiaResponse::from_serialize(user.servers))
 }

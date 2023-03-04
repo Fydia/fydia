@@ -176,7 +176,7 @@ pub fn get_router(
         .with_state(state)
 }
 
-/// ServerState contains all required data for response
+/// `ServerState` contains all required data for response
 #[derive(Clone, Debug)]
 pub struct ServerState {
     pub database: DbConnection,

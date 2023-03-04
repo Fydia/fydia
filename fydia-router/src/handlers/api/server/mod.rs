@@ -1,8 +1,5 @@
-use crate::handlers::basic::BasicValues;
-use axum::extract::{Extension, Path};
-use fydia_sql::sqlpool::DbConnection;
+use crate::handlers::basic::ServerJoinedFromId;
 use fydia_struct::response::{FydiaResponse, FydiaResult};
-use fydia_utils::http::HeaderMap;
 
 pub mod channels;
 pub mod create;
@@ -15,12 +12,6 @@ pub mod roles;
 ///
 /// # Errors
 /// This function will return if the token or serverid isn't valid
-pub async fn get_server(
-    headers: HeaderMap,
-    Path(serverid): Path<String>,
-    Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
-    BasicValues::get_user_and_server_and_check_if_joined(&headers, &serverid, &database)
-        .await
-        .map(|(_, server)| FydiaResponse::from_serialize(server))
+pub async fn get_server(ServerJoinedFromId(server): ServerJoinedFromId) -> FydiaResult {
+    Ok(FydiaResponse::from_serialize(server))
 }

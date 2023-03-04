@@ -1,31 +1,20 @@
 #![allow(clippy::unwrap_used)]
 
-use std::str::FromStr;
-
-use axum::extract::{Extension, Path, State};
-use fydia_sql::{impls::server::SqlServer, sqlpool::DbConnection};
+use crate::handlers::basic::{Database, ServerJoinedFromId};
+use fydia_sql::impls::server::SqlServer;
 use fydia_struct::{
     file::File,
     response::{FydiaResponse, FydiaResult, IntoFydia},
 };
-use fydia_utils::http::{HeaderMap, StatusCode};
+use fydia_utils::http::StatusCode;
 use mime::Mime;
-
-use crate::{handlers::basic::BasicValues, ServerState};
+use std::str::FromStr;
 
 /// Return icon of server
 ///
 /// # Errors
 /// Return an error if serverid isn't valid
-pub async fn get_picture_of_server(
-    Path(server_id): Path<String>,
-    headers: HeaderMap,
-    Extension(database): Extension<DbConnection>,
-) -> FydiaResult {
-    let (_, server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &database)
-            .await?;
-
+pub async fn get_picture_of_server(ServerJoinedFromId(server): ServerJoinedFromId) -> FydiaResult {
     let value = File::get(server.icon).get_value().map_err(|error| {
         error!("{error}");
         "Cannot get file".into_error()
@@ -51,13 +40,9 @@ const MAX_CONTENT_LENGHT: usize = 8_000_000;
 /// This function will return an error if file given isn't a file or if file is too large
 /// of if server doesn't exist
 pub async fn post_picture_of_server(
-    State(state): State<ServerState>,
-    Path(server_id): Path<String>,
-    headers: HeaderMap,
+    ServerJoinedFromId(mut server): ServerJoinedFromId,
+    Database(database): Database,
 ) -> FydiaResult {
-    let (_, mut server) =
-        BasicValues::get_user_and_server_and_check_if_joined(&headers, &server_id, &state.database)
-            .await?;
     let body = vec![];
     if body.len() > MAX_CONTENT_LENGHT {
         return Err("".into_error_with_statuscode(StatusCode::PAYLOAD_TOO_LARGE));
@@ -80,7 +65,7 @@ pub async fn post_picture_of_server(
     server.icon = file.get_name();
 
     server
-        .update(&state.database)
+        .update(&database)
         .await
         .map(|_| "Icon have been update".into_ok())
 }

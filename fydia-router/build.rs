@@ -11,7 +11,7 @@ fn main() {
     if cfg!(feature = "flutter_client") {
         Command::new("git")
             .current_dir(".")
-            .args(&[
+            .args([
                 "clone",
                 "https://github.com/fydia/fydiapackages",
                 "--depth",
@@ -22,7 +22,7 @@ fn main() {
 
         Command::new("flutter")
             .current_dir("./fydiapackages/fydiaclient")
-            .args(&["build", "web"])
+            .args(["build", "web"])
             .output()
             .unwrap();
     }
