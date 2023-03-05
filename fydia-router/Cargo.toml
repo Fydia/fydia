@@ -5,7 +5,7 @@ edition = "2018"
 
 [features]
 flutter_client = ["rust-embed"]
-
+sample = ["fydia-sql/sample"]
 
 [dependencies]
 fydia-config = { path = "../fydia-config" }

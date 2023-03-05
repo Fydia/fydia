@@ -1,42 +1,17 @@
+lazy_static::lazy_static! {
+    static ref CONTEXT: Context = Context::default();
+}
+
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
+use fydia_utils::http::{HeaderName, HeaderValue};
+use reqwest::Method;
 
-use fydia_utils::{
-    http::HeaderValue,
-    serde::{Deserialize, Serialize},
-    serde_json::Value,
-};
-use reqwest::header::HeaderName;
-
-#[derive(Deserialize, Serialize, Default, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-struct LibTest {
-    #[serde(skip)]
-    client: reqwest::Client,
-    #[serde(flatten)]
-    context: Context,
-    tests: HashMap<String, Test>,
-}
-
-impl LibTest {
-    pub fn from_str(str: &str) -> Self {
-        fydia_utils::serde_json::from_str::<LibTest>(str).unwrap()
-    }
-
-    pub async fn run_tests(&self) {
-        for i in self.tests.values() {
-            i.run(&self.context).await
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "fydia_utils::serde")]
+#[derive(Debug)]
 pub struct Context {
     url: String,
-    port: u16,
+    port: u32,
 }
 
 impl Default for Context {
@@ -47,122 +22,106 @@ impl Default for Context {
         }
     }
 }
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-#[serde(untagged)]
-pub enum Body {
-    String(String),
-    Json(fydia_utils::serde_json::Value),
-}
 
-impl ToString for Body {
-    fn to_string(&self) -> String {
-        match self {
-            Body::String(string) => string.to_owned(),
-            Body::Json(json) => fydia_utils::serde_json::to_string(json).unwrap(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-#[serde(tag = "type")]
-#[serde(rename_all = "lowercase")]
-pub enum StepType {
-    /// Message
-    Ws { body: String },
-
-    /// method, Body, headers to add
-    Http {
-        method: String,
-        url: String,
-        headers: Option<HashMap<String, String>>,
-        body: Body,
-    },
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-#[serde(untagged)]
-pub enum StepResultType {
-    HttpString { status_code: u32, body: String },
-    HttpValue { status_code: u32, body: Value },
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-pub struct Step {
-    #[serde(flatten)]
-    test_type: StepType,
-    result: StepResultType,
-}
-
-impl Step {
-    pub async fn run(&self, ctx: &Context) {
-        match &self.test_type {
-            StepType::Ws { body } => todo!(),
-            StepType::Http {
-                method,
-                url,
-                headers,
-                body,
-            } => {
-                let client = reqwest::Client::new();
-                let url = format!("http://{}:{}{}", ctx.url, ctx.port, url);
-                let mut rq = match method.to_uppercase().as_str() {
-                    "POST" => client.post(url),
-                    "GET" => client.get(url),
-                    "DELETE" => client.delete(url),
-                    _ => panic!("Unknown method"),
-                };
-
-                if let Some(headers) = headers {
-                    for (key, value) in headers.iter() {
-                        let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
-                        let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
-
-                        rq = rq.header(name, value);
-                    }
-                }
-
-                rq = rq.body(body.to_string());
-
-                let res = rq.send().await.unwrap();
-
-                println!("{:?}", res.text().await);
-            }
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Default, Debug)]
-#[serde(crate = "fydia_utils::serde")]
-#[serde(untagged)]
-pub enum Test {
-    OneStep(Step),
-    Steps(Vec<Step>),
-    Other(Value),
-
-    #[default]
-    None,
+pub struct Test {
+    method: Method,
+    url: String,
+    body: String,
+    headers: Vec<(String, String)>,
+    result: Option<TestResult>,
 }
 
 impl Test {
-    pub async fn run(&self, ctx: &Context) {
-        match self {
-            Test::OneStep(test) => test.run(ctx).await,
-            Test::Steps(tests) => {
-                for test in tests {
-                    test.run(ctx).await;
-                }
-            }
-            Test::Other(v) => {
-                let tos = fydia_utils::serde_json::to_string(v).unwrap();
-                println!("{:#?}", v.as_array().unwrap());
-                let a = fydia_utils::serde_json::from_str::<Vec<Step>>(&tos);
-                println!("{:?}", a);
-            }
-            Test::None => panic!(),
+    pub fn new<T>(
+        method: Method,
+        url: T,
+        body: T,
+        headers: Vec<(String, String)>,
+        result: Option<TestResult>,
+    ) -> Self
+    where
+        T: Into<String>,
+    {
+        Self {
+            method,
+            url: url.into(),
+            body: body.into(),
+            headers,
+            result,
         }
     }
+
+    pub fn add_result(&mut self, result: TestResult) {
+        self.result = Some(result);
+    }
+
+    ///
+    /// # Errors
+    ///
+    pub async fn send(self) -> Result<(), String> {
+        let ctx = &CONTEXT;
+        let client = reqwest::Client::new();
+        let url = format!("http://{}:{}{}", ctx.url, ctx.port, self.url);
+        let mut rq = match self.method.as_str().to_uppercase().as_str() {
+            "POST" => client.post(url),
+            "GET" => client.get(url),
+            "DELETE" => client.delete(url),
+            _ => return Err("Unknown method".to_string()),
+        };
+
+        for (key, value) in self.headers.iter() {
+            let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
+            let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
+
+            rq = rq.header(name, value);
+        }
+
+        rq = rq.body(self.body);
+
+        let res = rq.send().await.unwrap();
+
+        let statuscode = res.status().as_u16();
+        let body = res.text().await.unwrap();
+        let resulttest = self.result.unwrap();
+
+        assert_eq!(statuscode, resulttest.status_code);
+
+        if !resulttest.body.is_empty() {
+            assert_eq!(body, resulttest.body);
+        }
+
+        Ok(())
+    }
+}
+
+pub struct TestResult {
+    status_code: u16,
+    body: String,
+}
+
+impl TestResult {
+    pub fn new<T: Into<String>>(status_code: u16, body: T) -> Self {
+        Self {
+            status_code,
+            body: body.into(),
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! create_test {
+    ($method:expr, $url:expr, $body:expr) => {
+        $crate::Test::new($method, $url, $body, vec![], None)
+    };
+
+    ($method:expr, $url:expr, $body:expr, $headers:expr) => {
+        $crate::Test::new($method, $url, $body, $headers, None)
+    };
+}
+
+#[macro_export]
+macro_rules! create_result {
+    ($statuscode:expr, $body:expr, $test:expr) => {
+        $test.add_result($crate::TestResult::new($statuscode, $body))
+    };
 }

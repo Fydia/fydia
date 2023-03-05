@@ -57,78 +57,19 @@ jobs:
         with:
           command: build
           args: -p fydia --release
-      - name: Compress binaries
-        uses: svenstaro/upx-action@v2
-        with:
-          file: "/home/runner/work/fydia/fydia/target/release/fydia"
       - name: upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: "Linux-release"
           path: "/home/runner/work/fydia/fydia/target/release/fydia"
-          
-  build_with_flutter:
-    name: "Build fydia with fydia client web"
-    strategy:
-      matrix:
-        os: [ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Clone fydiapackages
-        uses: actions/checkout@v3
-        with:
-          ref: "origin/main"
-          repository: "fydia/fydiapackages"
-          path: "./fydia/fydia-router/fydiapackages"
-          token: ${{ secrets.GH_TOKEN }}
-      - uses: rui314/setup-mold@v1
-      - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: latest
-          platform: x64
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: Swatinem/rust-cache@v2
-      - name: Install Flutter
-        uses: britannio/action-install-flutter@v1
-      - name: Fydia with Flutter Client
+      - name: Fydia
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p fydia --features flutter_client --release
-      - name: Compress binaries
-        uses: svenstaro/upx-action@v2
-        with:
-          file: "/home/runner/work/fydia/fydia/target/release/fydia"
-      - name: upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: "Linux-flutter-release"
-          path: "/home/runner/work/fydia/fydia/target/release/fydia"
-  
-  tests_fydia:
-    needs: build_fydia
-    name: "Test fydia"
-    strategy:
-      matrix:
-        os: [ubuntu-18.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: julia-actions/setup-julia@v1
-        with:
-            version: 1.7.3
-            arch: x64
-      - uses: actions/download-artifact@v3
-        with:
-          name: "Linux-release"
-          path: test-env
+          args: -p fydia --features=sample
+      - name: test
       - run: |
+            mkdir test-env
             cd test-env
             echo '[instance]
             domain = ""
@@ -144,13 +85,14 @@ jobs:
             name = ""
             password = ""
             database_name = "Fydia"' >> config.toml
-            chmod +x ./fydia
-            ./fydia &
-            julia ../fydia-libtest.jl/main.jl
+            chmod +x ../target/release/fydia
+            ../target/release/fydia &
+            cd ..
+            cargo test -p fydia-test
             killall fydia
- 
+          
   delete-artifacts:
-    needs: [build_fydia, build_with_flutter]
+    needs: [build_fydia]
     runs-on: ubuntu-latest
     steps:
       - uses: kolpav/purge-artifacts-action@v1

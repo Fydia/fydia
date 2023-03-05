@@ -98,8 +98,7 @@ pub async fn get_axum_router(
     formated_ip: &str,
     port: u16,
 ) -> Result<axum::Router<()>, String> {
-    #[cfg(not(test))]
-    #[cfg(debug_assertions)]
+    #[cfg(any(feature = "sample", debug_assertions))]
     if let Err(error) = fydia_sql::samples::insert_samples(&database).await {
         error!("{}", error.get_string());
     }
