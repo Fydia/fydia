@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p fydia --features=sample
+          args: -p fydia --release --features=sample
       - run: |
             mkdir test-env
             cd test-env
