@@ -67,7 +67,6 @@ jobs:
         with:
           command: build
           args: -p fydia --features=sample
-      - name: test
       - run: |
             mkdir test-env
             cd test-env
