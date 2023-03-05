@@ -6,6 +6,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-argon2 = "0.4.1"
+argon2 = "0.5.0"
 fydia-utils = { path = "../fydia-utils" }
 openssl = { version = "0.10.45" }

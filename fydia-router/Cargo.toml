@@ -14,7 +14,7 @@ fydia-sql = { path = "../fydia-sql" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-dispatcher = { path = "../fydia-dispatcher" }
-tokio = { version = "1.25.0", default-features = false }
+tokio = { version = "1.26.0", default-features = false }
 futures = "0.3.26"
 chrono = "0.4.23"
 axum = { version = "0.6.10", features = ["ws", "headers"] }
@@ -29,7 +29,7 @@ tower = "0.4.13"
 parking_lot = { version = "0.12.1" }
 flume = "0.10.14"
 rust-embed = { version = "6.4.2", optional = true }
-axum-macros = { version ="0.3.4"}
+axum-macros = { version ="0.3.5"}
 
 [dev-dependencies]
 env_logger = "0.10.0"

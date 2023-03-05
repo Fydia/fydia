@@ -18,7 +18,7 @@ pub fn hash<T: Into<String>>(to_hash: T) -> Result<String, String> {
     let argon2 = Argon2::default();
 
     Ok(argon2
-        .hash_password(to_hash.into().as_ref(), salt.as_ref())
+        .hash_password(to_hash.into().as_ref(), &salt)
         .map_err(|error| error.to_string())?
         .to_string())
 }
