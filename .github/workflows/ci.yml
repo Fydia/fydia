@@ -5,7 +5,6 @@ name: Fydia Builder
 
 on:
   push:
-    branches: ["main"]
 
 jobs:
   clippy-fmt:
@@ -66,8 +65,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: -p fydia --features=sample
-      - name: test
+          args: -p fydia --release --features=sample
       - run: |
             mkdir test-env
             cd test-env
