@@ -57,7 +57,7 @@ jobs:
           command: build
           args: -p fydia --release
       - name: upload artifact
-        if: ${{ github.event_name == "push" }}
+        if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v3
         with:
           name: "Linux-release"
@@ -93,7 +93,7 @@ jobs:
   delete-artifacts:
     needs: [build_fydia]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == "push" }}
+    if: ${{ github.event_name == 'push' }}
     steps:
       - uses: kolpav/purge-artifacts-action@v1
         with:
