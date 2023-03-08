@@ -144,7 +144,6 @@ impl SqlServerId for ServerId {
 #[async_trait::async_trait]
 pub trait SqlMember {
     async fn users(&self, executor: &DatabaseConnection) -> Result<Vec<User>, FydiaResponse>;
-    async fn is_valid(&self, executor: &DatabaseConnection) -> bool;
 }
 
 #[async_trait::async_trait]
@@ -160,15 +159,6 @@ impl SqlMember for Members {
 
         Ok(result)
     }
-
-    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
-        for id in &self.members {
-            if id.to_user(executor).await.is_err() {
-                return false;
-            }
-        }
-        return true;
-    }
 }
 
 #[async_trait::async_trait]
@@ -177,15 +167,5 @@ impl SqlMember for Vec<UserId> {
         let members = Members::new(self.clone());
 
         members.users(executor).await
-    }
-
-    async fn is_valid(&self, executor: &DatabaseConnection) -> bool {
-        for id in self {
-            if id.to_user(executor).await.is_err() {
-                return false;
-            };
-        }
-
-        return true;
     }
 }
