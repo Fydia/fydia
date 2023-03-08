@@ -1,67 +1,75 @@
-lazy_static::lazy_static! {
-    static ref CONTEXT: Context = Context::default();
-}
+use fydia_utils::http::{HeaderName, HeaderValue};
+use reqwest::Method;
 
 #[cfg(test)]
 mod tests;
 
-use fydia_utils::http::{HeaderName, HeaderValue};
-use reqwest::Method;
-
-#[derive(Debug)]
-pub struct Context {
-    url: String,
-    port: u32,
+pub struct TestExpect {
+    statuscode: Option<u16>,
+    body: Option<&'static str>,
 }
 
-impl Default for Context {
-    fn default() -> Self {
-        Self {
-            url: "127.0.0.1".to_string(),
-            port: 8080,
-        }
-    }
-}
-
-pub struct Test {
+pub struct TestRunnable<'a> {
+    ctx: &'a TestContext,
     method: Method,
-    url: String,
-    body: String,
-    headers: Vec<(String, String)>,
-    result: Option<TestResult>,
+    path: &'a str,
+    body: Option<&'static str>,
+    headers: Option<Vec<(&'a str, &'a str)>>,
+    expect: Option<TestExpect>,
 }
 
-impl Test {
-    pub fn new<T>(
-        method: Method,
-        url: T,
-        body: T,
-        headers: Vec<(String, String)>,
-        result: Option<TestResult>,
-    ) -> Self
-    where
-        T: Into<String>,
-    {
-        Self {
-            method,
-            url: url.into(),
-            body: body.into(),
-            headers,
-            result,
+impl<'a> TestRunnable<'a> {
+    pub fn body(mut self, body: &'static str) -> Self {
+        self.body = Some(body);
+
+        self
+    }
+
+    pub fn header(mut self, name: &'a str, value: &'a str) -> Self {
+        if let Some(headers) = &mut self.headers {
+            headers.push((name, value));
+
+            return self;
         }
+
+        self.headers = Some(vec![(name, value)]);
+
+        self
     }
 
-    pub fn add_result(&mut self, result: TestResult) {
-        self.result = Some(result);
+    pub fn expect_statuscode(mut self, statuscode: u16) -> Self {
+        if let Some(expect) = &mut self.expect {
+            expect.statuscode = Some(statuscode);
+            return self;
+        }
+
+        self.expect = Some(TestExpect {
+            statuscode: Some(statuscode),
+            body: None,
+        });
+
+        self
     }
 
-    ///
+    pub fn expect_body(mut self, body: &'static str) -> Self {
+        if let Some(expect) = &mut self.expect {
+            expect.body = Some(body);
+            return self;
+        }
+
+        self.expect = Some(TestExpect {
+            statuscode: None,
+            body: Some(body),
+        });
+
+        self
+    }
+
     /// # Errors
-    ///
+    /// Return error if expected body or statuscode is different
     pub async fn send(self) -> Result<(), String> {
-        let ctx = &CONTEXT;
         let client = reqwest::Client::new();
-        let url = format!("http://{}:{}{}", ctx.url, ctx.port, self.url);
+        let url = format!("http://{}:{}{}", self.ctx.url, self.ctx.port, self.path);
         let mut rq = match self.method.as_str().to_uppercase().as_str() {
             "POST" => client.post(url),
             "GET" => client.get(url),
@@ -69,59 +77,76 @@ impl Test {
             _ => return Err("Unknown method".to_string()),
         };
 
-        for (key, value) in self.headers.iter() {
-            let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
-            let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
+        if let Some(headers) = self.headers {
+            for (key, value) in headers.iter() {
+                let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
+                let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
 
-            rq = rq.header(name, value);
+                rq = rq.header(name, value);
+            }
         }
 
-        rq = rq.body(self.body);
+        if let Some(body) = self.body {
+            rq = rq.body(body);
+        }
 
         let res = rq.send().await.unwrap();
 
         let statuscode = res.status().as_u16();
         let body = res.text().await.unwrap();
-        let resulttest = self.result.unwrap();
 
-        assert_eq!(statuscode, resulttest.status_code);
+        if let Some(expected) = self.expect {
+            if let Some(expected_statuscode) = expected.statuscode {
+                assert_eq!(statuscode, expected_statuscode);
+            }
 
-        if !resulttest.body.is_empty() {
-            assert_eq!(body, resulttest.body);
+            if let Some(expected_body) = expected.body {
+                assert_eq!(body, expected_body);
+            }
         }
 
         Ok(())
     }
 }
 
-pub struct TestResult {
-    status_code: u16,
-    body: String,
+pub struct TestContext {
+    url: &'static str,
+    port: u16,
 }
 
-impl TestResult {
-    pub fn new<T: Into<String>>(status_code: u16, body: T) -> Self {
-        Self {
-            status_code,
-            body: body.into(),
+impl TestContext {
+    pub const fn new(url: &'static str, port: u16) -> Self {
+        Self { url, port }
+    }
+
+    pub fn get<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
+        TestRunnable {
+            ctx: self,
+            method: Method::GET,
+            path,
+            body: None,
+            headers: None,
+            expect: None,
         }
     }
-}
-
-#[macro_export]
-macro_rules! create_test {
-    ($method:expr, $url:expr, $body:expr) => {
-        $crate::Test::new($method, $url, $body, vec![], None)
-    };
-
-    ($method:expr, $url:expr, $body:expr, $headers:expr) => {
-        $crate::Test::new($method, $url, $body, $headers, None)
-    };
-}
-
-#[macro_export]
-macro_rules! create_result {
-    ($statuscode:expr, $body:expr, $test:expr) => {
-        $test.add_result($crate::TestResult::new($statuscode, $body))
-    };
+    pub fn post<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
+        TestRunnable {
+            ctx: self,
+            method: Method::POST,
+            path,
+            body: None,
+            headers: None,
+            expect: None,
+        }
+    }
+    pub fn delete<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
+        TestRunnable {
+            ctx: self,
+            method: Method::DELETE,
+            path,
+            body: None,
+            headers: None,
+            expect: None,
+        }
+    }
 }
