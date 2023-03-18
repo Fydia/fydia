@@ -24,7 +24,7 @@ pub async fn create_direct_message(
 
     let target = UserId::new(id).to_user(&database).await?;
 
-    let mut dm = DirectMessage::new(Id::Unset, "New DM channel".to_string(), "".to_string());
+    let mut dm = DirectMessage::new(Id::Unset, "New DM channel".to_string(), String::new());
     dm.insert(&database).await?;
 
     dm.add(&user.id, &database).await?;

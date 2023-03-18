@@ -87,7 +87,7 @@ impl Permissions {
         }
 
         let mut value = 0;
-        for i in self.0.iter() {
+        for i in &self.0 {
             if let PermissionType::Role(_) = i.permission_type {
                 value |= i.value;
             }
@@ -156,8 +156,8 @@ impl Permission {
 impl Default for Permission {
     fn default() -> Self {
         Self {
-            permission_type: PermissionType::User(Default::default()),
-            channelid: Default::default(),
+            permission_type: PermissionType::User(UserId::default()),
+            channelid: Option::default(),
             value: Default::default(),
         }
     }

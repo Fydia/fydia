@@ -1,15 +1,17 @@
-use fydia_crypto::encrypt::private_encrypt;
+use fydia_crypto::encrypt::private;
 use fydia_crypto::PublicKey;
 use fydia_struct::event::Event;
 use fydia_struct::instance::{Instance, RsaData};
 use fydia_utils::generate_string;
 use fydia_utils::serde_json;
 
+/// # Panics
+/// Panic if json serialization failed
 pub fn encrypt_message(rsa_origin: &RsaData, key: &PublicKey, message: &Event) -> Vec<u8> {
     let json = serde_json::to_string(&message).unwrap();
-    let (iv, aeskey, body) = fydia_crypto::encrypt::aes_encrypt(key, json).unwrap();
+    let (iv, aeskey, body) = fydia_crypto::encrypt::aes(key, json).unwrap();
     let string = generate_string(4);
-    let verification = private_encrypt(&rsa_origin.0, string).unwrap();
+    let verification = private(&rsa_origin.0, string).unwrap();
     let mut vec: Vec<u8> = Vec::new();
 
     vec.extend_from_slice(verification.as_slice());
@@ -27,7 +29,7 @@ pub fn encrypt_message(rsa_origin: &RsaData, key: &PublicKey, message: &Event) -
 /// * message isn't serializable
 /// * aes encrypt isn't possible
 /// * rsa encrypt isn't possible
-pub async fn send_message(
+pub fn send_message(
     rsa_origin: &RsaData,
     origin: &Instance,
     key: &PublicKey,
@@ -35,9 +37,9 @@ pub async fn send_message(
     instances: &[Instance],
 ) -> Result<(), String> {
     let json = serde_json::to_string(message).map_err(|error| error.to_string())?;
-    let (iv, aeskey, body) = fydia_crypto::encrypt::aes_encrypt(key, json)?;
+    let (iv, aeskey, body) = fydia_crypto::encrypt::aes(key, json)?;
     let string = generate_string(4);
-    let verification = private_encrypt(&rsa_origin.0, string.as_str())?;
+    let verification = private(&rsa_origin.0, string.as_str())?;
     let mut vec: Vec<u8> = Vec::new();
 
     vec.extend_from_slice(verification.as_slice());

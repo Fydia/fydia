@@ -45,10 +45,10 @@ impl<'m> Model {
     pub async fn get_models_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse> {
+    ) -> Result<Vec<Self>, DirectMessageError> {
         match Entity::find().filter(simpl).all(executor).await {
             Ok(model) => Ok(model),
-            _ => Err(Self::MESSAGE),
+            _ => Err(DirectMessageError::CannotGetWithThisExpr),
         }
     }
 
@@ -66,9 +66,7 @@ impl<'m> Model {
         executor: &DatabaseConnection,
     ) -> Result<DirectMessage, DirectMessageError> {
         let direct_message =
-            super::direct_message::Model::get_model_by_id(self.directmessage, executor)
-                .await
-                .map_err(|_| DirectMessageError::CannotGetById)?;
+            super::direct_message::Model::get_model_by_id(self.directmessage, executor).await?;
 
         Ok(direct_message.to_directmessage())
     }

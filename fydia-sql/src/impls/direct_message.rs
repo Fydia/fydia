@@ -1,10 +1,10 @@
 use std::convert::TryFrom;
 
-use super::{delete, insert, user::UserFrom};
+use super::{delete, get_set_column, insert, user::UserFrom};
 use fydia_struct::{
     directmessage::{DirectMessage, DirectMessageError},
     server::Members,
-    sqlerror::GenericSqlError,
+    sqlerror::{GenericError, GenericSqlError},
     user::UserId,
     utils::Id,
 };
@@ -40,10 +40,9 @@ impl DirectMessageMembers for DirectMessage {
             dm_members::Column::Directmessage.eq(directmessageid),
             executor,
         )
-        .await
-        .map_err(|_| DirectMessageError::CannotGetById)?
+        .await?
         .iter()
-        .map(|f| f.to_userid())
+        .map(dm_members::Model::to_userid)
         .collect::<Vec<UserId>>();
 
         Ok(Members::new(userids))
@@ -53,14 +52,10 @@ impl DirectMessageMembers for DirectMessage {
         executor: &DatabaseConnection,
     ) -> Result<Vec<DirectMessage>, DirectMessageError> {
         let mut result = Vec::new();
-        let userid = userid
-            .0
-            .get_id_cloned()
-            .map_err(|_| DirectMessageError::CannotGetByUser)?;
+        let userid = userid.0.get_id_cloned()?;
 
-        for i in dm_members::Model::get_models_by(dm_members::Column::User.eq(userid), executor)
-            .await
-            .map_err(|_| DirectMessageError::CannotGetByUser)?
+        for i in
+            dm_members::Model::get_models_by(dm_members::Column::User.eq(userid), executor).await?
         {
             result.push(i.get_directmessage(executor).await?);
         }
@@ -74,9 +69,7 @@ impl DirectMessageMembers for DirectMessage {
     ) -> Result<(), DirectMessageError> {
         userid.to_user(executor).await?;
 
-        insert(dm_members::Model::new_activemodel(userid, self)?, executor)
-            .await
-            .map_err(|_| DirectMessageError::CannotAdd)?;
+        insert(dm_members::Model::new_activemodel(userid, self)?, executor).await?;
 
         Ok(())
     }
@@ -114,10 +107,13 @@ pub trait SqlDirectMessage {
 impl SqlDirectMessage for DirectMessage {
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), DirectMessageError> {
         let am = dm::ActiveModel::try_from(self.clone())?;
-        let result = dm::Entity::insert(am)
-            .exec(executor)
-            .await
-            .map_err(|f| GenericSqlError::CannotInsert(f.to_string()))?;
+        let set_column = get_set_column(&am);
+        let result = dm::Entity::insert(am).exec(executor).await.map_err(|f| {
+            GenericSqlError::CannotInsert(GenericError {
+                set_column,
+                error: f.to_string(),
+            })
+        })?;
 
         self.id.set(result.last_insert_id);
 
@@ -128,9 +124,8 @@ impl SqlDirectMessage for DirectMessage {
         executor: &DatabaseConnection,
     ) -> Result<DirectMessage, DirectMessageError> {
         let id = dm_id.get_id()?;
-        Ok(dm::Model::get_model_by(dm::Column::Id.eq(id), executor)
-            .await
-            .map_err(|_| DirectMessageError::CannotGetById)?
+        Ok(dm::Model::get_model_by_id(id, executor)
+            .await?
             .to_directmessage())
     }
     async fn delete(self, executor: &DatabaseConnection) -> Result<(), DirectMessageError> {

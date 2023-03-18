@@ -23,7 +23,8 @@ pub fn hash<T: Into<String>>(to_hash: T) -> Result<String, String> {
         .to_string())
 }
 
-pub fn verify_password<'a>(clear_password: Cow<'a, str>, hashed_password: Cow<'a, str>) -> bool {
+#[must_use]
+pub fn verify<'a>(clear_password: Cow<'a, str>, hashed_password: Cow<'a, str>) -> bool {
     let hashed_password = hashed_password;
     let clear_password = clear_password;
 

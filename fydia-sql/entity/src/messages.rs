@@ -29,7 +29,7 @@ impl TryFrom<Message> for ActiveModel {
             content: Set(Some(value.content)),
             message_type: Set(value.message_type.to_string()),
             timestamp: Set(value.timestamp.0.naive_utc()),
-            edited: Set(value.edited as i8),
+            edited: Set(i8::from(value.edited)),
             channel_id: Set(value.channel_id.id.clone()),
             author_id: Set(value.author_id.id.0.get_id()?),
         })

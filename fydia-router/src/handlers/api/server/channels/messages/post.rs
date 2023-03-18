@@ -66,7 +66,7 @@ pub async fn post_messages(
 
     if mime == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<String, Infallible>::Ok(body) });
-        let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found")?;
+        let boundary = get_boundary(&headers).ok_or("No boundary found")?;
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
@@ -99,7 +99,7 @@ pub async fn multipart_to_event<'a, 'r>(
                 file.create_with_description(&FileDescriptor::new_with_now(
                     field
                         .file_name()
-                        .map_or_else(|| file.get_name(), |v| v.to_string()),
+                        .map_or_else(|| file.get_name(), ToString::to_string),
                 ))
                 .map_err(|error| {
                     error!("{error}");
@@ -162,7 +162,7 @@ pub async fn json_message(
 ) -> Result<Event, FydiaResponse> {
     let type_from_json = get_json("type", &value)?.to_string();
     let messagetype = MessageType::from_string(type_from_json)
-        .map_err(|_| FydiaResponse::TextError("Bad Message Type"))?;
+        .map_err(|_f| FydiaResponse::TextError("Bad Message Type"))?;
 
     let content = get_json("content", &value)?.to_string();
 

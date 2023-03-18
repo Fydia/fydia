@@ -1,7 +1,7 @@
 //! All structs for channels
 
 use crate::server::{MembersError, ServerError, ServerId};
-use crate::sqlerror::GenericSqlError;
+use crate::sqlerror::{GenericError, GenericSqlError};
 use fydia_utils::generate_string;
 use fydia_utils::serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -272,6 +272,18 @@ impl From<MembersError> for ChannelError {
 
 impl From<GenericSqlError> for ChannelError {
     fn from(value: GenericSqlError) -> Self {
-        ChannelError::GenericSqlError(Box::new(value))
+        match value {
+            GenericSqlError::CannotInsert(_) | GenericSqlError::CannotDelete(_) => {
+                ChannelError::GenericSqlError(Box::new(value))
+            }
+            GenericSqlError::CannotUpdate(GenericError { error, set_column }) => {
+                error!("{error}");
+                if set_column.contains(&"description".to_string()) {
+                    return Self::CannotUpdateDescription;
+                }
+
+                Self::CannotUpdateName
+            }
+        }
     }
 }

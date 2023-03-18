@@ -111,7 +111,7 @@ impl SqlMessage for Message {
             .filter(entity::messages::Column::Id.eq(self.id.as_str()))
             .exec(executor)
             .await
-            .map_err(|_| MessageError::CannotIntoActiveModel)?;
+            .map_err(|_f| MessageError::CannotIntoActiveModel)?;
 
         self.content = content.to_string();
 
@@ -119,9 +119,7 @@ impl SqlMessage for Message {
     }
 
     async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), MessageError> {
-        let model = Model::get_model_by_id(&self.id, executor)
-            .await
-            .map_err(|_| MessageError::CannotGetById)?;
+        let model = Model::get_model_by_id(&self.id, executor).await?;
 
         let active_model: entity::messages::ActiveModel = model.clone().into();
 

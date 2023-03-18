@@ -6,6 +6,6 @@ pub async fn public_key(Rsa(rsa): Rsa) -> impl IntoResponse {
     if let Some(pem) = fydia_crypto::pem::key_to_string(&rsa.1) {
         (StatusCode::OK, pem)
     } else {
-        (StatusCode::INTERNAL_SERVER_ERROR, "".to_string())
+        (StatusCode::INTERNAL_SERVER_ERROR, String::new())
     }
 }

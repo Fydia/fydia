@@ -5,6 +5,9 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
+#[macro_use]
+extern crate log;
+
 pub mod channel;
 pub mod directmessage;
 pub mod emoji;

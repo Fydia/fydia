@@ -6,6 +6,7 @@ pub use rand_core::OsRng;
 pub use serde;
 pub use serde_json;
 
+#[must_use]
 pub fn generate_string(lenght: i32) -> String {
     let charset: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYZ123456789";
     let mut rng = rand::thread_rng();

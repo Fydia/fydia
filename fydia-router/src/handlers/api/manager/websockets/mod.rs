@@ -30,7 +30,7 @@ impl Default for WebsocketInner {
 
 impl WebsocketInner {
     pub fn new() -> Self {
-        Default::default()
+        WebsocketInner::default()
     }
 
     pub fn get_sender_index(&self, user: &UserId, sender: &WbSender) -> Option<usize> {

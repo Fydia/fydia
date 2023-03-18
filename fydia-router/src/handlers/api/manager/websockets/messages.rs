@@ -32,15 +32,11 @@ async fn connected(
     wbmanager: Arc<WebsocketManagerChannel>,
     user: Result<User, UserError>,
 ) {
-    let user = if let Ok(user) = user {
-        user
-    } else {
+    let Ok(user) = user else {
         return;
     };
 
-    let (sender, mut receiver) = if let Some(channels) = wbmanager.get_new_channel(&user.id).await {
-        channels
-    } else {
+    let Some((sender, mut receiver)) = wbmanager.get_new_channel(&user.id).await else {
         return;
     };
 

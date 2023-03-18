@@ -22,7 +22,7 @@ pub async fn create_channel(
     let name = get_json("name", &json)?.to_string();
     let channeltype = ChannelType::from_string(get_json("type", &json)?.to_string());
 
-    let channel = Channel::new_with_serverid(name, "".to_string(), server.id.clone(), channeltype)?;
+    let channel = Channel::new_with_serverid(name, String::new(), server.id.clone(), channeltype)?;
 
     server
         .insert_channel(&channel, &database)

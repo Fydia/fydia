@@ -43,6 +43,8 @@ impl Display for MessageType {
 impl MessageType {
     /// Parse a str to convert it in `MessageType`
     ///
+    /// # Errors
+    /// Return an error if type is unknow
     /// # Examples
     ///
     /// ```
@@ -65,7 +67,7 @@ impl MessageType {
             "VIDEO" => Ok(Self::VIDEO),
             "PHOTO" => Ok(Self::PHOTO),
             "AUDIO" => Ok(Self::AUDIO),
-            _ => Err(MessageTypeError::UnknowType(from.into())),
+            _ => Err(MessageTypeError::UnknowType(from)),
         }
     }
 }
@@ -246,7 +248,7 @@ impl<'de> Deserialize<'de> for Date {
         D: Deserializer<'de>,
     {
         if let Ok(timestamp) = i32::deserialize(deserializer) {
-            return Date::parse_timestamp(timestamp as i64)
+            return Date::parse_timestamp(i64::from(timestamp))
                 .ok_or_else(|| de::Error::custom("Error on Date"));
         }
 

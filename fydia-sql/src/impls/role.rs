@@ -2,11 +2,12 @@ use entity::roles::assignation;
 use fydia_struct::{
     roles::{Role, RoleError},
     server::ServerId,
+    sqlerror::GenericSqlError,
     user::UserId,
     utils::Id,
 };
 
-use super::{delete, insert};
+use super::{delete, from_dberr_and_activemodel, get_set_column, insert};
 use fydia_utils::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use shared::sea_orm;
@@ -92,22 +93,21 @@ impl SqlRoles for Role {
             name: Set(name.clone()),
             ..Default::default()
         };
-        let id = self.id.get_id_cloned()?;
 
-        match entity::roles::Entity::update(active_model)
+        let id = self.id.get_id_cloned()?;
+        let set_column = get_set_column(&active_model);
+
+        entity::roles::Entity::update(active_model)
             .filter(entity::messages::Column::Id.eq(id))
             .exec(executor)
             .await
-        {
-            Ok(_) => {
-                self.name = name;
-                Ok(())
-            }
-            Err(e) => {
-                error!("{}", e.to_string());
-                Err(RoleError::CannotUpdateName)
-            }
-        }
+            .map_err(|f| {
+                GenericSqlError::CannotUpdate(from_dberr_and_activemodel(set_column, &f))
+            })?;
+
+        self.name = name;
+
+        Ok(())
     }
 
     async fn update_color<'a, T: Into<String> + Send>(
@@ -122,27 +122,24 @@ impl SqlRoles for Role {
         };
         let id = self.id.get_id_cloned()?;
 
-        match entity::roles::Entity::update(active_model)
+        let set_column = get_set_column(&active_model);
+
+        entity::roles::Entity::update(active_model)
             .filter(entity::messages::Column::Id.eq(id))
             .exec(executor)
             .await
-        {
-            Ok(_) => {
-                self.color = color;
-                Ok(())
-            }
-            Err(e) => {
-                error!("{}", e.to_string());
-                Err(RoleError::CannotUpdateColor)
-            }
-        }
+            .map_err(|f| {
+                GenericSqlError::CannotUpdate(from_dberr_and_activemodel(set_column, &f))
+            })?;
+
+        self.color = color;
+
+        Ok(())
     }
     async fn insert(&mut self, executor: &DatabaseConnection) -> Result<(), RoleError> {
         let model = entity::roles::ActiveModel::from(self.clone());
 
-        let result = insert(model, executor)
-            .await
-            .map_err(|_| RoleError::CannotInsert)?;
+        let result = insert(model, executor).await?;
 
         self.id = Id::Id(result.last_insert_id);
 
@@ -151,17 +148,17 @@ impl SqlRoles for Role {
     async fn delete(&self, executor: &DatabaseConnection) -> Result<(), RoleError> {
         let id = self.id.get_id_cloned()?;
 
-        let model = entity::roles::Entity::find_by_id(id)
+        let Ok(Some(model)) = entity::roles::Entity::find_by_id(id)
             .one(executor)
-            .await
-            .map_err(|_| RoleError::CannotDelete)?
-            .ok_or(RoleError::CannotDelete)?;
+            .await else {
+                return Err(RoleError::CannotDelete);
+            };
 
         let active_model: entity::roles::ActiveModel = model.into();
 
-        delete(active_model, executor)
-            .await
-            .map_err(|_| RoleError::CannotDelete)
+        delete(active_model, executor).await?;
+
+        Ok(())
     }
 
     async fn add_user(
@@ -175,9 +172,8 @@ impl SqlRoles for Role {
             server_id: Set(self.server_id.id.clone()),
         };
 
-        insert(am, executor)
-            .await
-            .map(|_| ())
-            .map_err(|_| RoleError::CannotAddUser)
+        insert(am, executor).await.map(|_| ())?;
+
+        Ok(())
     }
 }

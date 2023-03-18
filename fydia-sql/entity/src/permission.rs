@@ -51,9 +51,7 @@ pub mod role {
     impl TryFrom<Permission> for ActiveModel {
         type Error = PermissionError;
         fn try_from(perm: Permission) -> Result<Self, Self::Error> {
-            let role = if let PermissionType::Role(role) = perm.permission_type {
-                role
-            } else {
+            let PermissionType::Role(role) = perm.permission_type else {
                 return Err(PermissionError::PermissionTypeError);
             };
 
@@ -128,9 +126,7 @@ pub mod user {
     impl TryFrom<Permission> for ActiveModel {
         type Error = PermissionError;
         fn try_from(perm: Permission) -> Result<Self, Self::Error> {
-            let user = if let PermissionType::User(user) = perm.permission_type {
-                user
-            } else {
+            let PermissionType::User( user )= perm.permission_type  else {
                 return Err(PermissionError::PermissionTypeError);
             };
 

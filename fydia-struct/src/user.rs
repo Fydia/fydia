@@ -2,8 +2,9 @@
 
 use crate::{
     instance::Instance,
+    roles::RoleError,
     server::{ServerId, Servers},
-    sqlerror::GenericSqlError,
+    sqlerror::{GenericError, GenericSqlError},
     utils::{Id, IdError},
 };
 use fydia_crypto::password::hash;
@@ -161,7 +162,30 @@ impl From<String> for UserError {
 
 impl From<GenericSqlError> for UserError {
     fn from(value: GenericSqlError) -> Self {
-        Self::GenericSqlError(Box::new(value))
+        match value {
+            GenericSqlError::CannotInsert(_) | GenericSqlError::CannotDelete(_) => {
+                Self::GenericSqlError(Box::new(value))
+            }
+            GenericSqlError::CannotUpdate(GenericError { set_column, error }) => {
+                error!("{error}");
+
+                if set_column.contains(&"name".to_string()) {
+                    return Self::CannotUpdateName;
+                }
+
+                if set_column.contains(&"password".to_string()) {
+                    return Self::CannotUpdatePassword;
+                }
+
+                Self::CannotUpdateToken
+            }
+        }
+    }
+}
+
+impl From<RoleError> for UserError {
+    fn from(_: RoleError) -> Self {
+        Self::CannotGetRolesOfUser
     }
 }
 

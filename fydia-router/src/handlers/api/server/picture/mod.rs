@@ -21,7 +21,7 @@ pub async fn get_picture_of_server(ServerJoinedFromId(server): ServerJoinedFromI
     })?;
 
     let mime_str = infer::get(&value)
-        .ok_or_else(|| "Cannot get the mimetype")?
+        .ok_or("Cannot get the mimetype")?
         .to_string();
 
     let mime = Mime::from_str(mime_str.as_str()).map_err(|error| {
@@ -50,7 +50,7 @@ pub async fn post_picture_of_server(
             .into();
     }
 
-    let mimetype = infer::get(&body).ok_or_else(|| "No body")?;
+    let mimetype = infer::get(&body).ok_or("No body")?;
 
     let mimetype_str = mimetype.extension();
     if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {

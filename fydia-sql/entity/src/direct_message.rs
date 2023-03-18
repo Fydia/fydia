@@ -25,8 +25,6 @@ pub struct Model {
 }
 
 impl<'m> Model {
-    const MESSAGE: FydiaResponse = FydiaResponse::TextError("No DirectMessage with this expr");
-
     /// Return max id of `DirectMessage` Id
     ///
     /// # Errors
@@ -47,10 +45,10 @@ impl<'m> Model {
     pub async fn get_model_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse> {
+    ) -> Result<Self, DirectMessageError> {
         match Entity::find().filter(simpl).one(executor).await {
             Ok(Some(model)) => Ok(model),
-            _ => Err(Self::MESSAGE),
+            _ => Err(DirectMessageError::CannotGetWithThisExpr),
         }
     }
 
@@ -63,10 +61,10 @@ impl<'m> Model {
     pub async fn get_models_by(
         simpl: SimpleExpr,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Self>, FydiaResponse> {
+    ) -> Result<Vec<Self>, DirectMessageError> {
         match Entity::find().filter(simpl).all(executor).await {
             Ok(model) => Ok(model),
-            _ => Err(Self::MESSAGE),
+            _ => Err(DirectMessageError::CannotGetWithThisExpr),
         }
     }
 
@@ -79,10 +77,10 @@ impl<'m> Model {
     pub async fn get_model_by_id(
         id: u32,
         executor: &DatabaseConnection,
-    ) -> Result<Self, FydiaResponse> {
+    ) -> Result<Self, DirectMessageError> {
         match Entity::find().filter(Column::Id.eq(id)).one(executor).await {
             Ok(Some(model)) => Ok(model),
-            _ => Err(Self::MESSAGE),
+            _ => Err(DirectMessageError::CannotGetById),
         }
     }
 

@@ -68,7 +68,7 @@ pub async fn get_axum_router_from_config(config: Config) -> Result<axum::Router<
         get_database_connection(&config.database).await?,
         &config.instance,
         &config.format_ip(),
-        config.server.port as u16,
+        config.server.port,
     )
     .await
 }
@@ -78,7 +78,7 @@ pub async fn get_axum_router_from_config(config: Config) -> Result<axum::Router<
 /// This function will return an error if cannot generate rsa key
 pub fn generate_key() -> Result<Rsa<Private>, String> {
     info!("Try to generate RSA keys");
-    if let Ok(key) = fydia_crypto::key::generate::generate_key() {
+    if let Ok(key) = fydia_crypto::key::generate::generate() {
         info!("RSA keys are successfully generated");
         Ok(key)
     } else {
@@ -92,6 +92,9 @@ pub fn generate_key() -> Result<Rsa<Private>, String> {
 /// # Errors
 /// This function will return an error if cannot generate rsa key, if cannot set
 /// websocketmanager, typingmanager and database in typingmanager
+///
+/// # Panics
+/// Panic if private to public key failed
 pub async fn get_axum_router(
     database: DbConnection,
     instance: &InstanceConfig,
@@ -106,9 +109,7 @@ pub async fn get_axum_router(
     info!("Ip is : {}", instance.domain);
     info!("Listen on: http://{}", formated_ip);
     let private_key = generate_key()?;
-    let public_key = if let Some(public_key) = private_to_public(&private_key) {
-        public_key
-    } else {
+    let Some(public_key) = private_to_public(&private_key) else {
         panic!("Public key error");
     };
 
@@ -202,7 +203,7 @@ impl<B> OnResponse<B> for Log {
 
 /// Return index client
 async fn not_found() -> (StatusCode, String) {
-    (StatusCode::NOT_FOUND, String::from(""))
+    (StatusCode::NOT_FOUND, String::new())
 }
 
 #[cfg(not(feature = "flutter_client"))]

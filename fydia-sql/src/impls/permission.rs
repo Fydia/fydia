@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use super::{
     basic_model::BasicModel,
     channel::SqlChannelId,
-    delete, insert,
+    delete, get_set_column, insert,
     user::{SqlUser, UserFrom},
 };
 use fydia_struct::{
@@ -11,7 +11,7 @@ use fydia_struct::{
     permission::{Permission, PermissionError, Permissions},
     roles::RoleId,
     server::ServerId,
-    sqlerror::GenericSqlError,
+    sqlerror::{GenericError, GenericSqlError},
     user::UserId,
 };
 use fydia_utils::async_trait::async_trait;
@@ -73,18 +73,17 @@ impl PermissionSql for Permission {
         roleid: &RoleId,
         db: &DatabaseConnection,
     ) -> Result<Permission, PermissionError> {
-        if let Ok(Some(model)) = entity::permission::role::Entity::find()
+        let Ok(Some(model)) = entity::permission::role::Entity::find()
             .filter(entity::permission::role::Column::Role.eq(roleid.get_id_cloned()?))
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
-            .await
-        {
-            return Ok(model
-                .to_struct(db)
-                .await
-                .map_err(|_| PermissionError::ModelToStruct)?);
-        }
-        Err(PermissionError::CannotGetByChannelAndRole)
+            .await else {
+                return Err(PermissionError::CannotGetByChannelAndRole);
+            };
+
+        let permission = model.to_struct(db).await?;
+
+        Ok(permission)
     }
 
     async fn of_user_in_channel(
@@ -92,16 +91,15 @@ impl PermissionSql for Permission {
         user: &UserId,
         db: &DatabaseConnection,
     ) -> Result<Permission, PermissionError> {
-        entity::permission::user::Entity::find()
+        let Ok(Some(model)) = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::User.eq(user.0.clone().get_id_cloned()?))
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
-            .await
-            .map_err(|_| PermissionError::CannotGetByChannelAndUser)?
-            .ok_or_else(|| PermissionError::CannotGetByChannelAndUser)?
-            .to_struct(db)
-            .await
-            .map_err(|_| PermissionError::ModelToStruct)
+            .await else {return Err(PermissionError::CannotGetByChannelAndUser)};
+
+        let permission = model.to_struct(db).await?;
+
+        Ok(permission)
     }
 
     async fn of_user_with_role_in_channel(
@@ -115,7 +113,7 @@ impl PermissionSql for Permission {
 
         let mut vec = Vec::new();
 
-        for i in roles.iter() {
+        for i in &roles {
             if let Ok(perm) = Self::of_role_in_channel(channelid, &i.id, db).await {
                 vec.push(perm);
             }
@@ -130,33 +128,27 @@ impl PermissionSql for Permission {
         channelid: &ChannelId,
         db: &DatabaseConnection,
     ) -> Result<Permissions, PermissionError> {
-        let result = entity::permission::user::Entity::find()
+        let Ok(result) = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
-            .await
-            .map_err(|_| PermissionError::CannotGetByChannel)?;
+            .await else {
+                return Err( PermissionError::CannotGetByChannel)
+            };
 
         let mut vec = Vec::new();
         for i in result {
-            vec.push(
-                i.to_struct(db)
-                    .await
-                    .map_err(|_| PermissionError::ModelToStruct)?,
-            );
+            vec.push(i.to_struct(db).await?);
         }
 
-        let result = entity::permission::role::Entity::find()
+        let Ok(result) = entity::permission::role::Entity::find()
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
-            .await
-            .map_err(|_| PermissionError::CannotGetByChannel)?;
+            .await else {
+                return Err( PermissionError::CannotGetByChannel)
+            };
 
         for i in result {
-            vec.push(
-                i.to_struct(db)
-                    .await
-                    .map_err(|_| PermissionError::ModelToStruct)?,
-            );
+            vec.push(i.to_struct(db).await?);
         }
 
         Ok(Permissions::new(vec))
@@ -193,26 +185,36 @@ impl PermissionSql for Permission {
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(role) => {
                 let am = entity::permission::role::ActiveModel::try_from(&self)?;
-
+                let set_column = get_set_column(&am);
                 entity::permission::role::Entity::update(am)
                     .filter(entity::permission::role::Column::Channel.eq(channelid.as_str()))
                     .filter(entity::permission::role::Column::Role.eq(role.get_id_cloned()?))
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .map_err(|f| GenericSqlError::CannotUpdate(f.to_string()))?;
+                    .map_err(|f| {
+                        GenericSqlError::CannotUpdate(GenericError {
+                            set_column,
+                            error: f.to_string(),
+                        })
+                    })?;
             }
 
             fydia_struct::permission::PermissionType::User(user) => {
                 let am = entity::permission::user::ActiveModel::try_from(&self)?;
-
+                let set_column = get_set_column(&am);
                 entity::permission::user::Entity::update(am)
                     .filter(entity::permission::user::Column::Channel.eq(channelid.as_str()))
                     .filter(entity::permission::user::Column::User.eq(user.0.get_id_cloned()?))
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .map_err(|f| GenericSqlError::CannotUpdate(f.to_string()))?;
+                    .map_err(|f| {
+                        GenericSqlError::CannotUpdate(GenericError {
+                            set_column,
+                            error: f.to_string(),
+                        })
+                    })?;
             }
             fydia_struct::permission::PermissionType::Channel(_) => {
                 return Err(PermissionError::PermissionTypeError)

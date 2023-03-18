@@ -1,5 +1,5 @@
 use super::insert;
-use entity::members::*;
+use entity::members::{Column, Model};
 use fydia_struct::{
     server::{Members, MembersError, ServerId},
     user::UserId,
@@ -35,7 +35,7 @@ impl SqlMembers for Members {
             Model::get_models_by(Column::Serverid.contains(&server.id), executor)
                 .await?
                 .iter()
-                .map(|i| i.to_userid())
+                .map(Model::to_userid)
                 .collect();
 
         Ok(Members::new(model))
@@ -50,7 +50,7 @@ impl SqlMembers for Members {
         Ok(Model::get_models_by(Column::Userid.eq(userid), executor)
             .await?
             .iter()
-            .map(|i| i.to_server())
+            .map(Model::to_server)
             .collect())
     }
 

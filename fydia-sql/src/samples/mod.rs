@@ -19,6 +19,7 @@ use crate::{
 /// Return an error if:
 /// * Database is unreachable
 /// * Any tables errors
+#[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
 pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 

@@ -87,7 +87,7 @@ impl<T: IntoFydiaResponse, E: Display> From<Result<T, E>> for FydiaResult {
         match value {
             Ok(displayok) => FydiaResult::Ok(displayok.response_ok()),
             Err(error) => {
-                FydiaResult::Err(FydiaResponse::StringError(Box::new(format!("{}", error))))
+                FydiaResult::Err(FydiaResponse::StringError(Box::new(format!("{error}"))))
             }
         }
     }
@@ -188,7 +188,7 @@ impl IntoResponse for FydiaResponse {
             let string = match serde_json::to_string(&res) {
                 Ok(str) => str,
                 Err(error) => {
-                    println!("{}", error);
+                    println!("{error}");
                     panic!("Cannot serialize response");
                 }
             };

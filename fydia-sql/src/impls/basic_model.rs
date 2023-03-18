@@ -3,7 +3,7 @@ use fydia_struct::{
     channel::{Channel, ChannelError, ChannelId, ChannelType},
     instance::Instance,
     messages::{Message, MessageError, MessageType, MessageTypeError},
-    permission::Permission,
+    permission::{Permission, PermissionError},
     roles::{Role, RoleError},
     server::{Members, MembersError, Server, ServerError, ServerId, Servers},
     user::{Token, User, UserError, UserId},
@@ -233,16 +233,13 @@ pub struct RequestError {
 
 impl RequestError {
     pub fn get_column_names(&self) -> Vec<String> {
-        let mut t = Vec::new();
-        for el in &self.expr {
-            if let SimpleExpr::Binary(simplexpr, _, _) = el {
-                if let SimpleExpr::Column(ColumnRef::TableColumn(_, column)) = *simplexpr.clone() {
-                    t.push(column.to_string());
-                }
-            }
-        }
-
-        t
+        self.expr.iter().filter_map(|el| {
+            let SimpleExpr::Binary(simplexpr, _, _) = el else {return None};
+            Some(simplexpr)
+        }).filter_map(|simplexpr| {
+            let SimpleExpr::Column(ColumnRef::TableColumn(_, column)) = *simplexpr.clone() else {return None};
+            Some(column)
+        }).map(|column| column.to_string()).collect()
     }
     pub fn new(values: &[SimpleExpr]) -> Self {
         Self {
@@ -329,20 +326,15 @@ impl From<ModelError> for UserError {
                 let columns = f.get_column_names();
 
                 if columns.contains(&"id".to_string()) {
-                    return Self::CannotGetById;
+                    Self::CannotGetById
                 } else if columns.contains(&"token".to_string()) {
-                    return Self::CannotGetByToken;
+                    Self::CannotGetByToken
                 } else {
                     Self::Other("Cannot get user".to_string())
                 }
             }
-            ModelError::ChannelError(_) => todo!(),
-            ModelError::RoleError(_) => todo!(),
-            ModelError::UserError(_) => todo!(),
-            ModelError::ServerError(_) => todo!(),
-            ModelError::MessageTypeError(_) => todo!(),
-            ModelError::MembersError(_) => todo!(),
-            ModelError::Other(_) => todo!(),
+            ModelError::Other(string) => Self::Other(string),
+            _ => Self::ModelToStruct,
         }
     }
 }
@@ -350,17 +342,7 @@ impl From<ModelError> for UserError {
 impl From<ModelError> for ServerError {
     fn from(value: ModelError) -> Self {
         match value {
-            ModelError::NoPrimaryKey => Self::CannotGetById,
-            ModelError::ModelNotExist(f) => {
-                let columns = f.get_column_names();
-
-                if columns.contains(&"id".to_string()) {
-                    return Self::CannotGetById;
-                } else {
-                    error!("Unhandled error: {:?}", f);
-                    todo!()
-                }
-            }
+            ModelError::NoPrimaryKey | ModelError::ModelNotExist(_) => Self::CannotGetById,
             _ => Self::ModelToStruct,
         }
     }
@@ -369,16 +351,30 @@ impl From<ModelError> for ServerError {
 impl From<ModelError> for MessageError {
     fn from(value: ModelError) -> Self {
         match value {
-            ModelError::NoPrimaryKey => Self::CannotGetById,
+            ModelError::NoPrimaryKey | ModelError::ModelNotExist(_) => Self::CannotGetById,
+            _ => Self::ModelToStruct,
+        }
+    }
+}
+
+impl From<ModelError> for PermissionError {
+    fn from(value: ModelError) -> Self {
+        match value {
+            ModelError::NoPrimaryKey => Self::CannotGetByChannel,
             ModelError::ModelNotExist(f) => {
                 let columns = f.get_column_names();
 
-                if columns.contains(&"id".to_string()) {
-                    return Self::CannotGetById;
-                } else {
-                    error!("Unhandled error: {:?}", f);
-                    todo!()
+                if columns.contains(&"channel".to_string()) && columns.contains(&"user".to_string())
+                {
+                    return Self::CannotGetByChannelAndUser;
                 }
+
+                if columns.contains(&"channel".to_string()) && columns.contains(&"role".to_string())
+                {
+                    return Self::CannotGetByChannelAndRole;
+                }
+
+                Self::CannotGetByChannel
             }
             _ => Self::ModelToStruct,
         }

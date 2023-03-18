@@ -20,7 +20,7 @@ pub async fn get_message_dm(
     Database(database): Database,
 ) -> FydiaResult {
     let message = Message::by_channel(ChannelId::new(dm_id.clone()), &database).await;
-    println!("{:?}", message);
+    println!("{message:?}");
 
     "".into_not_implemented_error().into()
 }

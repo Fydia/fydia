@@ -152,7 +152,7 @@ pub struct Servers(pub Vec<ServerId>);
 impl Servers {
     /// Take a `ServerId` and check if is already in `Vec<ServerId>`
     pub fn is_join(&self, server_id: &ServerId) -> bool {
-        for i in self.0.iter() {
+        for i in &self.0 {
             if cfg!(debug_assertion) {
                 let serverid_id = &i.id;
                 let cmp_serverid_id = &server_id.id;
@@ -170,7 +170,7 @@ impl Servers {
     /// Take a `Into<String>` and return `ServerId` if exists in `Vec<ServerId>`
     pub fn get<T: Into<String>>(&self, server_id: T) -> Option<ServerId> {
         let server_id = server_id.into();
-        for i in self.0.iter() {
+        for i in &self.0 {
             if i.id == server_id {
                 return Some(i.clone());
             }

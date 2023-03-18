@@ -4,6 +4,8 @@ use fydia_config::{DatabaseConfig, DatabaseType};
 use sea_orm::{Database, DatabaseConnection};
 use shared::sea_orm;
 
+/// # Panics
+/// Panic when connection to database failed
 pub async fn get_connection(configdatabase: &DatabaseConfig) -> DatabaseConnection {
     if configdatabase.database_type == DatabaseType::Sqlite
         && std::fs::File::open(format!("./{}", configdatabase.ip)).is_err()
@@ -12,7 +14,7 @@ pub async fn get_connection(configdatabase: &DatabaseConfig) -> DatabaseConnecti
             configdatabase
                 .format_url()
                 .strip_prefix("sqlite://")
-                .map_or_else(|| format!("{}.db", configdatabase.ip), |v| v.to_string()),
+                .map_or_else(|| format!("{}.db", configdatabase.ip), ToString::to_string),
         )
         .expect("Error");
     }

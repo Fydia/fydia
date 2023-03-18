@@ -36,6 +36,7 @@ pub fn write(rsa: &Rsa<Private>) -> std::io::Result<()> {
 /// Return an if :
 /// * File cannot be read
 /// * File cannot be converted as RSA key
+#[must_use]
 pub fn read() -> Option<Rsa<Private>> {
     let buf = std::fs::read("./keys/private.key").ok()?;
 

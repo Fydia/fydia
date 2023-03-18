@@ -10,6 +10,7 @@ impl Iv {
 #[derive(Clone)]
 pub struct AesKeyEncrypt(pub Vec<u8>);
 impl AesKeyEncrypt {
+    #[must_use]
     pub fn new(new: Vec<u8>) -> Self {
         Self(new)
     }
@@ -26,6 +27,7 @@ impl AesKey {
 pub struct EncryptedBody(pub Vec<u8>);
 
 impl EncryptedBody {
+    #[must_use]
     pub fn new(new: Vec<u8>) -> Self {
         Self(new)
     }

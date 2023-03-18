@@ -38,6 +38,7 @@ impl DatabaseConfig {
         }
     }
 
+    #[must_use]
     pub fn format_url(&self) -> String {
         match &self.database_type {
             DatabaseType::Mysql => format!(
@@ -70,10 +71,11 @@ impl Default for DatabaseConfig {
 #[serde(crate = "fydia_utils::serde")]
 pub struct ServerConfig {
     pub ip: String,
-    pub port: i16,
+    pub port: u16,
 }
 
 impl ServerConfig {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             ip: "0.0.0.0".to_string(),
@@ -101,6 +103,7 @@ impl Default for InstanceConfig {
 }
 
 impl InstanceConfig {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             domain: String::new(),
@@ -154,6 +157,8 @@ impl Config {
     pub fn serialize_to_string(&self) -> Result<String, String> {
         toml::to_string(self).map_err(|error| error.to_string())
     }
+
+    #[must_use]
     pub fn format_ip(&self) -> String {
         format!("{}:{}", self.server.ip, self.server.port)
     }
@@ -170,6 +175,8 @@ fn get_config_or_init() -> Config {
     }
 }
 
+/// # Panics
+/// Panics when domains is not valid
 pub async fn get_config() -> Config {
     let mut config = get_config_or_init();
 

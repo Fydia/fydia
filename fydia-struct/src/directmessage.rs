@@ -3,7 +3,7 @@ use fydia_utils::serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    sqlerror::GenericSqlError,
+    sqlerror::{GenericError, GenericSqlError},
     user::UserError,
     utils::{Id, IdError},
 };
@@ -31,6 +31,8 @@ impl DirectMessage {
 pub enum DirectMessageError {
     #[error("No DirectMessage with id")]
     CannotGetById,
+    #[error("No DirectMessage with id")]
+    CannotGetWithThisExpr,
     #[error("No DirectMessage with this user")]
     CannotGetByUser,
     #[error("No DirectMessage with members")]
@@ -61,6 +63,17 @@ impl From<UserError> for DirectMessageError {
 
 impl From<GenericSqlError> for DirectMessageError {
     fn from(value: GenericSqlError) -> Self {
-        DirectMessageError::GenericSqlError(Box::new(value))
+        match value {
+            GenericSqlError::CannotInsert(GenericError { error, set_column }) => {
+                error!("{error}");
+                if set_column.contains(&"directmessage".to_string())
+                    && set_column.contains(&"user".to_string())
+                {}
+                Self::CannotAdd
+            }
+            GenericSqlError::CannotUpdate(_) | GenericSqlError::CannotDelete(_) => {
+                DirectMessageError::GenericSqlError(Box::new(value))
+            }
+        }
     }
 }

@@ -7,6 +7,6 @@ const LENGHT: u32 = 4096;
 /// # Errors
 /// Return an error if :
 /// * key cannot be generated
-pub fn generate_key() -> Result<Rsa<Private>, ErrorStack> {
+pub fn generate() -> Result<Rsa<Private>, ErrorStack> {
     Rsa::generate(LENGHT)
 }

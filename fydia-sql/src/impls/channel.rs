@@ -102,9 +102,7 @@ impl SqlChannel for Channel {
         let mut active_model: entity::channels::ActiveModel = model.clone().into();
         active_model.name = Set(name.clone());
 
-        update(active_model, executor)
-            .await
-            .map_err(|_| ChannelError::CannotUpdateName)?;
+        update(active_model, executor).await?;
 
         self.name = name;
 
@@ -122,15 +120,13 @@ impl SqlChannel for Channel {
             .await
             .map_err(|error| {
                 error!("{}", error);
-                ChannelError::CannotUpdateDescription
+                ChannelError::CannotGetById
             })?;
 
         let mut active_model: entity::channels::ActiveModel = model.clone().into();
         active_model.description = Set(Some(description.clone()));
 
-        update(active_model, executor)
-            .await
-            .map_err(|_| ChannelError::CannotUpdateDescription)?;
+        update(active_model, executor).await?;
 
         self.description = description;
         Ok(())
@@ -142,7 +138,7 @@ impl SqlChannel for Channel {
                 .await
                 .map_err(|error| {
                     error!("{}", error);
-                    ChannelError::CannotGetFromDatabase
+                    ChannelError::CannotGetById
                 })?
                 .into();
 

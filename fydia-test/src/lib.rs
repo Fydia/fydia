@@ -19,12 +19,14 @@ pub struct TestRunnable<'a> {
 }
 
 impl<'a> TestRunnable<'a> {
+    #[must_use]
     pub fn body(mut self, body: &'static str) -> Self {
         self.body = Some(body);
 
         self
     }
 
+    #[must_use]
     pub fn header(mut self, name: &'a str, value: &'a str) -> Self {
         if let Some(headers) = &mut self.headers {
             headers.push((name, value));
@@ -37,6 +39,7 @@ impl<'a> TestRunnable<'a> {
         self
     }
 
+    #[must_use]
     pub fn expect_statuscode(mut self, statuscode: u16) -> Self {
         if let Some(expect) = &mut self.expect {
             expect.statuscode = Some(statuscode);
@@ -51,6 +54,7 @@ impl<'a> TestRunnable<'a> {
         self
     }
 
+    #[must_use]
     pub fn expect_body(mut self, body: &'static str) -> Self {
         if let Some(expect) = &mut self.expect {
             expect.body = Some(body);
@@ -67,6 +71,8 @@ impl<'a> TestRunnable<'a> {
 
     /// # Errors
     /// Return error if expected body or statuscode is different
+    /// # Panics
+    /// Panics if headername or headervalue is incorrect
     pub async fn send(self) -> Result<(), String> {
         let client = reqwest::Client::new();
         let url = format!("http://{}:{}{}", self.ctx.url, self.ctx.port, self.path);
@@ -78,7 +84,7 @@ impl<'a> TestRunnable<'a> {
         };
 
         if let Some(headers) = self.headers {
-            for (key, value) in headers.iter() {
+            for (key, value) in &headers {
                 let name = HeaderName::from_bytes(key.as_bytes()).unwrap();
                 let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
 
@@ -115,10 +121,12 @@ pub struct TestContext {
 }
 
 impl TestContext {
+    #[must_use]
     pub const fn new(url: &'static str, port: u16) -> Self {
         Self { url, port }
     }
 
+    #[must_use]
     pub fn get<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
         TestRunnable {
             ctx: self,
@@ -129,6 +137,8 @@ impl TestContext {
             expect: None,
         }
     }
+
+    #[must_use]
     pub fn post<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
         TestRunnable {
             ctx: self,
@@ -139,6 +149,8 @@ impl TestContext {
             expect: None,
         }
     }
+
+    #[must_use]
     pub fn delete<'a>(&'a self, path: &'a str) -> TestRunnable<'a> {
         TestRunnable {
             ctx: self,

@@ -2,6 +2,7 @@
 
 use crate::{
     server::ServerId,
+    sqlerror::{GenericError, GenericSqlError},
     utils::{Id, IdError},
 };
 use fydia_utils::serde::{Deserialize, Serialize};
@@ -42,5 +43,23 @@ pub enum RoleError {
 impl From<IdError> for RoleError {
     fn from(_: IdError) -> Self {
         Self::NoRoleWithId
+    }
+}
+
+impl From<GenericSqlError> for RoleError {
+    fn from(value: GenericSqlError) -> Self {
+        match value {
+            GenericSqlError::CannotInsert(_) => Self::CannotAddUser,
+            GenericSqlError::CannotUpdate(GenericError { set_column, error }) => {
+                error!("{error}");
+
+                if set_column.contains(&"color".to_string()) {
+                    return Self::CannotUpdateColor;
+                }
+
+                Self::CannotUpdateName
+            }
+            GenericSqlError::CannotDelete(_) => Self::CannotDelete,
+        }
     }
 }

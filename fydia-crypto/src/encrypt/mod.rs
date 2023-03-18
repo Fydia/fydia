@@ -12,7 +12,7 @@ use openssl::symm::Cipher;
 /// # Errors
 /// Return an error if :
 /// * `T` value cannot be encrypted
-pub fn encrypt<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
+pub fn public<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>, String> {
     let mut buf = vec![0; rsa.size() as usize];
 
     match rsa.public_encrypt(string.into().as_bytes(), &mut buf, Padding::PKCS1) {
@@ -26,7 +26,7 @@ pub fn encrypt<T: Into<String>>(rsa: &Rsa<Public>, string: T) -> Result<Vec<u8>,
 /// # Errors
 /// Return an error if :
 /// * `T` value cannot be encrypted
-pub fn private_encrypt<'a, T: Into<Cow<'a, str>>>(
+pub fn private<'a, T: Into<Cow<'a, str>>>(
     rsa: &Rsa<Private>,
     string: T,
 ) -> Result<Vec<u8>, String> {
@@ -53,7 +53,7 @@ pub fn private_encrypt<'a, T: Into<Cow<'a, str>>>(
 /// # Errors
 /// Return an error if :
 /// * `T` value cannot be encrypted
-pub fn aes_encrypt<T: Into<String>>(
+pub fn aes<T: Into<String>>(
     rsa: &PublicKey,
     string: T,
 ) -> Result<(Iv, AesKeyEncrypt, EncryptedBody), String> {
@@ -67,7 +67,7 @@ pub fn aes_encrypt<T: Into<String>>(
         string.into().as_bytes(),
     );
 
-    match encrypt(rsa, key) {
+    match public(rsa, key) {
         Ok(aes_key_encrypted) => match encrypted {
             Ok(data) => Ok((
                 Iv(iv),

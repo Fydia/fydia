@@ -10,7 +10,7 @@ use entity::user::ActiveModel as UserActiveModel;
 use entity::user::Column;
 use entity::user::Model;
 use fydia_crypto::password::hash;
-use fydia_crypto::password::verify_password;
+use fydia_crypto::password::verify;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::permission::Permission;
 use fydia_struct::permission::PermissionError;
@@ -90,34 +90,34 @@ impl SqlUser for User {
     ) -> Result<Self, UserError> {
         let model = Model::get_model_by(&[entity::user::Column::Email.eq(email)], executor).await?;
 
-        let password_is_good =
-            verify_password(password.into(), std::borrow::Cow::Borrowed(&model.password));
+        let password_is_good = verify(password.into(), std::borrow::Cow::Borrowed(&model.password));
 
         if !password_is_good {
             return Err(UserError::PasswordError);
         }
 
-        model
-            .to_struct(executor)
-            .await
-            .map_err(|_| UserError::ModelToStruct)
+        let model = model.to_struct(executor).await?;
+
+        Ok(model)
     }
 
     async fn by_id(id: u32, executor: &DatabaseConnection) -> Result<Self, UserError> {
-        Model::get_model_by(&[Column::Id.eq(id)], executor)
+        let model = Model::get_model_by(&[Column::Id.eq(id)], executor)
             .await?
             .to_struct(executor)
-            .await
-            .map_err(|_| UserError::ModelToStruct)
+            .await?;
+
+        Ok(model)
     }
 
     async fn by_token(token: &Token, executor: &DatabaseConnection) -> Result<Self, UserError> {
         let token = token.get_token()?;
-        Model::get_model_by(&[Column::Token.eq(token.as_str())], executor)
+        let model = Model::get_model_by(&[Column::Token.eq(token.as_str())], executor)
             .await?
             .to_struct(executor)
-            .await
-            .map_err(|_| UserError::ModelToStruct)
+            .await?;
+
+        Ok(model)
     }
 
     async fn update_from_database(
@@ -135,17 +135,15 @@ impl SqlUser for User {
         let token = generate_string(30);
         let mut active_model: UserActiveModel =
             Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor)
-                .await
-                .map_err(|_| UserError::CannotGetById)?
+                .await?
                 .into();
 
         active_model.token = Set(token.clone());
 
-        update(active_model, executor)
-            .await
-            .map_err(|_| UserError::CannotUpdateToken)?;
+        update(active_model, executor).await?;
 
         self.token = Token::new(token.clone());
+
         Ok(())
     }
 
@@ -161,9 +159,7 @@ impl SqlUser for User {
 
         active_model.name = Set(name.to_string());
 
-        update(active_model, executor)
-            .await
-            .map_err(|_| UserError::CannotUpdateName)?;
+        update(active_model, executor).await?;
 
         self.name = name.to_string();
 
@@ -184,9 +180,7 @@ impl SqlUser for User {
 
         active_model.password = Set(password.clone());
 
-        update(active_model, executor)
-            .await
-            .map_err(|_| UserError::CannotUpdatePassword)?;
+        update(active_model, executor).await?;
 
         self.password = Some(password);
 
@@ -244,16 +238,12 @@ impl SqlUser for User {
             .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned()?))
             .all(executor)
             .await
-            .map_err(|_| UserError::CannotGetRolesOfUser)?;
+            .map_err(|_f| UserError::CannotGetRolesOfUser)?;
 
         let mut buf = Vec::new();
 
         for roleid in roles {
-            buf.push(
-                Role::by_id(roleid.role_id, serverid, executor)
-                    .await
-                    .map_err(|_| UserError::CannotGetRolesOfUser)?,
-            );
+            buf.push(Role::by_id(roleid.role_id, serverid, executor).await?);
         }
 
         Ok(buf)
