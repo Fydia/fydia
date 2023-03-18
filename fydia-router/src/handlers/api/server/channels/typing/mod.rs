@@ -18,11 +18,12 @@ pub async fn start_typing(
 ) -> FydiaResult {
     typing
         .start_typing(user.id, channel.id, server.id)
-        .map(|_| "".into_ok())
         .map_err(|error| {
             error!("{error}");
             "Can't start typing".into_server_error()
-        })
+        })?;
+
+    "".into()
 }
 
 /// Stop typing
@@ -38,9 +39,10 @@ pub async fn stop_typing(
 ) -> FydiaResult {
     typing
         .stop_typing(user.id, channel.id, server.id)
-        .map(|_| "".into_ok())
         .map_err(|error| {
             error!("{error}");
             "Can't stop typing".into_server_error()
-        })
+        })?;
+
+    "".into()
 }

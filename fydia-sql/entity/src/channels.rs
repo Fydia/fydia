@@ -2,7 +2,7 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::channel::Channel;
+use fydia_struct::channel::{Channel, ChannelError};
 use sea_orm::{entity::prelude::*, Set};
 use shared::sea_orm;
 
@@ -21,7 +21,7 @@ pub struct Model {
 }
 
 impl TryFrom<Channel> for ActiveModel {
-    type Error = String;
+    type Error = ChannelError;
 
     fn try_from(channel: Channel) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -35,7 +35,7 @@ impl TryFrom<Channel> for ActiveModel {
 }
 
 impl TryFrom<&Channel> for ActiveModel {
-    type Error = String;
+    type Error = ChannelError;
 
     fn try_from(channel: &Channel) -> Result<Self, Self::Error> {
         Self::try_from(channel.clone())

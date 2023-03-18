@@ -1,7 +1,9 @@
 //! This module related to message
 
 use crate::channel::ChannelId;
+use crate::sqlerror::GenericSqlError;
 use crate::user::User;
+use crate::utils::IdError;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use fydia_utils::generate_string;
 use fydia_utils::serde::{
@@ -10,6 +12,7 @@ use fydia_utils::serde::{
 };
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
+use thiserror::Error;
 /// `MessageType` reprensent the type of Message.
 /// This enum is used in the Message Json$
 #[allow(missing_docs)]
@@ -53,15 +56,16 @@ impl MessageType {
     ///
     ///assert_eq!(None, MessageType::from_string("NOVALUE"));
     ///```
-    pub fn from_string<T: Into<String>>(from: T) -> Option<Self> {
-        match from.into().to_uppercase().as_str() {
-            "TEXT" => Some(Self::TEXT),
-            "FILE" => Some(Self::FILE),
-            "URL" => Some(Self::URL),
-            "VIDEO" => Some(Self::VIDEO),
-            "PHOTO" => Some(Self::PHOTO),
-            "AUDIO" => Some(Self::AUDIO),
-            _ => None,
+    pub fn from_string<T: Into<String>>(from: T) -> Result<Self, MessageTypeError> {
+        let from = from.into();
+        match from.to_uppercase().as_str() {
+            "TEXT" => Ok(Self::TEXT),
+            "FILE" => Ok(Self::FILE),
+            "URL" => Ok(Self::URL),
+            "VIDEO" => Ok(Self::VIDEO),
+            "PHOTO" => Ok(Self::PHOTO),
+            "AUDIO" => Ok(Self::AUDIO),
+            _ => Err(MessageTypeError::UnknowType(from.into())),
         }
     }
 }
@@ -70,6 +74,14 @@ impl Default for MessageType {
     fn default() -> Self {
         Self::TEXT
     }
+}
+
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `MessageTypeError` represents all errors of `MessageType`
+pub enum MessageTypeError {
+    #[error("Unknow type ; `{0}`")]
+    UnknowType(String),
 }
 
 /// Message contains all value of a message.
@@ -110,11 +122,11 @@ impl Message {
         timestamp: Date,
         author_id: User,
         channel_id: ChannelId,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, MessageError> {
         let content = content.into();
 
         if content.is_empty() {
-            return Err(String::from("Content is empty"));
+            return Err(MessageError::ContentEmpty);
         }
 
         Ok(Self {
@@ -126,6 +138,36 @@ impl Message {
             author_id,
             channel_id,
         })
+    }
+}
+
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `MessageError` represents all errors of `Message`
+pub enum MessageError {
+    #[error("Message's content cannot be empty")]
+    ContentEmpty,
+    #[error("Cannot convert Message in ActiveModel")]
+    CannotIntoActiveModel,
+    #[error("No message with this id")]
+    CannotGetById,
+    #[error("Cannot convert the model to the struct")]
+    ModelToStruct,
+    #[error("{0}")]
+    GenericSqlError(Box<GenericSqlError>),
+}
+
+impl From<IdError> for MessageError {
+    fn from(value: IdError) -> Self {
+        match value {
+            IdError::IdUnset => Self::CannotIntoActiveModel,
+        }
+    }
+}
+
+impl From<GenericSqlError> for MessageError {
+    fn from(value: GenericSqlError) -> Self {
+        Self::GenericSqlError(Box::new(value))
     }
 }
 

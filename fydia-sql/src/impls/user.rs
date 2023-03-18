@@ -13,14 +13,13 @@ use fydia_crypto::password::hash;
 use fydia_crypto::password::verify_password;
 use fydia_struct::channel::ChannelId;
 use fydia_struct::permission::Permission;
+use fydia_struct::permission::PermissionError;
 use fydia_struct::permission::Permissions;
-use fydia_struct::response::FydiaResponse;
-use fydia_struct::response::IntoFydia;
-use fydia_struct::response::MapError;
 use fydia_struct::roles::Role;
 use fydia_struct::server::ServerId;
 use fydia_struct::user::Token;
 use fydia_struct::user::User;
+use fydia_struct::user::UserError;
 use fydia_struct::user::UserId;
 use fydia_utils::async_trait;
 use fydia_utils::generate_string;
@@ -38,48 +37,48 @@ pub trait SqlUser {
         email: &str,
         password: &str,
         executor: &DatabaseConnection,
-    ) -> Option<Self>
+    ) -> Result<Self, UserError>
     where
         Self: Sized;
-    async fn by_id(id: u32, executor: &DatabaseConnection) -> Option<Self>
+    async fn by_id(id: u32, executor: &DatabaseConnection) -> Result<Self, UserError>
     where
         Self: Sized;
-    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self>
+    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Result<Self, UserError>
     where
         Self: Sized;
     async fn update_from_database(
         &mut self,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse>;
-    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    ) -> Result<(), UserError>;
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), UserError>;
     async fn update_name(
         &mut self,
         name: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse>;
+    ) -> Result<(), UserError>;
     async fn update_password(
         &mut self,
         clear_password: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse>;
-    async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, FydiaResponse>;
-    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    ) -> Result<(), UserError>;
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<User, UserError>;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), UserError>;
     async fn permission_of_channel(
         &self,
         channelid: &ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse>;
+    ) -> Result<Permissions, PermissionError>;
     async fn permission_of_server(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse>;
+    ) -> Result<Permissions, PermissionError>;
 
     async fn roles(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Role>, FydiaResponse>;
+    ) -> Result<Vec<Role>, UserError>;
 }
 
 #[async_trait]
@@ -88,67 +87,65 @@ impl SqlUser for User {
         email: &str,
         password: &str,
         executor: &DatabaseConnection,
-    ) -> Option<Self> {
-        let model = Model::get_model_by(&[entity::user::Column::Email.eq(email)], executor)
-            .await
-            .ok()?;
+    ) -> Result<Self, UserError> {
+        let model = Model::get_model_by(&[entity::user::Column::Email.eq(email)], executor).await?;
 
         let password_is_good =
             verify_password(password.into(), std::borrow::Cow::Borrowed(&model.password));
 
-        if password_is_good {
-            model.to_struct(executor).await.ok()
-        } else {
-            None
+        if !password_is_good {
+            return Err(UserError::PasswordError);
         }
+
+        model
+            .to_struct(executor)
+            .await
+            .map_err(|_| UserError::ModelToStruct)
     }
 
-    async fn by_id(id: u32, executor: &DatabaseConnection) -> Option<Self> {
+    async fn by_id(id: u32, executor: &DatabaseConnection) -> Result<Self, UserError> {
         Model::get_model_by(&[Column::Id.eq(id)], executor)
-            .await
-            .ok()?
+            .await?
             .to_struct(executor)
             .await
-            .ok()
+            .map_err(|_| UserError::ModelToStruct)
     }
 
-    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Option<Self> {
-        Model::get_model_by(&[Column::Token.eq(token.0.as_str())], executor)
-            .await
-            .ok()?
+    async fn by_token(token: &Token, executor: &DatabaseConnection) -> Result<Self, UserError> {
+        let token = token.get_token()?;
+        Model::get_model_by(&[Column::Token.eq(token.as_str())], executor)
+            .await?
             .to_struct(executor)
             .await
-            .ok()
+            .map_err(|_| UserError::ModelToStruct)
     }
 
     async fn update_from_database(
         &mut self,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse> {
-        let model = Model::get_model_by(
-            &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
-            executor,
-        )
-        .await?;
-        let user_of_db = model.to_struct(executor).await?;
+    ) -> Result<(), UserError> {
+        let user_of_db = Self::by_id(self.id.0.get_id_cloned()?, executor).await?;
 
         self.take_value_of(user_of_db);
+
         Ok(())
     }
 
-    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
+    async fn update_token(&mut self, executor: &DatabaseConnection) -> Result<(), UserError> {
         let token = generate_string(30);
-        let mut active_model: UserActiveModel = Model::get_model_by(
-            &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
-            executor,
-        )
-        .await?
-        .into();
+        let mut active_model: UserActiveModel =
+            Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor)
+                .await
+                .map_err(|_| UserError::CannotGetById)?
+                .into();
+
         active_model.token = Set(token.clone());
 
-        update(active_model, executor).await?;
+        update(active_model, executor)
+            .await
+            .map_err(|_| UserError::CannotUpdateToken)?;
 
-        self.token = Some(token.clone());
+        self.token = Token::new(token.clone());
         Ok(())
     }
 
@@ -156,19 +153,20 @@ impl SqlUser for User {
         &mut self,
         name: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse> {
-        let mut active_model: UserActiveModel = Model::get_model_by(
-            &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
-            executor,
-        )
-        .await?
-        .into();
+    ) -> Result<(), UserError> {
+        let mut active_model: UserActiveModel =
+            Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor)
+                .await?
+                .into();
 
         active_model.name = Set(name.to_string());
 
-        update(active_model, executor).await?;
+        update(active_model, executor)
+            .await
+            .map_err(|_| UserError::CannotUpdateName)?;
 
         self.name = name.to_string();
+
         Ok(())
     }
 
@@ -176,30 +174,32 @@ impl SqlUser for User {
         &mut self,
         clear_password: &str,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse> {
-        let mut active_model: UserActiveModel = Model::get_model_by(
-            &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
-            executor,
-        )
-        .await?
-        .into();
+    ) -> Result<(), UserError> {
+        let mut active_model: UserActiveModel =
+            Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor)
+                .await?
+                .into();
 
-        let password = hash(clear_password).error_to_fydiaresponse()?;
+        let password = hash(clear_password)?;
+
         active_model.password = Set(password.clone());
 
-        update(active_model, executor).await?;
+        update(active_model, executor)
+            .await
+            .map_err(|_| UserError::CannotUpdatePassword)?;
 
         self.password = Some(password);
+
         Ok(())
     }
 
-    async fn insert(mut self, executor: &DatabaseConnection) -> Result<Self, FydiaResponse> {
-        if self.token.is_none() {
-            self.token = Some(generate_string(30));
+    async fn insert(mut self, executor: &DatabaseConnection) -> Result<Self, UserError> {
+        if self.token.is_null() {
+            self.token = Token::new(generate_string(30));
         }
 
-        let active_model: UserActiveModel =
-            UserActiveModel::try_from(self.clone()).error_to_fydiaresponse()?;
+        let active_model: UserActiveModel = UserActiveModel::try_from(self.clone())?;
+
         let db = insert(active_model, executor).await?;
 
         self.id = UserId::new(db.last_insert_id);
@@ -207,12 +207,10 @@ impl SqlUser for User {
         Ok(self)
     }
 
-    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), FydiaResponse> {
-        let model = Model::get_model_by(
-            &[Column::Id.eq(self.id.0.get_id_cloned_fydiaresponse()?)],
-            executor,
-        )
-        .await?;
+    async fn delete(mut self, executor: &DatabaseConnection) -> Result<(), UserError> {
+        let model =
+            Model::get_model_by(&[Column::Id.eq(self.id.0.get_id_cloned()?)], executor).await?;
+
         let active_model: UserActiveModel = model.clone().into();
 
         delete(active_model, executor).await?;
@@ -226,32 +224,36 @@ impl SqlUser for User {
         &self,
         channelid: &ChannelId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse> {
+    ) -> Result<Permissions, PermissionError> {
         Permission::of_user_with_role_in_channel(channelid, &self.id, executor).await
     }
     async fn permission_of_server(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse> {
+    ) -> Result<Permissions, PermissionError> {
         Permission::of_user(&self.id, serverid, executor).await
     }
     async fn roles(
         &self,
         serverid: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<Role>, FydiaResponse> {
+    ) -> Result<Vec<Role>, UserError> {
         let roles = assignation::Entity::find()
             .filter(assignation::Column::ServerId.eq(serverid.id.as_str()))
-            .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned_fydiaresponse()?))
+            .filter(assignation::Column::UserId.eq(self.id.0.get_id_cloned()?))
             .all(executor)
             .await
-            .error_to_fydiaresponse()?;
+            .map_err(|_| UserError::CannotGetRolesOfUser)?;
 
         let mut buf = Vec::new();
 
         for roleid in roles {
-            buf.push(Role::by_id(roleid.role_id, serverid, executor).await?);
+            buf.push(
+                Role::by_id(roleid.role_id, serverid, executor)
+                    .await
+                    .map_err(|_| UserError::CannotGetRolesOfUser)?,
+            );
         }
 
         Ok(buf)
@@ -259,14 +261,12 @@ impl SqlUser for User {
 }
 #[async_trait]
 pub trait UserFrom {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse>;
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, UserError>;
 }
 
 #[async_trait]
 impl UserFrom for UserId {
-    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, FydiaResponse> {
-        User::by_id(self.0.get_id_cloned_fydiaresponse()?, executor)
-            .await
-            .ok_or_else(|| "No user with this id".into_error())
+    async fn to_user(&self, executor: &DatabaseConnection) -> Result<User, UserError> {
+        User::by_id(self.0.get_id_cloned()?, executor).await
     }
 }

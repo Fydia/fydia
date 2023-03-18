@@ -11,12 +11,12 @@ use fydia_sql::{
     sqlpool::DbConnection,
 };
 use fydia_struct::{
-    channel::{Channel, ChannelId},
+    channel::{Channel, ChannelError, ChannelId},
     instance::RsaData,
     messages::Message,
-    response::{FydiaResponse, IntoFydia, MapError},
+    response::FydiaResponse,
     roles::Role,
-    server::{Server, ServerId},
+    server::{Server, ServerError, ServerId},
     user::{Token, User},
 };
 use fydia_utils::async_trait;
@@ -37,16 +37,16 @@ impl FromRequestParts<ServerState> for ContentType {
         let content_type = parts
             .headers
             .get(CONTENT_TYPE)
-            .ok_or_else(|| "No Content-Type header found".into_error())?
+            .ok_or_else(|| FydiaResponse::TextError("No Content-Type header found"))?
             .to_str()
             .map_err(|error| {
                 error!("{error}");
-                "Content-Type error".into_error()
+                FydiaResponse::TextError("Content-Type error")
             })?;
 
         let mime_type = Mime::from_str(content_type).map_err(|error| {
             error!("{error}");
-            "Bad Content-Type".into_error()
+            FydiaResponse::TextError("Bad Content-Type")
         })?;
 
         Ok(Self(mime_type, content_type.to_string()))
@@ -108,7 +108,7 @@ impl<T: UrlName> FromRequestParts<ServerState> for UrlGetter<T> {
             }
         }
 
-        Err("No message id".into_error())
+        Err(FydiaResponse::TextError("No message id"))
     }
 }
 #[derive(Debug)]
@@ -137,13 +137,12 @@ impl FromRequestParts<ServerState> for RoleFromId {
         if !user
             .permission_of_channel(&channel.id, &state.database)
             .await?
-            .calculate(Some(channel.id.clone()))
-            .error_to_fydiaresponse()?
+            .calculate(Some(channel.id.clone()))?
             .is_admin()
         {
-            return Err("Unknow channel".into_error());
+            return Err(FydiaResponse::TextError("Unknow channel"));
         }
-        let roleid = roleid.as_str().parse().error_to_fydiaresponse()?;
+        let roleid = roleid.as_str().parse()?;
         let role = Role::by_id(roleid, &server.id, &state.database).await?;
 
         Ok(Self(role))
@@ -175,11 +174,10 @@ impl FromRequestParts<ServerState> for MessageFromId {
         if !user
             .permission_of_channel(&channel.id, &state.database)
             .await?
-            .calculate(Some(channel.id.clone()))
-            .error_to_fydiaresponse()?
+            .calculate(Some(channel.id.clone()))?
             .can_read()
         {
-            return Err("Unknow channel".into_error());
+            return Err(ChannelError::CannotGetById.into());
         }
 
         let message = Message::by_id(&url_param, &state.database).await?;
@@ -217,7 +215,7 @@ impl FromRequestParts<ServerState> for ChannelFromId {
         let channel = ChannelId::new(channelid).channel(&state.database).await?;
 
         if !server.channel.is_exists(&channel.id) {
-            return Err("Channel is not exists".into_error());
+            return Err(ChannelError::CannotGetById.into());
         }
 
         Ok(Self(channel))
@@ -239,7 +237,7 @@ impl FromRequestParts<ServerState> for ServerJoinedFromId {
         let ServerFromId(server) = ServerFromId::from_request_parts(parts, state).await?;
 
         if !user.servers.is_join(&server.id) {
-            return Err("Server not exists".into_error());
+            return Err(ServerError::CannotGetById.into());
         }
 
         Ok(Self(server))
@@ -264,7 +262,9 @@ impl FromRequestParts<ServerState> for ServerFromId {
         let UrlGetter(serverid, _) =
             UrlGetter::<ServerFromId>::from_request_parts(parts, state).await?;
 
-        ServerId::new(serverid).get(&state.database).await.map(Self)
+        let server = ServerId::new(serverid).get(&state.database).await?;
+
+        Ok(ServerFromId(server))
     }
 }
 
@@ -288,10 +288,9 @@ impl FromRequest<ServerState, axum::body::Body> for UserFromJson {
         let email = get_json("email", &json)?;
         let password = get_json("password", &json)?;
 
-        User::by_email_and_password(email, password, &state.database)
-            .await
-            .ok_or_else(|| "User not exists".into_error())
-            .map(Self)
+        let user = User::by_email_and_password(email, password, &state.database).await?;
+
+        Ok(UserFromJson(user))
     }
 }
 
@@ -306,13 +305,10 @@ impl FromRequestParts<ServerState> for UserFromToken {
         parts: &mut axum::http::request::Parts,
         state: &ServerState,
     ) -> Result<Self, Self::Rejection> {
-        let token =
-            Token::from_headervalue(&parts.headers).ok_or_else(|| "No token".into_error())?;
+        let token = Token::from_headervalue(&parts.headers);
 
-        token
-            .get_user(&state.database)
-            .await
-            .ok_or_else(|| "Wrong token".into_error())
-            .map(UserFromToken)
+        let user = token.get_user(&state.database).await?;
+
+        Ok(UserFromToken(user))
     }
 }

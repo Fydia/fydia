@@ -2,7 +2,11 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::{directmessage::DirectMessage, response::FydiaResponse, utils::Id};
+use fydia_struct::{
+    directmessage::{DirectMessage, DirectMessageError},
+    response::FydiaResponse,
+    utils::Id,
+};
 use sea_orm::{
     entity::prelude::*,
     sea_query::{Expr, SimpleExpr},
@@ -106,7 +110,7 @@ impl<'m> Model {
     }
 }
 impl TryFrom<DirectMessage> for ActiveModel {
-    type Error = String;
+    type Error = DirectMessageError;
 
     fn try_from(value: DirectMessage) -> Result<Self, Self::Error> {
         Ok(Self {

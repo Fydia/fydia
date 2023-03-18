@@ -45,7 +45,7 @@ pub async fn post_permission_of_user(
 
     let value = get_json("value", &json)?
         .parse()
-        .map_err(|_err| "Bad value".into_error())?;
+        .map_err(|_err| "Bad value")?;
 
     if let Ok(mut permission) =
         Permission::of_user_in_channel(&channel.id, &user.id, &database).await
@@ -66,5 +66,5 @@ pub async fn post_permission_of_user(
         }
     }
 
-    Ok("".into_ok())
+    "".into()
 }

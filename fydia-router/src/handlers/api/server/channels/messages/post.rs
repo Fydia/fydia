@@ -15,7 +15,7 @@ use fydia_struct::event::{Event, EventContent};
 use fydia_struct::file::{File, FileDescriptor};
 use fydia_struct::instance::RsaData;
 use fydia_struct::messages::{Date, Message, MessageType};
-use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia, MapError};
+use fydia_struct::response::{FydiaResponse, FydiaResult, IntoFydia};
 use fydia_struct::server::{Server, ServerId};
 use fydia_struct::user::User;
 use fydia_utils::http::header::CONTENT_TYPE;
@@ -66,7 +66,7 @@ pub async fn post_messages(
 
     if mime == mime::MULTIPART_FORM_DATA {
         let stream = once(async move { Result::<String, Infallible>::Ok(body) });
-        let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found".into_error())?;
+        let boundary = get_boundary(&headers).ok_or_else(|| "No boundary found")?;
 
         let multer = multer::Multipart::new(stream, boundary.clone());
 
@@ -75,7 +75,7 @@ pub async fn post_messages(
         return send_event(event, server, &rsa, wbsocket, database).await;
     }
 
-    Err("Content-Type error".into_error())
+    "Content-Type error".into()
 }
 
 /// Transform a multipart request to a Message event
@@ -111,7 +111,7 @@ pub async fn multipart_to_event<'a, 'r>(
                     .await
                     .map_err(|error| {
                         error!("{error}");
-                        "Body error".into_error()
+                        FydiaResponse::TextError("Body error")
                     })?
                     .to_vec();
 
@@ -136,7 +136,7 @@ pub async fn multipart_to_event<'a, 'r>(
         user,
         channelid.clone(),
     )
-    .error_to_fydiaresponse()?;
+    .map_err(|f| FydiaResponse::StringError(Box::new(f.to_string())))?;
 
     let event = Event::new(
         server_id.clone(),
@@ -161,8 +161,8 @@ pub async fn json_message(
     server_id: &ServerId,
 ) -> Result<Event, FydiaResponse> {
     let type_from_json = get_json("type", &value)?.to_string();
-    let messagetype =
-        MessageType::from_string(type_from_json).ok_or_else(|| "Bad Message Type".into_error())?;
+    let messagetype = MessageType::from_string(type_from_json)
+        .map_err(|_| FydiaResponse::TextError("Bad Message Type"))?;
 
     let content = get_json("content", &value)?.to_string();
 
@@ -174,7 +174,7 @@ pub async fn json_message(
         user,
         channelid.clone(),
     )
-    .error_to_fydiaresponse()?;
+    .map_err(|f| FydiaResponse::StringError(Box::new(f.to_string())))?;
 
     Ok(Event::new(
         server_id.clone(),
@@ -227,12 +227,12 @@ pub async fn send_event(
 ) -> FydiaResult {
     let members = match server.users(&database).await {
         Ok(members) => members.members,
-        Err(_) => return Err("Cannot get users of the server".into_server_error()),
+        Err(_) => return "Cannot get users of the server".into_server_error().into(),
     };
 
     if let EventContent::Message { ref content } = event.content {
         if content.insert(&database).await.is_err() {
-            return Err("Cannot send message".into_server_error());
+            return "Cannot send message".into_server_error().into();
         }
 
         let key = rsa.clone();
@@ -246,5 +246,5 @@ pub async fn send_event(
         });
     }
 
-    Ok("Message send".into_ok())
+    "Message send".into()
 }

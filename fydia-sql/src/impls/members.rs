@@ -1,8 +1,7 @@
 use super::insert;
 use entity::members::*;
 use fydia_struct::{
-    response::FydiaResponse,
-    server::{Members, ServerId},
+    server::{Members, MembersError, ServerId},
     user::UserId,
 };
 use fydia_utils::async_trait;
@@ -14,16 +13,16 @@ pub trait SqlMembers {
     async fn users_of(
         server: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Members, FydiaResponse>;
+    ) -> Result<Members, MembersError>;
     async fn servers_of(
         user: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<ServerId>, FydiaResponse>;
+    ) -> Result<Vec<ServerId>, MembersError>;
     async fn insert(
         serverid: &ServerId,
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse>;
+    ) -> Result<(), MembersError>;
 }
 
 #[async_trait::async_trait]
@@ -31,7 +30,7 @@ impl SqlMembers for Members {
     async fn users_of(
         server: &ServerId,
         executor: &DatabaseConnection,
-    ) -> Result<Members, FydiaResponse> {
+    ) -> Result<Members, MembersError> {
         let model: Vec<UserId> =
             Model::get_models_by(Column::Serverid.contains(&server.id), executor)
                 .await?
@@ -45,8 +44,8 @@ impl SqlMembers for Members {
     async fn servers_of(
         userid: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<Vec<ServerId>, FydiaResponse> {
-        let userid = userid.0.get_id_cloned_fydiaresponse()?;
+    ) -> Result<Vec<ServerId>, MembersError> {
+        let userid = userid.0.get_id_cloned()?;
 
         Ok(Model::get_models_by(Column::Userid.eq(userid), executor)
             .await?
@@ -59,9 +58,11 @@ impl SqlMembers for Members {
         server: &ServerId,
         user: &UserId,
         executor: &DatabaseConnection,
-    ) -> Result<(), FydiaResponse> {
+    ) -> Result<(), MembersError> {
         let acmodel = Model::new_activemodel(user, server.clone())?;
 
-        insert(acmodel, executor).await.map(|_| ())
+        insert(acmodel, executor).await.map(|_| {})?;
+
+        Ok(())
     }
 }

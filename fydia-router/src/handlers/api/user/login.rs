@@ -1,7 +1,7 @@
 use crate::handlers::basic::{Database, UserFromJson};
 
 use fydia_sql::impls::user::SqlUser;
-use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_struct::response::FydiaResult;
 
 /// Return a token
 ///
@@ -13,7 +13,5 @@ pub async fn user_login(
 ) -> FydiaResult {
     user.update_token(&database).await?;
 
-    let token = user.token.ok_or_else(|| "Token error".into_error())?;
-
-    Ok(token.into_ok())
+    user.token.get_token().into()
 }

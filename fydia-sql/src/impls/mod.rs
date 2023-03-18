@@ -1,4 +1,4 @@
-use fydia_struct::response::{FydiaResponse, MapError};
+use fydia_struct::sqlerror::GenericSqlError;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, InsertResult, IntoActiveModel};
 use shared::sea_orm;
 
@@ -24,8 +24,11 @@ pub mod user;
 pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<InsertResult<A>, FydiaResponse> {
-    T::insert(am).exec(executor).await.error_to_fydiaresponse()
+) -> Result<InsertResult<A>, GenericSqlError> {
+    T::insert(am)
+        .exec(executor)
+        .await
+        .map_err(|f| GenericSqlError::CannotInsert(f.to_string()))
 }
 
 /// Update any model
@@ -37,7 +40,7 @@ pub async fn insert<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
 pub async fn update<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), FydiaResponse>
+) -> Result<(), GenericSqlError>
 where
     <A::Entity as EntityTrait>::Model: IntoActiveModel<A>,
 {
@@ -45,7 +48,7 @@ where
         .exec(executor)
         .await
         .map(|_| ())
-        .error_to_fydiaresponse()
+        .map_err(|f| GenericSqlError::CannotUpdate(f.to_string()))
 }
 
 /// Delete any model
@@ -57,10 +60,10 @@ where
 pub async fn delete<'a, T: EntityTrait, A: ActiveModelTrait<Entity = T>>(
     am: A,
     executor: &DatabaseConnection,
-) -> Result<(), FydiaResponse> {
+) -> Result<(), GenericSqlError> {
     T::delete(am)
         .exec(executor)
         .await
         .map(|_| ())
-        .error_to_fydiaresponse()
+        .map_err(|f| GenericSqlError::CannotDelete(f.to_string()))
 }

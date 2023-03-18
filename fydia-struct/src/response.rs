@@ -2,7 +2,10 @@
 
 //! This module is related to HTTP Response
 
-use std::fmt::Debug;
+use std::convert::Infallible;
+use std::error::Error;
+use std::fmt::{Debug, Display};
+use std::ops::FromResidual;
 
 use axum::{body, response::IntoResponse};
 use fydia_utils::http::{header::CONTENT_TYPE, response::Builder, Response, StatusCode};
@@ -29,8 +32,100 @@ pub struct ResponseFormat {
     body: Value,
 }
 
-/// `FydiaResult` type alias for Result with `FydiaResponse`
-pub type FydiaResult = Result<FydiaResponse, FydiaResponse>;
+#[derive(Debug)]
+/// Result for `FydiaResponse`
+pub enum FydiaResult {
+    /// Ok value
+    Ok(FydiaResponse),
+    /// Error value
+    Err(FydiaResponse),
+}
+
+impl<E: Display> FromResidual<Result<Infallible, E>> for FydiaResult {
+    #[inline]
+    fn from_residual(residual: Result<Infallible, E>) -> Self {
+        match residual {
+            Err(error) => Self::Err(FydiaResponse::StringError(Box::new(error.to_string()))),
+            Ok(_) => panic!("wut cannot go here"),
+        }
+    }
+}
+
+impl FromResidual<Result<Infallible, FydiaResponse>> for FydiaResult {
+    #[inline]
+    fn from_residual(residual: Result<Infallible, FydiaResponse>) -> Self {
+        match residual {
+            Err(error) => Self::Err(error),
+            Ok(_) => panic!("wut cannot go here"),
+        }
+    }
+}
+
+impl<T: IntoFydiaResponse> From<T> for FydiaResult {
+    fn from(value: T) -> Self {
+        FydiaResult::Ok(value.response_ok())
+    }
+}
+
+impl From<FydiaResponse> for FydiaResult {
+    fn from(value: FydiaResponse) -> Self {
+        FydiaResult::Ok(value)
+    }
+}
+
+impl From<Result<FydiaResponse, FydiaResponse>> for FydiaResult {
+    fn from(value: Result<FydiaResponse, FydiaResponse>) -> Self {
+        match value {
+            Ok(displayok) => FydiaResult::Ok(displayok),
+            Err(error) => FydiaResult::Err(error),
+        }
+    }
+}
+
+impl<T: IntoFydiaResponse, E: Display> From<Result<T, E>> for FydiaResult {
+    fn from(value: Result<T, E>) -> Self {
+        match value {
+            Ok(displayok) => FydiaResult::Ok(displayok.response_ok()),
+            Err(error) => {
+                FydiaResult::Err(FydiaResponse::StringError(Box::new(format!("{}", error))))
+            }
+        }
+    }
+}
+
+trait IntoFydiaResponse: Sized {
+    fn response_ok(self) -> FydiaResponse;
+    fn response_err(self) -> FydiaResponse;
+}
+
+impl IntoFydiaResponse for String {
+    fn response_ok(self) -> FydiaResponse {
+        FydiaResponse::String(Box::new(self))
+    }
+
+    fn response_err(self) -> FydiaResponse {
+        FydiaResponse::StringError(Box::new(self))
+    }
+}
+
+impl IntoFydiaResponse for &'static str {
+    fn response_ok(self) -> FydiaResponse {
+        FydiaResponse::Text(self)
+    }
+
+    fn response_err(self) -> FydiaResponse {
+        FydiaResponse::Text(self)
+    }
+}
+
+impl IntoResponse for FydiaResult {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            FydiaResult::Ok(response) => response.into_response(),
+            FydiaResult::Err(err) => err.into_response(),
+        }
+    }
+}
 
 /// `ImplString` is used by `FydiaResponse` for generics type
 pub trait ImplString: ToString + Debug + Send {}
@@ -156,33 +251,14 @@ impl IntoResponse for FydiaResponse {
     }
 }
 
-/// Map error value to `FydiaResponse`
-pub trait MapError<T> {
-    /// Convert error value to `FydiaResponse`
-    ///
-    /// # Errors
-    /// Return error type to `FydiaResponse`
-    fn error_to_fydiaresponse(self) -> Result<T, FydiaResponse>;
-}
-
-impl<T, E: ToString> MapError<T> for Result<T, E> {
-    fn error_to_fydiaresponse(self) -> Result<T, FydiaResponse> {
-        self.map_err(|f| f.to_string().into_error())
+impl<T: Error + Display> From<T> for FydiaResponse {
+    fn from(value: T) -> Self {
+        FydiaResponse::StringError(Box::new(value.to_string()))
     }
 }
 
 /// Convert types to `FydiaResponse`
 pub trait IntoFydia {
-    /// Convert this type to ok
-    fn into_ok(self) -> FydiaResponse
-    where
-        Self: Sized;
-
-    /// Convert this type to error
-    fn into_error(self) -> FydiaResponse
-    where
-        Self: Sized;
-
     /// Convert this type to error with custom statuscode
     fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse
     where
@@ -213,26 +289,12 @@ pub trait IntoFydia {
 }
 
 impl IntoFydia for &'static str {
-    fn into_ok(self) -> FydiaResponse {
-        FydiaResponse::String(Box::new(self))
-    }
-    fn into_error(self) -> FydiaResponse {
-        FydiaResponse::StringError(Box::new(self))
-    }
-
     fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse {
         FydiaResponse::StringWithStatusCode(statuscode, Box::new(self))
     }
 }
 
 impl IntoFydia for String {
-    fn into_ok(self) -> FydiaResponse {
-        FydiaResponse::String(Box::new(self))
-    }
-    fn into_error(self) -> FydiaResponse {
-        FydiaResponse::StringError(Box::new(self))
-    }
-
     fn into_error_with_statuscode(self, statuscode: StatusCode) -> FydiaResponse {
         FydiaResponse::StringWithStatusCode(statuscode, Box::new(self))
     }

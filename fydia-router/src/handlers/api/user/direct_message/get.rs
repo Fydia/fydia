@@ -14,5 +14,5 @@ pub async fn get_direct_messages(
     Database(database): Database,
 ) -> FydiaResult {
     let channels = DirectMessage::of_user(&user.id, &database).await?;
-    Ok(FydiaResponse::from_serialize(channels))
+    FydiaResponse::from_serialize(channels).into()
 }

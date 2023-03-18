@@ -21,3 +21,4 @@ tokio = { version = "1.26.0", default-features = false, features = [
 
 entity = { path = "entity" }
 migration = { path = "migration" }
+thiserror = "1.0.39"

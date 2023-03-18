@@ -13,5 +13,5 @@ pub mod roles;
 /// # Errors
 /// This function will return if the token or serverid isn't valid
 pub async fn get_server(ServerJoinedFromId(server): ServerJoinedFromId) -> FydiaResult {
-    Ok(FydiaResponse::from_serialize(server))
+    FydiaResponse::from_serialize(server).into()
 }

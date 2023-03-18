@@ -4,5 +4,5 @@ use fydia_struct::response::{FydiaResult, IntoFydia};
 /// # Errors
 /// This function will return an error if dm doesn't exist
 pub async fn delete_direct_message() -> FydiaResult {
-    Err("".into_not_implemented_error())
+    "".into_not_implemented_error().into()
 }

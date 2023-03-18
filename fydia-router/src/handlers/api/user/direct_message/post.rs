@@ -3,7 +3,7 @@ use axum::extract::Path;
 use fydia_sql::impls::direct_message::{DirectMessageMembers, SqlDirectMessage};
 use fydia_sql::impls::user::UserFrom;
 use fydia_struct::directmessage::DirectMessage;
-use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
+use fydia_struct::response::{FydiaResult, IntoFydia};
 use fydia_struct::utils::Id;
 use fydia_struct::{format::UserFormat, user::UserId};
 
@@ -17,10 +17,10 @@ pub async fn create_direct_message(
     Database(database): Database,
 ) -> FydiaResult {
     if UserFormat::from_string(&target_user).is_some() {
-        return Err("Soon may be".into_not_implemented_error());
+        return "Soon may be".into_not_implemented_error().into();
     }
 
-    let id = target_user.parse::<u32>().error_to_fydiaresponse()?;
+    let id = target_user.parse::<u32>()?;
 
     let target = UserId::new(id).to_user(&database).await?;
 
@@ -31,5 +31,5 @@ pub async fn create_direct_message(
 
     dm.add(&target.id, &database).await?;
 
-    Ok("".into_error())
+    "".into()
 }

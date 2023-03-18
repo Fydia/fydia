@@ -1,11 +1,7 @@
 use crate::handlers::{basic::Database, get_json, get_json_value_from_body};
 
 use fydia_sql::impls::user::SqlUser;
-use fydia_struct::{
-    instance::Instance,
-    response::{FydiaResult, IntoFydia, MapError},
-    user::User,
-};
+use fydia_struct::{instance::Instance, response::FydiaResult, user::User};
 
 /// Create a new user
 ///
@@ -19,9 +15,9 @@ pub async fn create_user(Database(database): Database, body: String) -> FydiaRes
     let email = get_json("email".to_string(), &json)?;
     let password = get_json("password".to_string(), &json)?;
 
-    User::new(name, email, password, Instance::default())
-        .error_to_fydiaresponse()?
+    User::new(name, email, password, Instance::default())?
         .insert(&database)
-        .await
-        .map(|_| "Register successfully".into_ok())
+        .await?;
+
+    "Register successfully".into()
 }

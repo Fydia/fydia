@@ -2,7 +2,7 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::server::Server;
+use fydia_struct::server::{Server, ServerError};
 use sea_orm::{entity::prelude::*, Set};
 use shared::sea_orm;
 //use crate::impls::{channel::SqlChannel, members::SqlMembers, role::SqlRoles};
@@ -20,7 +20,7 @@ pub struct Model {
 }
 
 impl TryFrom<Server> for ActiveModel {
-    type Error = String;
+    type Error = ServerError;
 
     fn try_from(value: Server) -> Result<Self, Self::Error> {
         Ok(ActiveModel {

@@ -1,11 +1,11 @@
 //! All structs for channels
 
-use std::fmt::Display;
-
+use crate::server::{MembersError, ServerError, ServerId};
+use crate::sqlerror::GenericSqlError;
 use fydia_utils::generate_string;
 use fydia_utils::serde::{Deserialize, Serialize};
-
-use crate::server::ServerId;
+use std::fmt::Display;
+use thiserror::Error;
 /// `ChannelType` reprensent which type of channel is.
 /// Voice, Text or `DirectMessage`
 #[allow(missing_docs)]
@@ -169,12 +169,12 @@ impl Channel {
         name: T,
         description: T,
         channel_type: ChannelType,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, ChannelError> {
         let name = name.into();
         let description = description.into();
 
         if name.is_empty() {
-            return Err(String::from("Name is empty"));
+            return Err(ChannelError::EmptyName);
         }
 
         Ok(Self {
@@ -215,7 +215,7 @@ impl Channel {
         description: T,
         parent_id: ServerId,
         channel_type: ChannelType,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, ChannelError> {
         let mut channel = Self::new(name, description, channel_type)?;
 
         channel.parent_id = parent_id;
@@ -233,5 +233,45 @@ impl Default for Channel {
             description: String::new(),
             channel_type: ChannelType::Text,
         }
+    }
+}
+
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `ChannelError` represents all errors of `Channel`
+pub enum ChannelError {
+    #[error("Cannot get this channel from database")]
+    CannotGetFromDatabase,
+    #[error("Cannot update name in database")]
+    CannotUpdateName,
+    #[error("Cannot update description in database")]
+    CannotUpdateDescription,
+    #[error("Cannot the server")]
+    CannotGetServer,
+    #[error("Cannot the members")]
+    CannotGetMembers,
+    #[error("No channel with this id")]
+    CannotGetById,
+    #[error("Empty name")]
+    EmptyName,
+    #[error("{0}")]
+    GenericSqlError(Box<GenericSqlError>),
+}
+
+impl From<ServerError> for ChannelError {
+    fn from(_: ServerError) -> Self {
+        Self::CannotGetServer
+    }
+}
+
+impl From<MembersError> for ChannelError {
+    fn from(_: MembersError) -> Self {
+        Self::CannotGetMembers
+    }
+}
+
+impl From<GenericSqlError> for ChannelError {
+    fn from(value: GenericSqlError) -> Self {
+        ChannelError::GenericSqlError(Box::new(value))
     }
 }

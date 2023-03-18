@@ -1,6 +1,6 @@
 use fydia_sql::impls::server::SqlServer;
 
-use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_struct::{response::FydiaResult, server::ServerError};
 
 use crate::handlers::basic::{Database, ServerFromId, UserFromToken};
 
@@ -14,11 +14,10 @@ pub async fn join(
     Database(database): Database,
 ) -> FydiaResult {
     if user.servers.is_join(&server.id) {
-        return Err("Already join".into_error());
+        Err(ServerError::AlreadyJoin)?;
     }
 
-    server
-        .join(&mut user, &database)
-        .await
-        .map(|_| "Server joined".into_ok())
+    server.join(&mut user, &database).await?;
+
+    "Server joined".into()
 }

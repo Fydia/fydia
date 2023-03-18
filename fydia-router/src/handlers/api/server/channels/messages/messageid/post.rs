@@ -29,11 +29,11 @@ pub async fn update_message(
     body: String,
 ) -> FydiaResult {
     if message.message_type != MessageType::TEXT && message.message_type != MessageType::URL {
-        return Err("Cannot edit this type of message".into_error());
+        return "Cannot edit this type of message".into();
     }
 
     if message.author_id.id != user.id {
-        return Err("You can't edit this message".into_error());
+        return "You can't edit this message".into();
     }
 
     let value = get_json_value_from_body(&body)?;
@@ -61,5 +61,5 @@ pub async fn update_message(
             "Cannot edit message".into_server_error()
         })?;
 
-    Ok("Message edited".into_ok())
+    "Message edited".into()
 }

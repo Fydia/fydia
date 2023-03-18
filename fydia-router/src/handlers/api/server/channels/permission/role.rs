@@ -67,5 +67,5 @@ pub async fn post_permission_of_user(
         }
     }
 
-    Ok("".into_ok())
+    "".into()
 }

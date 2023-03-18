@@ -2,7 +2,7 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::messages::Message;
+use fydia_struct::messages::{Message, MessageError};
 use sea_orm::{entity::prelude::*, Set};
 use shared::sea_orm;
 
@@ -21,7 +21,7 @@ pub struct Model {
 }
 
 impl TryFrom<Message> for ActiveModel {
-    type Error = String;
+    type Error = MessageError;
 
     fn try_from(value: Message) -> Result<Self, Self::Error> {
         Ok(Self {

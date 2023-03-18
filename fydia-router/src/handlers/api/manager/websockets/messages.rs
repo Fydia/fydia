@@ -10,7 +10,7 @@ use axum::response::IntoResponse;
 use futures::prelude::*;
 use fydia_sql::impls::token::SqlToken;
 use fydia_struct::querystring::QsToken;
-use fydia_struct::user::{Token, User};
+use fydia_struct::user::{Token, User, UserError};
 use fydia_utils::{serde::Serialize, serde_json};
 
 use super::manager::{WbManagerChannelTrait, WebsocketManagerChannel};
@@ -21,14 +21,18 @@ pub async fn ws_handler(
     Query(token): Query<QsToken>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    let token = Token(token.token.unwrap_or_default());
+    let token = Token::new(token.token.unwrap_or_default());
     let user = token.get_user(&database).await;
 
     ws.on_upgrade(move |e| connected(e, wbsocket, user))
 }
 
-async fn connected(socket: WebSocket, wbmanager: Arc<WebsocketManagerChannel>, user: Option<User>) {
-    let user = if let Some(user) = user {
+async fn connected(
+    socket: WebSocket,
+    wbmanager: Arc<WebsocketManagerChannel>,
+    user: Result<User, UserError>,
+) {
+    let user = if let Ok(user) = user {
         user
     } else {
         return;

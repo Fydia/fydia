@@ -11,5 +11,5 @@ pub async fn get_message(
     ChannelFromId(_): ChannelFromId,
     MessageFromId(message): MessageFromId,
 ) -> FydiaResult {
-    Ok(FydiaResponse::from_serialize(message))
+    FydiaResponse::from_serialize(message).into()
 }

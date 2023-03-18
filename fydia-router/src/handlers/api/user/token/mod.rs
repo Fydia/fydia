@@ -1,4 +1,4 @@
-use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_struct::response::FydiaResult;
 
 use crate::handlers::basic::UserFromToken;
 
@@ -7,5 +7,5 @@ use crate::handlers::basic::UserFromToken;
 /// # Errors
 /// This function will return an error if token isn't valid
 pub async fn verify(UserFromToken(_): UserFromToken) -> FydiaResult {
-    Ok("".into_ok())
+    "".into()
 }

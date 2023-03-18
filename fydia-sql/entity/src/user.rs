@@ -2,7 +2,7 @@
 
 use std::convert::TryFrom;
 
-use fydia_struct::user::User;
+use fydia_struct::user::{User, UserError};
 use sea_orm::{entity::prelude::*, Set};
 use shared::sea_orm;
 //use crate::impls::members::SqlMembers;
@@ -27,17 +27,17 @@ pub struct Model {
 }
 
 impl TryFrom<User> for ActiveModel {
-    type Error = String;
+    type Error = UserError;
 
     fn try_from(value: User) -> Result<Self, Self::Error> {
         let password = value
             .password
             .clone()
-            .ok_or_else(|| "Password is empty".to_string())?;
+            .ok_or_else(|| UserError::EmptyPassword)?;
 
         Ok(Self {
             name: Set(value.name.clone()),
-            token: Set(value.token.unwrap_or_default()),
+            token: Set(value.token.get_token().unwrap_or_default()),
             email: Set(value.email.clone()),
             password: Set(password),
             instance: Set(0),

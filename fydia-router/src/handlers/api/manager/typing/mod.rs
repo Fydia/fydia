@@ -246,10 +246,10 @@ fn send_websocket_message(
         let users = channelid
             .channel(&database)
             .await
-            .map_err(|e| e.get_string())?
+            .map_err(|e| e.to_string())?
             .users(&database)
             .await
-            .map_err(|e| e.get_string())?;
+            .map_err(|e| e.to_string())?;
 
         websocket
             .send(&Event::new(serverid.clone(), event), &users)

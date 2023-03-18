@@ -8,10 +8,10 @@ use super::{
 };
 use fydia_struct::{
     channel::ChannelId,
-    permission::{Permission, Permissions},
-    response::{FydiaResponse, IntoFydia, MapError},
+    permission::{Permission, PermissionError, Permissions},
     roles::RoleId,
     server::ServerId,
+    sqlerror::GenericSqlError,
     user::UserId,
 };
 use fydia_utils::async_trait::async_trait;
@@ -24,30 +24,30 @@ pub trait PermissionSql {
         channelid: &ChannelId,
         role: &RoleId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse>;
+    ) -> Result<Permission, PermissionError>;
 
     async fn of_user_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse>;
+    ) -> Result<Permission, PermissionError>;
     async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse>;
+    ) -> Result<Permissions, PermissionError>;
     async fn of_user(
         user: &UserId,
         serverid: &ServerId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse>;
+    ) -> Result<Permissions, PermissionError>;
     async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse>;
-    async fn insert(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse>;
-    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, FydiaResponse>;
-    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse>;
+    ) -> Result<Permissions, PermissionError>;
+    async fn insert(&self, db: &DatabaseConnection) -> Result<(), PermissionError>;
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, PermissionError>;
+    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), PermissionError>;
 }
 
 #[async_trait]
@@ -56,7 +56,7 @@ impl PermissionSql for Permission {
         user: &UserId,
         serverid: &ServerId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse> {
+    ) -> Result<Permissions, PermissionError> {
         let user = user.to_user(db).await?;
         let roles = user.roles(serverid, db).await?;
         let mut vec = Vec::new();
@@ -72,44 +72,43 @@ impl PermissionSql for Permission {
         channelid: &ChannelId,
         roleid: &RoleId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse> {
-        entity::permission::role::Entity::find()
-            .filter(
-                entity::permission::role::Column::Role.eq(roleid.get_id_cloned_fydiaresponse()?),
-            )
+    ) -> Result<Permission, PermissionError> {
+        if let Ok(Some(model)) = entity::permission::role::Entity::find()
+            .filter(entity::permission::role::Column::Role.eq(roleid.get_id_cloned()?))
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
             .await
-            .error_to_fydiaresponse()?
-            .ok_or_else(|| "No role permission".into_error())?
-            .to_struct(db)
-            .await
+        {
+            return Ok(model
+                .to_struct(db)
+                .await
+                .map_err(|_| PermissionError::ModelToStruct)?);
+        }
+        Err(PermissionError::CannotGetByChannelAndRole)
     }
 
     async fn of_user_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permission, FydiaResponse> {
+    ) -> Result<Permission, PermissionError> {
         entity::permission::user::Entity::find()
-            .filter(
-                entity::permission::user::Column::User
-                    .eq(user.0.clone().get_id_cloned_fydiaresponse()?),
-            )
+            .filter(entity::permission::user::Column::User.eq(user.0.clone().get_id_cloned()?))
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .one(db)
             .await
-            .error_to_fydiaresponse()?
-            .ok_or_else(|| "No role permission".into_error())?
+            .map_err(|_| PermissionError::CannotGetByChannelAndUser)?
+            .ok_or_else(|| PermissionError::CannotGetByChannelAndUser)?
             .to_struct(db)
             .await
+            .map_err(|_| PermissionError::ModelToStruct)
     }
 
     async fn of_user_with_role_in_channel(
         channelid: &ChannelId,
         user: &UserId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse> {
+    ) -> Result<Permissions, PermissionError> {
         let channel = channelid.channel(db).await?;
         let user = user.to_user(db).await?;
         let roles = user.roles(&channel.parent_id, db).await?;
@@ -130,116 +129,113 @@ impl PermissionSql for Permission {
     async fn of_channel(
         channelid: &ChannelId,
         db: &DatabaseConnection,
-    ) -> Result<Permissions, FydiaResponse> {
+    ) -> Result<Permissions, PermissionError> {
         let result = entity::permission::user::Entity::find()
             .filter(entity::permission::user::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
             .await
-            .error_to_fydiaresponse()?;
+            .map_err(|_| PermissionError::CannotGetByChannel)?;
 
         let mut vec = Vec::new();
         for i in result {
-            vec.push(i.to_struct(db).await?);
+            vec.push(
+                i.to_struct(db)
+                    .await
+                    .map_err(|_| PermissionError::ModelToStruct)?,
+            );
         }
 
         let result = entity::permission::role::Entity::find()
             .filter(entity::permission::role::Column::Channel.eq(channelid.id.as_str()))
             .all(db)
             .await
-            .error_to_fydiaresponse()?;
+            .map_err(|_| PermissionError::CannotGetByChannel)?;
 
         for i in result {
-            vec.push(i.to_struct(db).await?);
+            vec.push(
+                i.to_struct(db)
+                    .await
+                    .map_err(|_| PermissionError::ModelToStruct)?,
+            );
         }
 
         Ok(Permissions::new(vec))
     }
 
-    async fn insert(&self, db: &DatabaseConnection) -> Result<(), FydiaResponse> {
+    async fn insert(&self, db: &DatabaseConnection) -> Result<(), PermissionError> {
         match self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
-                let am = entity::permission::role::ActiveModel::try_from(self.clone())
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::role::ActiveModel::try_from(self.clone())?;
 
                 insert(am, db).await?;
             }
             fydia_struct::permission::PermissionType::User(_) => {
-                let am = entity::permission::user::ActiveModel::try_from(self.clone())
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::user::ActiveModel::try_from(self.clone())?;
 
                 insert(am, db).await?;
             }
 
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err("Bad Type".into_error())
+                return Err(PermissionError::PermissionTypeError)
             }
         }
 
         Ok(())
     }
 
-    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, FydiaResponse> {
+    async fn update_value(self, db: &DatabaseConnection) -> Result<Permission, PermissionError> {
         let channelid = self
             .channelid
             .clone()
-            .ok_or_else(|| "No channelid".into_error())?
+            .ok_or_else(|| PermissionError::NoChannelId)?
             .id;
 
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(role) => {
-                let am = entity::permission::role::ActiveModel::try_from(&self)
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::role::ActiveModel::try_from(&self)?;
 
                 entity::permission::role::Entity::update(am)
                     .filter(entity::permission::role::Column::Channel.eq(channelid.as_str()))
-                    .filter(
-                        entity::permission::role::Column::Role
-                            .eq(role.get_id_cloned_fydiaresponse()?),
-                    )
+                    .filter(entity::permission::role::Column::Role.eq(role.get_id_cloned()?))
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .error_to_fydiaresponse()?;
+                    .map_err(|f| GenericSqlError::CannotUpdate(f.to_string()))?;
             }
+
             fydia_struct::permission::PermissionType::User(user) => {
-                let am = entity::permission::user::ActiveModel::try_from(&self)
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::user::ActiveModel::try_from(&self)?;
 
                 entity::permission::user::Entity::update(am)
                     .filter(entity::permission::user::Column::Channel.eq(channelid.as_str()))
-                    .filter(
-                        entity::permission::user::Column::User
-                            .eq(user.0.get_id_cloned_fydiaresponse()?),
-                    )
+                    .filter(entity::permission::user::Column::User.eq(user.0.get_id_cloned()?))
                     .exec(db)
                     .await
                     .map(|_| ())
-                    .error_to_fydiaresponse()?;
+                    .map_err(|f| GenericSqlError::CannotUpdate(f.to_string()))?;
             }
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err("Bad Type".into_error())
+                return Err(PermissionError::PermissionTypeError)
             }
         }
 
         Ok(self)
     }
 
-    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), FydiaResponse> {
+    async fn delete(mut self, db: &DatabaseConnection) -> Result<(), PermissionError> {
         match &self.permission_type {
             fydia_struct::permission::PermissionType::Role(_) => {
-                let am = entity::permission::role::ActiveModel::try_from(&self)
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::role::ActiveModel::try_from(&self)?;
 
                 delete(am, db).await?;
             }
             fydia_struct::permission::PermissionType::User(_) => {
-                let am = entity::permission::user::ActiveModel::try_from(&self)
-                    .error_to_fydiaresponse()?;
+                let am = entity::permission::user::ActiveModel::try_from(&self)?;
 
                 delete(am, db).await?;
             }
             fydia_struct::permission::PermissionType::Channel(_) => {
-                return Err("Bad Type".into_error())
+                return Err(PermissionError::PermissionTypeError)
             }
         }
 

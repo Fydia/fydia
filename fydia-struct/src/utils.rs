@@ -1,7 +1,6 @@
 //! Usefull data structure
 use fydia_utils::serde::{Deserialize, Serialize};
-
-use crate::response::{FydiaResponse, IntoFydia};
+use thiserror::Error;
 
 /// Enum to add a state of Id of a structure
 #[derive(Debug, PartialEq, PartialOrd, Eq, Clone, Hash, Serialize, Deserialize)]
@@ -20,12 +19,12 @@ impl<T> Id<T> {
     /// # Errors
     /// Return an error if:
     /// * `Id` is unset
-    pub fn get_id(self) -> Result<T, String> {
+    pub fn get_id(self) -> Result<T, IdError> {
         if let Self::Id(id) = self {
             return Ok(id);
         }
 
-        Err("Id is unset".to_string())
+        Err(IdError::IdUnset)
     }
 
     /// Return cloned value of `Id` if `Id` is `Id(T)`
@@ -33,12 +32,12 @@ impl<T> Id<T> {
     /// # Errors
     /// Returns an error if:
     /// * Id is unset
-    pub fn get_id_fydiaresponse(self) -> Result<T, FydiaResponse> {
+    pub fn get_id_fydiaresponse(self) -> Result<T, IdError> {
         if let Self::Id(id) = self {
             return Ok(id);
         }
 
-        Err("Id is unset".into_error())
+        Err(IdError::IdUnset)
     }
 
     /// Return true if Id is `Id(T)`
@@ -63,24 +62,19 @@ impl<T: Clone> Id<T> {
     /// # Errors
     /// Returns an error if:
     /// * Id is unset
-    pub fn get_id_cloned(&self) -> Result<T, String> {
+    pub fn get_id_cloned(&self) -> Result<T, IdError> {
         if let Self::Id(id) = &self {
             return Ok(id.clone());
         }
 
-        Err("Id is unset".to_string())
+        Err(IdError::IdUnset)
     }
+}
 
-    /// Return cloned value of `Id` if `Id` is `Id(T)`
-    ///
-    /// # Errors
-    /// Returns an error if:
-    /// * Id is unset
-    pub fn get_id_cloned_fydiaresponse(&self) -> Result<T, FydiaResponse> {
-        if let Self::Id(id) = &self {
-            return Ok(id.clone());
-        }
-
-        Err("Id is unset".into_error())
-    }
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `IdError` represents all errors of `Id`
+pub enum IdError {
+    #[error("Id is unset")]
+    IdUnset,
 }

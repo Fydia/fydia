@@ -2,7 +2,6 @@ use fydia_struct::{
     channel::{Channel, ChannelId},
     instance::Instance,
     messages::{Date, Message},
-    response::{FydiaResponse, MapError},
     roles::Role,
     server::{Server, ServerId},
     user::{Token, User},
@@ -20,45 +19,43 @@ use crate::{
 /// Return an error if:
 /// * Database is unreachable
 /// * Any tables errors
-pub async fn insert_samples(db: &DbConnection) -> Result<(), FydiaResponse> {
+pub async fn insert_samples(db: &DbConnection) -> Result<(), String> {
     warn!("Insert Sample Values");
 
-    let mut user = if let Some(user) = User::by_token(&Token("default_token".to_string()), db).await
-    {
-        user
-    } else {
-        let mut user = User::new("user", "user@sample.com", "user", Instance::default())
-            .error_to_fydiaresponse()?;
+    let mut user =
+        if let Ok(user) = User::by_token(&Token::new("default_token".to_string()), db).await {
+            user
+        } else {
+            let mut user = User::new("user", "user@sample.com", "user", Instance::default())?;
 
-        user.token = Some(String::from("default_token"));
+            user.token = Token::new(String::from("default_token"));
 
-        user = user.insert(db).await?;
+            user = user.insert(db).await.unwrap();
 
-        user
-    };
+            user
+        };
 
-    let mut server = if let Ok(server) =
-        Server::by_id(&ServerId::new("server_default_id"), db).await
-    {
-        info!("Server already exists");
-        server
-    } else {
-        let mut server = Server::new("server_default", user.id.clone()).error_to_fydiaresponse()?;
+    let mut server =
+        if let Ok(server) = Server::by_id(&ServerId::new("server_default_id"), db).await {
+            info!("Server already exists");
+            server
+        } else {
+            let mut server = Server::new("server_default", user.id.clone()).unwrap();
 
-        server.id = ServerId::new("server_default_id");
+            server.id = ServerId::new("server_default_id");
 
-        if let Err(error) = server.insert(db).await {
-            error!("{}", error.get_string());
-        }
+            if let Err(error) = server.insert(db).await {
+                error!("{}", error);
+            }
 
-        server
-    };
+            server
+        };
 
-    user.update_from_database(db).await?;
+    user.update_from_database(db).await.unwrap();
 
     if !user.servers.is_join(&ServerId::new("server_default_id")) {
         if let Err(error) = server.join(&mut user, db).await {
-            error!("{}", error.get_string());
+            error!("{}", error);
         }
     }
 
@@ -72,12 +69,12 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), FydiaResponse> {
             ServerId::new("server_default_id"),
             fydia_struct::channel::ChannelType::Text,
         )
-        .error_to_fydiaresponse()?;
+        .unwrap();
 
         channel.id = ChannelId::new("channel_default_id");
 
         if let Err(error) = server.insert_channel(&channel, db).await {
-            error!("{}", error.get_string());
+            error!("{}", error);
         }
     }
 
@@ -92,10 +89,10 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), FydiaResponse> {
                     user.clone(),
                     ChannelId::new("channel_default_id"),
                 )
-                .error_to_fydiaresponse()?;
+                .unwrap();
 
                 if let Err(error) = message.insert(db).await {
-                    error!("{}", error.get_string());
+                    error!("{}", error);
                 }
             }
         }
@@ -109,9 +106,9 @@ pub async fn insert_samples(db: &DbConnection) -> Result<(), FydiaResponse> {
         server_permission: 4,
     };
 
-    role.insert(db).await?;
+    role.insert(db).await.unwrap();
 
-    role.add_user(&user.id, db).await?;
+    role.add_user(&user.id, db).await.unwrap();
 
     info!("Sample are insert in database");
 

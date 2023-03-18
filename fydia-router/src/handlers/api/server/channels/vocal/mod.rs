@@ -1,5 +1,5 @@
 use crate::handlers::basic::ChannelFromId;
-use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_struct::response::FydiaResult;
 
 /// Join a vocal channel
 ///
@@ -7,7 +7,8 @@ use fydia_struct::response::{FydiaResult, IntoFydia};
 /// Return an error if channelid isn't valid or if channel is text
 pub async fn join_channel(ChannelFromId(channel): ChannelFromId) -> FydiaResult {
     if channel.channel_type.is_voice() {
-        return Ok("Vocal Channel".into_ok());
+        return "Vocal Channel".into();
     }
-    Err("Text Channel".into_error())
+
+    "Text Channel".into()
 }

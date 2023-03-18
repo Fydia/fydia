@@ -6,5 +6,5 @@ use fydia_struct::response::{FydiaResponse, FydiaResult};
 /// # Errors
 /// Return an error if the token isn't valid
 pub async fn get_server_of_user(UserFromToken(user): UserFromToken) -> FydiaResult {
-    Ok(FydiaResponse::from_serialize(user.servers))
+    FydiaResponse::from_serialize(user.servers).into()
 }

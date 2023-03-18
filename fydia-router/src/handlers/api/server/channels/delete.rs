@@ -1,7 +1,7 @@
 use crate::handlers::basic::{ChannelFromId, Database};
 
 use fydia_sql::impls::channel::SqlChannel;
-use fydia_struct::response::{FydiaResult, IntoFydia};
+use fydia_struct::response::FydiaResult;
 
 /// Delete a channel in a server
 ///
@@ -13,8 +13,7 @@ pub async fn delete_channel(
     Database(database): Database,
     ChannelFromId(channel): ChannelFromId,
 ) -> FydiaResult {
-    channel
-        .delete(&database)
-        .await
-        .map(|_| "Channel deleted".into_ok())
+    channel.delete(&database).await?;
+
+    "Channel deleted".into()
 }

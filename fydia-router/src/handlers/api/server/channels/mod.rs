@@ -15,5 +15,5 @@ use crate::handlers::basic::ChannelFromId;
 /// # Errors
 /// Return an error if channelid isn't valid
 pub async fn info_channel(ChannelFromId(channel): ChannelFromId) -> FydiaResult {
-    Ok(FydiaResponse::from_serialize(channel))
+    FydiaResponse::from_serialize(channel).into()
 }

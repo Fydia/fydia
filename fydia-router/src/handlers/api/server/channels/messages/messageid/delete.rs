@@ -26,7 +26,7 @@ pub async fn delete_message(
     WebsocketManager(wbsocket): WebsocketManager,
 ) -> FydiaResult {
     if message.author_id.id != user.id {
-        return Err("You can't delete this message".into_error());
+        return "You can't delete this message".into();
     }
 
     wbsocket
@@ -47,5 +47,5 @@ pub async fn delete_message(
 
     message.delete(&database).await?;
 
-    Ok("Message delete".into_error())
+    "Message delete".into()
 }

@@ -17,19 +17,19 @@ use std::str::FromStr;
 pub async fn get_picture_of_server(ServerJoinedFromId(server): ServerJoinedFromId) -> FydiaResult {
     let value = File::get(server.icon).get_value().map_err(|error| {
         error!("{error}");
-        "Cannot get file".into_error()
+        "Cannot get file"
     })?;
 
     let mime_str = infer::get(&value)
-        .ok_or_else(|| "Cannot get the mimetype".into_error())?
+        .ok_or_else(|| "Cannot get the mimetype")?
         .to_string();
 
     let mime = Mime::from_str(mime_str.as_str()).map_err(|error| {
         error!("{error}");
-        "Cannot convert mime".into_error()
+        "Cannot convert mime"
     })?;
 
-    Ok(FydiaResponse::BytesWithContentType(value, mime))
+    FydiaResponse::BytesWithContentType(value, mime).into()
 }
 
 const MAX_CONTENT_LENGHT: usize = 8_000_000;
@@ -45,14 +45,16 @@ pub async fn post_picture_of_server(
 ) -> FydiaResult {
     let body = vec![];
     if body.len() > MAX_CONTENT_LENGHT {
-        return Err("".into_error_with_statuscode(StatusCode::PAYLOAD_TOO_LARGE));
+        return ""
+            .into_error_with_statuscode(StatusCode::PAYLOAD_TOO_LARGE)
+            .into();
     }
 
-    let mimetype = infer::get(&body).ok_or_else(|| "No body".into_error())?;
+    let mimetype = infer::get(&body).ok_or_else(|| "No body")?;
 
     let mimetype_str = mimetype.extension();
     if mimetype_str != "png" && mimetype_str != "jpg" && mimetype_str != "gif" {
-        return Err("Bad Image type retry with png / jpg / gif".into_error());
+        return "Bad Image type retry with png / jpg / gif".into();
     }
 
     let file = File::new();
@@ -64,8 +66,7 @@ pub async fn post_picture_of_server(
 
     server.icon = file.get_name();
 
-    server
-        .update(&database)
-        .await
-        .map(|_| "Icon have been update".into_ok())
+    server.update(&database).await?;
+
+    "Icon have been update".into()
 }

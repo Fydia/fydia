@@ -1,7 +1,7 @@
 use fydia_sql::impls::channel::SqlChannel;
 use fydia_sql::impls::user::SqlUser;
 
-use fydia_struct::response::{FydiaResult, IntoFydia, MapError};
+use fydia_struct::response::FydiaResult;
 
 use crate::handlers::basic::{ChannelFromId, Database, UserFromToken};
 use crate::handlers::{get_json, get_json_value_from_body};
@@ -19,21 +19,19 @@ pub async fn update_name(
     if !user
         .permission_of_channel(&channel.id, &database)
         .await?
-        .calculate(Some(channel.id.clone()))
-        .error_to_fydiaresponse()?
+        .calculate(Some(channel.id.clone()))?
         .can_read()
     {
-        return FydiaResult::Err("Unknow channel".into_error());
+        return "Unknow channel".into();
     }
 
     let json = get_json_value_from_body(&body)?;
 
     let name = get_json("name", &json)?;
 
-    channel
-        .update_name(name, &database)
-        .await
-        .map(|_| "Channel name updated".into_ok())
+    channel.update_name(name, &database).await?;
+
+    "Channel name updated".into()
 }
 
 /// Change description of a channel
@@ -49,8 +47,7 @@ pub async fn update_description(
 
     let description = get_json("description", &json)?;
 
-    channel
-        .update_description(description, &database)
-        .await
-        .map(|_| "Channel description updated".into_ok())
+    channel.update_description(description, &database).await?;
+
+    "Channel description updated".into()
 }

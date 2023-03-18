@@ -21,5 +21,5 @@ pub async fn post_message_dm(
         Message::by_channel(ChannelId::new(dm_id.clone()), &database).await
     );
 
-    Err("".into_not_implemented_error())
+    "".into_not_implemented_error().into()
 }

@@ -1,8 +1,15 @@
 //! This module is related to permission
 
 use fydia_utils::serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-use crate::{channel::ChannelId, roles::RoleId, user::UserId};
+use crate::{
+    channel::{ChannelError, ChannelId},
+    roles::{RoleError, RoleId},
+    sqlerror::GenericSqlError,
+    user::{UserError, UserId},
+    utils::IdError,
+};
 
 /// Wrapper of `Vec<Permission>`
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,7 +77,7 @@ impl Permissions {
     /// # Errors
     /// Return an error if :
     /// * there is no `Permission` have `PermissionType::User` as type
-    pub fn calculate(&self, channelid: Option<ChannelId>) -> Result<Permission, String> {
+    pub fn calculate(&self, channelid: Option<ChannelId>) -> Result<Permission, PermissionError> {
         if let Some(user_perm) = self
             .0
             .iter()
@@ -85,7 +92,8 @@ impl Permissions {
                 value |= i.value;
             }
         }
-        let channelid = channelid.ok_or_else(|| "No channelid".to_string())?;
+
+        let channelid = channelid.ok_or_else(|| PermissionError::NoChannelId)?;
 
         Ok(Permission {
             permission_type: PermissionType::Channel(channelid.clone()),
@@ -152,6 +160,68 @@ impl Default for Permission {
             channelid: Default::default(),
             value: Default::default(),
         }
+    }
+}
+
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `PermissionError` represents all errors of `Permission`
+pub enum PermissionError {
+    #[error("No permission for this channel and this role")]
+    CannotGetByChannelAndRole,
+    #[error("No permission for this channel and this user")]
+    CannotGetByChannelAndUser,
+    #[error("No permission for this channel")]
+    CannotGetByChannel,
+    #[error("Permission have a bad type")]
+    PermissionTypeError,
+    #[error("Cannot convert the model to struct")]
+    ModelToStruct,
+    #[error("No id for this channel")]
+    NoChannelId,
+    #[error("No role id")]
+    NoRoleId,
+    #[error("{0}")]
+    GenericSqlError(Box<GenericSqlError>),
+    #[error("{0}")]
+    CannotGetRoles(Box<RoleError>),
+    #[error("{0}")]
+    UserError(Box<UserError>),
+    #[error("{0}")]
+    ChannelError(Box<ChannelError>),
+    #[error("{0}")]
+    Other(String),
+}
+
+impl From<IdError> for PermissionError {
+    fn from(value: IdError) -> Self {
+        match value {
+            IdError::IdUnset => PermissionError::NoRoleId,
+        }
+    }
+}
+
+impl From<RoleError> for PermissionError {
+    fn from(value: RoleError) -> Self {
+        Self::CannotGetRoles(Box::new(value))
+    }
+}
+
+impl From<UserError> for PermissionError {
+    fn from(value: UserError) -> Self {
+        Self::UserError(Box::new(value))
+    }
+}
+
+impl From<ChannelError> for PermissionError {
+    fn from(value: ChannelError) -> Self {
+        Self::ChannelError(Box::new(value))
+    }
+}
+
+impl From<GenericSqlError> for PermissionError {
+    fn from(value: GenericSqlError) -> Self {
+        Self::GenericSqlError(Box::new(value))
     }
 }
 

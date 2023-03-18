@@ -3,14 +3,17 @@
 use crate::{
     instance::Instance,
     server::{ServerId, Servers},
-    utils::Id,
+    sqlerror::GenericSqlError,
+    utils::{Id, IdError},
 };
 use fydia_crypto::password::hash;
 use fydia_utils::http::HeaderMap;
+
 use fydia_utils::{
     serde::{Deserialize, Serialize},
     serde_json,
 };
+use thiserror::Error;
 
 /// `User` contains all value of user
 #[allow(missing_docs)]
@@ -21,7 +24,7 @@ pub struct User {
     pub name: String,
     pub instance: Instance,
     #[serde(skip)]
-    pub token: Option<String>,
+    pub token: Token,
     #[serde(skip)]
     pub email: String,
     #[serde(skip)]
@@ -99,11 +102,66 @@ impl User {
         }
 
         Ok(JsonBuf {
-            id: self.id.0.clone().get_id()?,
+            id: self.id.0.clone().get_id().map_err(|err| err.to_string())?,
             name: self.name.clone(),
             email: self.email.clone(),
             description: self.description.clone().unwrap_or_default(),
         })
+    }
+}
+
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+/// `UserError` represents all errors of `Users`
+pub enum UserError {
+    #[error("No user with this email")]
+    CannotGetByEmail,
+    #[error("Password don't match")]
+    PasswordError,
+    #[error("Password is empty")]
+    EmptyPassword,
+    #[error("No user with this id")]
+    CannotGetById,
+    #[error("No user with this token")]
+    CannotGetByToken,
+    #[error("Cannot update the token")]
+    CannotUpdateToken,
+    #[error("Cannot update the name")]
+    CannotUpdateName,
+    #[error("Cannot update the password")]
+    CannotUpdatePassword,
+
+    #[error("Cannot get roles of user")]
+    CannotGetRolesOfUser,
+    #[error("Cannot convert database model to struct")]
+    ModelToStruct,
+    #[error("{0}")]
+    GenericSqlError(Box<GenericSqlError>),
+    #[error("{0}")]
+    Other(String),
+}
+
+impl From<TokenError> for UserError {
+    fn from(_: TokenError) -> Self {
+        UserError::CannotGetByToken
+    }
+}
+
+impl From<IdError> for UserError {
+    fn from(_: IdError) -> Self {
+        UserError::CannotGetById
+    }
+}
+
+impl From<String> for UserError {
+    fn from(value: String) -> Self {
+        UserError::Other(value)
+    }
+}
+
+impl From<GenericSqlError> for UserError {
+    fn from(value: GenericSqlError) -> Self {
+        Self::GenericSqlError(Box::new(value))
     }
 }
 
@@ -138,14 +196,53 @@ impl UserId {
 pub const HEADERNAME: &str = "Authorization";
 
 /// `Token` contains the token of a `User`
-#[derive(Debug)]
-pub struct Token(pub String);
+#[derive(Debug, Default, Clone, PartialOrd, PartialEq, Eq)]
+pub struct Token(Option<String>);
 
 impl Token {
-    /// Return a Token from HTTP headers
-    pub fn from_headervalue(headers: &HeaderMap) -> Option<Token> {
-        let token = headers.get(HEADERNAME)?;
-
-        Some(Token(token.to_str().ok()?.to_string()))
+    /// Create a new token from a String
+    pub fn new(token: String) -> Self {
+        Self(Some(token))
     }
+
+    /// Create an empty Token
+    pub fn null() -> Self {
+        Self(None)
+    }
+
+    /// Get if Token is empty
+    pub fn is_null(&self) -> bool {
+        self.0.is_none()
+    }
+
+    //// Get token
+    ///
+    /// # Errors
+    /// Return error if Token is empty
+    pub fn get_token(&self) -> Result<String, TokenError> {
+        if let Some(token) = &self.0 {
+            return Ok(token.clone());
+        }
+
+        Err(TokenError::NoToken)
+    }
+
+    /// Return a Token from HTTP headers
+    pub fn from_headervalue(headers: &HeaderMap) -> Token {
+        if let Some(token) = headers.get(HEADERNAME) {
+            if let Ok(token) = token.to_str() {
+                return Token::new(token.to_string());
+            }
+        }
+
+        Token::null()
+    }
+}
+
+#[derive(Debug, Error)]
+/// `TokenError` is error enum of `Token`
+pub enum TokenError {
+    /// `Token` is empty
+    #[error("Token is empty")]
+    NoToken,
 }
