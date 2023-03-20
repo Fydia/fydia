@@ -29,7 +29,7 @@ tower = "0.4.13"
 parking_lot = { version = "0.12.1" }
 flume = "0.10.14"
 rust-embed = { version = "6.4.2", optional = true }
-axum-macros = { version ="0.3.5"}
+axum-macros = { version ="0.3.6"}
 thiserror = "1.0.40"
 
 [dev-dependencies]
