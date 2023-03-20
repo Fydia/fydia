@@ -15,4 +15,4 @@ log = "0.4.17"
 mime = "0.3.16"
 url = "2.3.1"
 tokio = { version = "1.26.0", default-features = false }
-thiserror = "1.0.39"
+thiserror = "1.0.40"
