@@ -8,5 +8,5 @@ edition = "2018"
 [dependencies]
 fydia-utils = { path = "../fydia-utils" }
 toml = "0.7.3"
-reqwest = "0.11.14"
+reqwest = "0.11.16"
 log = "0.4.17"
