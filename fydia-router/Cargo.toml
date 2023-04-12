@@ -14,7 +14,7 @@ fydia-sql = { path = "../fydia-sql" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
 fydia-dispatcher = { path = "../fydia-dispatcher" }
-tokio = { version = "1.26.0", default-features = false }
+tokio = { version = "1.27.0", default-features = false }
 futures = "0.3.27"
 chrono = "0.4.24"
 axum = { version = "0.6.15", features = ["ws", "headers"] }
