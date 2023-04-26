@@ -6,7 +6,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.6.15", features = ["headers"] }
+axum = { version = "0.6.17", features = ["headers"] }
 chrono = "0.4.24"
 futures = "0.3.27"
 fydia-crypto = { path = "../fydia-crypto" }
