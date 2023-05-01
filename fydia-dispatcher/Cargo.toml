@@ -10,7 +10,7 @@ tokio = { version = "1.26.0", default-features = false, features = [
     "rt",
     "macros",
 ] }
-reqwest = "0.11.14"
+reqwest = "0.11.17"
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 fydia-crypto = { path = "../fydia-crypto" }
