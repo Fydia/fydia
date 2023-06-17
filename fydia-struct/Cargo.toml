@@ -14,5 +14,5 @@ fydia-utils = { path = "../fydia-utils" }
 log = "0.4.17"
 mime = "0.3.17"
 url = "2.3.1"
-tokio = { version = "1.26.0", default-features = false }
+tokio = { version = "1.28.2", default-features = false }
 thiserror = "1.0.40"
