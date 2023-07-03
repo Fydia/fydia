@@ -28,7 +28,7 @@ tower-http = { version = "0.4.0", features = ["trace"] }
 tower = "0.4.13"
 parking_lot = { version = "0.12.1" }
 flume = "0.10.14"
-rust-embed = { version = "6.6.1", optional = true }
+rust-embed = { version = "6.8.1", optional = true }
 axum-macros = { version ="0.3.7"}
 thiserror = "1.0.40"
 
