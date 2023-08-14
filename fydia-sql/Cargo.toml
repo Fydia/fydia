@@ -12,7 +12,7 @@ fydia-crypto = { path = "../fydia-crypto" }
 fydia-struct = { path = "../fydia-struct" }
 fydia-utils = { path = "../fydia-utils" }
 shared = { path = "./shared" }
-log = "0.4.17"
+log = "0.4.20"
 
 tokio = { version = "1.28.2", default-features = false, features = [
     "rt",
