@@ -18,7 +18,7 @@ tokio = { version = "1.28.2", default-features = false }
 futures = "0.3.27"
 chrono = "0.4.24"
 axum = { version = "0.6.18", features = ["ws", "headers"] }
-log = "0.4.17"
+log = "0.4.20"
 mime = "0.3.17"
 multer = "2.1.0"
 infer = "0.13.0"
